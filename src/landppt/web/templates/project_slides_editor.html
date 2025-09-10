@@ -7768,6 +7768,18 @@
                                         newHtmlContent = data.newHtmlContent;
                                         fullResponse = data.fullResponse || fullResponse;
 
+                                        console.log('🎯 AI流式响应完成');
+                                        console.log('📝 完整响应长度:', fullResponse ? fullResponse.length : 0);
+                                        console.log('🔍 提取的HTML内容:', newHtmlContent ? `长度${newHtmlContent.length}` : '无');
+                                        
+                                        if (newHtmlContent) {
+                                            console.log('✅ 检测到HTML内容，准备添加按钮');
+                                            console.log('📄 HTML内容预览:', newHtmlContent.substring(0, 200));
+                                        } else {
+                                            console.warn('⚠️  未检测到HTML内容');
+                                            console.log('📝 完整AI响应预览:', fullResponse ? fullResponse.substring(0, 500) : '无响应内容');
+                                        }
+
                                         // 确保最终内容正确显示，转义HTML标签
                                         if (aiMessageDiv) {
                                             const escapedContent = fullResponse
@@ -7780,7 +7792,12 @@
 
                                         // 如果有HTML内容，添加应用按钮
                                         if (newHtmlContent) {
+                                            console.log('🎯 调用addApplyChangesButton函数');
                                             addApplyChangesButton(aiMessageDiv, newHtmlContent);
+                                        } else {
+                                            // 即使没有HTML，也提供手动提取选项
+                                            console.log('🔧 添加手动提取HTML的提示');
+                                            addManualHtmlExtractPrompt(aiMessageDiv, fullResponse);
                                         }
 
                                         break;
@@ -7802,12 +7819,111 @@
             }
         }
 
+        // 添加手动HTML提取提示
+        function addManualHtmlExtractPrompt(messageDiv, fullResponse) {
+            if (!messageDiv || !fullResponse) return;
+
+            // 检查是否已经有提示了
+            if (messageDiv.querySelector('.manual-html-extract')) return;
+
+            const promptContainer = document.createElement('div');
+            promptContainer.className = 'manual-html-extract';
+            promptContainer.style.cssText = `
+                margin-top: 15px;
+                padding: 10px;
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                font-size: 14px;
+                color: #6c757d;
+            `;
+
+            const promptText = document.createElement('p');
+            promptText.textContent = '未能自动检测到HTML代码。如果AI的回复中包含HTML代码，您可以点击下方按钮手动提取：';
+            promptText.style.margin = '0 0 10px 0';
+
+            const extractBtn = document.createElement('button');
+            extractBtn.textContent = '🔍 尝试手动提取HTML';
+            extractBtn.style.cssText = `
+                background: #17a2b8;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            `;
+
+            extractBtn.addEventListener('click', () => {
+                // 尝试更激进的HTML提取
+                const htmlContent = extractHtmlFromResponse(fullResponse);
+                if (htmlContent) {
+                    console.log('🎉 手动提取HTML成功');
+                    promptContainer.remove();
+                    addApplyChangesButton(messageDiv, htmlContent);
+                } else {
+                    alert('仍然无法提取到HTML内容。请确认AI的回复中包含有效的HTML代码。');
+                }
+            });
+
+            promptContainer.appendChild(promptText);
+            promptContainer.appendChild(extractBtn);
+            messageDiv.appendChild(promptContainer);
+        }
+
+        // 更激进的HTML提取函数
+        function extractHtmlFromResponse(response) {
+            if (!response) return null;
+
+            // 尝试多种模式
+            const patterns = [
+                /```html\s*([\s\S]*?)\s*```/gi,
+                /```HTML\s*([\s\S]*?)\s*```/gi,
+                /```\s*html\s*([\s\S]*?)\s*```/gi,
+                /<html[^>]*>[\s\S]*?<\/html>/gi,
+                /<div[^>]*style[^>]*1280px[^>]*>[\s\S]*?<\/div>/gi,
+                /<div[^>]*class[^>]*slide[^>]*>[\s\S]*?<\/div>/gi,
+                /<div[^>]*>[\s\S]*?<\/div>/gi // 最宽松的匹配
+            ];
+
+            for (const pattern of patterns) {
+                const matches = response.match(pattern);
+                if (matches && matches.length > 0) {
+                    let extracted = matches[0];
+                    // 如果是代码块格式，提取内容
+                    if (extracted.startsWith('```')) {
+                        const lines = extracted.split('\n');
+                        lines.shift(); // 移除第一行 ```html
+                        lines.pop(); // 移除最后一行 ```
+                        extracted = lines.join('\n').trim();
+                    }
+                    if (extracted.length > 50) { // 确保有实质内容
+                        return extracted;
+                    }
+                }
+            }
+            return null;
+        }
+
         // 添加应用更改按钮
         function addApplyChangesButton(messageDiv, newHtmlContent) {
-            if (!messageDiv || !newHtmlContent) return;
+            if (!messageDiv || !newHtmlContent) {
+                console.error('❌ addApplyChangesButton参数无效:', {
+                    messageDiv: !!messageDiv,
+                    newHtmlContent: !!newHtmlContent
+                });
+                return;
+            }
+
+            console.log('🚀 开始添加应用更改按钮');
 
             // 检查是否已经有按钮了
-            if (messageDiv.querySelector('.ai-apply-changes-btn')) return;
+            if (messageDiv.querySelector('.ai-apply-changes-btn')) {
+                console.log('⚠️  按钮已存在，跳过添加');
+                return;
+            }
+
+            console.log('✅ 开始创建按钮容器和按钮');
 
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'ai-apply-changes-container';
@@ -7904,6 +8020,13 @@
             buttonContainer.appendChild(applyBtn);
             buttonContainer.appendChild(previewBtn);
             messageDiv.appendChild(buttonContainer);
+            
+            console.log('🎉 按钮添加完成！');
+            console.log('📋 按钮容器已添加到消息区域');
+            
+            // 验证按钮是否正确添加
+            const addedButtons = messageDiv.querySelectorAll('.ai-apply-changes-btn, .ai-preview-changes-btn');
+            console.log('🔍 已添加的按钮数量:', addedButtons.length);
         }
 
         // 显示HTML预览

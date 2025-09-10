@@ -2231,13 +2231,29 @@ async def ai_slide_edit_stream(
                         full_response += chunk
                         yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
 
-                # 检查是否包含HTML代码
+                # 检查是否包含HTML代码 - 改进版本，支持多种格式
                 new_html_content = None
-                if "```html" in full_response:
-                    import re
-                    html_match = re.search(r'```html\s*(.*?)\s*```', full_response, re.DOTALL)
+                import re
+                
+                # 尝试多种HTML代码块格式
+                html_patterns = [
+                    r'```html\s*(.*?)\s*```',  # 标准格式
+                    r'```HTML\s*(.*?)\s*```',  # 大写
+                    r'```\s*html\s*(.*?)\s*```',  # 带空格
+                    r'<html[^>]*>.*?</html>',  # 完整HTML文档
+                    r'<div[^>]*style[^>]*>.*?</div>',  # PPT幻灯片div
+                ]
+                
+                for pattern in html_patterns:
+                    html_match = re.search(pattern, full_response, re.DOTALL | re.IGNORECASE)
                     if html_match:
-                        new_html_content = html_match.group(1).strip()
+                        new_html_content = html_match.group(1).strip() if html_match.groups() else html_match.group(0).strip()
+                        logger.info(f"HTML内容提取成功，使用模式: {pattern}，内容长度: {len(new_html_content)}")
+                        break
+                
+                if not new_html_content:
+                    logger.warning(f"未能从AI响应中提取HTML内容。响应长度: {len(full_response)}")
+                    logger.debug(f"AI完整响应: {full_response[:500]}...")
 
                 # 发送完成信号
                 yield f"data: {json.dumps({'type': 'complete', 'content': '', 'newHtmlContent': new_html_content, 'fullResponse': full_response})}\n\n"
