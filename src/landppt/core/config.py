@@ -47,6 +47,11 @@ class AIConfig(BaseSettings):
     ollama_base_url: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
     ollama_model: str = Field(default="llama2", env="OLLAMA_MODEL")
     
+    # 302.AI Configuration
+    ai_302ai_api_key: Optional[str] = Field(default=None, env="302AI_API_KEY", alias="302ai_api_key")
+    ai_302ai_base_url: str = Field(default="https://api.302.ai/v1", env="302AI_BASE_URL", alias="302ai_base_url")
+    ai_302ai_model: str = Field(default="gpt-4o", env="302AI_MODEL", alias="302ai_model")
+    
     # Hugging Face Configuration
     huggingface_api_token: Optional[str] = Field(default=None, env="HUGGINGFACE_API_TOKEN")
 
@@ -149,6 +154,14 @@ class AIConfig(BaseSettings):
                 "max_tokens": self.max_tokens,
                 "temperature": self.temperature,
                 "top_p": self.top_p,
+            },
+            "302ai": {
+                "api_key": self.ai_302ai_api_key,
+                "base_url": self.ai_302ai_base_url,
+                "model": self.ai_302ai_model,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
             }
         }
 
@@ -169,6 +182,8 @@ class AIConfig(BaseSettings):
             return bool(config.get("api_key") and config.get("endpoint"))
         elif provider == "ollama":
             return self.enable_local_models
+        elif provider == "302ai":
+            return bool(config.get("api_key"))
 
         return False
     
@@ -177,7 +192,7 @@ class AIConfig(BaseSettings):
         providers = []
 
         # Add built-in providers
-        for provider in ["openai", "anthropic", "google", "gemini", "azure_openai", "ollama"]:
+        for provider in ["openai", "anthropic", "google", "gemini", "azure_openai", "ollama", "302ai"]:
             if self.is_provider_available(provider):
                 providers.append(provider)
 
@@ -211,6 +226,9 @@ def reload_ai_config():
     ai_config.google_api_key = os.environ.get('GOOGLE_API_KEY', ai_config.google_api_key)
     ai_config.google_base_url = os.environ.get('GOOGLE_BASE_URL', ai_config.google_base_url)
     ai_config.google_model = os.environ.get('GOOGLE_MODEL', ai_config.google_model)
+    ai_config.ai_302ai_api_key = os.environ.get('302AI_API_KEY', ai_config.ai_302ai_api_key)
+    ai_config.ai_302ai_base_url = os.environ.get('302AI_BASE_URL', ai_config.ai_302ai_base_url)
+    ai_config.ai_302ai_model = os.environ.get('302AI_MODEL', ai_config.ai_302ai_model)
     ai_config.default_ai_provider = os.environ.get('DEFAULT_AI_PROVIDER', ai_config.default_ai_provider)
     ai_config.max_tokens = int(os.environ.get('MAX_TOKENS', str(ai_config.max_tokens)))
     ai_config.temperature = float(os.environ.get('TEMPERATURE', str(ai_config.temperature)))

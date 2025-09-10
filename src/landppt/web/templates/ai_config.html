@@ -71,7 +71,7 @@
         <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">🔧 AI 提供者详情配置</h3>
 
         <div class="grid">
-            {% for provider in ["openai", "anthropic", "google", "azure_openai", "ollama"] %}
+            {% for provider in ["openai", "anthropic", "google", "azure_openai", "ollama", "302ai"] %}
             <div class="card provider-config-card" data-provider="{{ provider }}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h4 style="color: #2c3e50; margin: 0;">
@@ -85,6 +85,8 @@
                             ☁️ Azure OpenAI
                         {% elif provider == "ollama" %}
                             🏠 Ollama (本地)
+                        {% elif provider == "302ai" %}
+                            🚀 302.AI
                         {% endif %}
                     </h4>
 
@@ -126,9 +128,12 @@
                         <div class="form-group">
                             <label>默认模型:</label>
                             <div class="model-input-container">
-                                <select name="openai_model" id="openai_model_select" class="model-select" style="display: none;">
-                                    <option value="">选择模型...</option>
-                                </select>
+                                <div class="searchable-select-container" id="openai_model_container" style="display: none;">
+                                    <input type="text" class="searchable-select-input" id="openai_model_search" placeholder="搜索模型...">
+                                    <div class="searchable-select-dropdown" id="openai_model_dropdown">
+                                        <div class="searchable-select-option" data-value="">选择模型...</div>
+                                    </div>
+                                </div>
                                 <input type="text" name="openai_model" id="openai_model_input" class="model-input"
                                        value="{{ current_config.get('openai_model', '') }}"
                                        placeholder="{{ current_config.get('openai_model', 'gpt-4o') }}">
@@ -137,7 +142,6 @@
                                     📋
                                 </button>
                             </div>
-                            <small style="color: #7f8c8d;">直接输入模型名称，或点击右侧图标从API获取可用模型</small>
                         </div>
                     {% elif provider == "anthropic" %}
                         <div class="form-group">
@@ -208,9 +212,37 @@
                         </div>
                         <div class="form-group">
                             <label>默认模型:</label>
-                            <input type="text" name="ollama_model"
+                                <input type="text" name="ollama_model"
                                    value="{{ current_config.get('ollama_model', '') }}"
                                    placeholder="{{ current_config.get('ollama_model', 'llama2, mistral, codellama...') }}">
+                        </div>
+                    {% elif provider == "302ai" %}
+                        <div class="form-group">
+                            <label>API Key:</label>
+                            <input type="password" name="302ai_api_key" placeholder="sk-..."
+                                   value="{{ current_config.get('302ai_api_key', '') }}"
+                                   style="font-family: monospace; font-size: 0.9em;">
+                            <small style="color: #007bff;"><a href="https://share.302.ai/5ml9vD" target="_blank" style="color: #007bff; text-decoration: underline;">点击获取</a></small>
+                        </div>
+                        <input type="hidden" name="302ai_base_url" value="https://api.302.ai/v1">
+                        <div class="form-group">
+                            <label>默认模型:</label>
+                            <div class="model-input-container">
+                                <div class="searchable-select-container" id="302ai_model_container" style="display: none;">
+                                    <input type="text" class="searchable-select-input" id="302ai_model_search" placeholder="搜索模型...">
+                                    <div class="searchable-select-dropdown" id="302ai_model_dropdown">
+                                        <div class="searchable-select-option" data-value="">选择模型...</div>
+                                    </div>
+                                </div>
+                                <input type="text" name="302ai_model" id="302ai_model_input" class="model-input"
+                                       value="{{ current_config.get('302ai_model', '') }}"
+                                       placeholder="{{ current_config.get('302ai_model', 'gpt-4o') }}">
+                                <button type="button" onclick="fetch302AIModels()" id="302ai_model_fetch_btn"
+                                        class="model-fetch-btn" title="获取可用模型列表">
+                                    📋
+                                </button>
+                            </div>
+                            <small style="color: #7f8c8d;">直接输入模型名称，或点击右侧图标从API获取可用模型。支持：gpt-4o, gpt-4o-mini, claude-3-5-sonnet等</small>
                         </div>
                     {% endif %}
                 </div>
@@ -1266,6 +1298,101 @@
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
+/* 可搜索选择框样式 */
+.searchable-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.searchable-select-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.searchable-select-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+    cursor: text;
+}
+
+.searchable-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.searchable-select-dropdown.show {
+    display: block;
+}
+
+.searchable-select-option {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s ease;
+    font-size: 14px;
+}
+
+.searchable-select-option:hover {
+    background-color: #f8f9fa;
+}
+
+.searchable-select-option.highlighted {
+    background-color: #667eea;
+    color: white;
+}
+
+.searchable-select-option:last-child {
+    border-bottom: none;
+}
+
+.searchable-select-option[data-value=""] {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* 搜索框在下拉框显示时的样式 */
+.searchable-select-container.open .searchable-select-input {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* 滚动条美化 */
+.searchable-select-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -1822,15 +1949,236 @@
 <script>
 // 全局变量
 let currentConfig = {};
-let availableProviders = ['openai', 'anthropic', 'google', 'azure_openai', 'ollama'];
+let availableProviders = ['openai', 'anthropic', 'google', 'azure_openai', 'ollama', '302ai'];
+
+// 搜索选择框管理
+class SearchableSelect {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.input = this.container.querySelector('.searchable-select-input');
+        this.dropdown = this.container.querySelector('.searchable-select-dropdown');
+        this.options = [];
+        this.originalPlaceholder = this.input.placeholder;
+        this.selectedValue = '';
+        
+        this.init();
+    }
+    
+    init() {
+        // 点击输入框显示下拉框
+        this.input.addEventListener('click', () => {
+            this.show();
+        });
+        
+        // 输入搜索
+        this.input.addEventListener('input', (e) => {
+            this.search(e.target.value);
+        });
+        
+        // 按键处理
+        this.input.addEventListener('keydown', (e) => {
+            this.handleKeyDown(e);
+        });
+        
+        // 点击外部关闭
+        document.addEventListener('click', (e) => {
+            if (!this.container.contains(e.target)) {
+                this.hide();
+            }
+        });
+        
+        // 输入框失去焦点时设置显示值
+        this.input.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!this.container.classList.contains('open')) {
+                    this.updateDisplayValue();
+                }
+            }, 100);
+        });
+    }
+    
+    setOptions(options) {
+        this.options = options;
+        this.updateDropdown(options);
+    }
+    
+    updateDropdown(filteredOptions) {
+        this.dropdown.innerHTML = '';
+        
+        if (filteredOptions.length === 0) {
+            const noResultOption = document.createElement('div');
+            noResultOption.className = 'searchable-select-option';
+            noResultOption.textContent = '暂无匹配项';
+            noResultOption.style.color = '#999';
+            this.dropdown.appendChild(noResultOption);
+            return;
+        }
+        
+        filteredOptions.forEach((option, index) => {
+            const optionElement = document.createElement('div');
+            optionElement.className = 'searchable-select-option';
+            optionElement.dataset.value = option.value;
+            optionElement.textContent = option.label;
+            
+            if (index === 0) {
+                optionElement.classList.add('highlighted');
+            }
+            
+            optionElement.addEventListener('click', () => {
+                this.selectOption(option);
+            });
+            
+            this.dropdown.appendChild(optionElement);
+        });
+    }
+    
+    search(query) {
+        const filteredOptions = this.options.filter(option => 
+            option.label.toLowerCase().includes(query.toLowerCase()) ||
+            option.value.toLowerCase().includes(query.toLowerCase())
+        );
+        this.updateDropdown(filteredOptions);
+        
+        if (!this.container.classList.contains('open')) {
+            this.show();
+        }
+    }
+    
+    show() {
+        this.container.classList.add('open');
+        this.dropdown.classList.add('show');
+        this.input.placeholder = '搜索模型...';
+        if (this.selectedValue) {
+            this.input.value = '';
+        }
+    }
+    
+    hide() {
+        this.container.classList.remove('open');
+        this.dropdown.classList.remove('show');
+        this.updateDisplayValue();
+    }
+    
+    selectOption(option) {
+        this.selectedValue = option.value;
+        this.input.value = option.label;
+        
+        // 更新对应的隐藏输入框的值
+        const hiddenInput = this.container.parentNode.querySelector('.model-input');
+        if (hiddenInput) {
+            hiddenInput.value = option.value;
+        }
+        
+        this.hide();
+    }
+    
+    updateDisplayValue() {
+        if (this.selectedValue) {
+            const option = this.options.find(opt => opt.value === this.selectedValue);
+            if (option) {
+                this.input.value = option.label;
+            } else {
+                this.input.value = this.selectedValue;
+            }
+        } else {
+            this.input.value = '';
+            this.input.placeholder = this.originalPlaceholder;
+        }
+    }
+    
+    handleKeyDown(e) {
+        const options = this.dropdown.querySelectorAll('.searchable-select-option');
+        let highlighted = this.dropdown.querySelector('.highlighted');
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (highlighted) {
+                    highlighted.classList.remove('highlighted');
+                    const next = highlighted.nextElementSibling;
+                    if (next) {
+                        next.classList.add('highlighted');
+                    } else if (options.length > 0) {
+                        options[0].classList.add('highlighted');
+                    }
+                } else if (options.length > 0) {
+                    options[0].classList.add('highlighted');
+                }
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                if (highlighted) {
+                    highlighted.classList.remove('highlighted');
+                    const prev = highlighted.previousElementSibling;
+                    if (prev) {
+                        prev.classList.add('highlighted');
+                    } else if (options.length > 0) {
+                        options[options.length - 1].classList.add('highlighted');
+                    }
+                } else if (options.length > 0) {
+                    options[options.length - 1].classList.add('highlighted');
+                }
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                if (highlighted && highlighted.dataset.value !== undefined) {
+                    const option = this.options.find(opt => opt.value === highlighted.dataset.value);
+                    if (option) {
+                        this.selectOption(option);
+                    }
+                }
+                break;
+                
+            case 'Escape':
+                this.hide();
+                break;
+        }
+    }
+    
+    setValue(value) {
+        this.selectedValue = value;
+        const option = this.options.find(opt => opt.value === value);
+        if (option) {
+            this.input.value = option.label;
+        } else {
+            this.input.value = value;
+        }
+        
+        // 更新对应的隐藏输入框的值
+        const hiddenInput = this.container.parentNode.querySelector('.model-input');
+        if (hiddenInput) {
+            hiddenInput.value = value;
+        }
+    }
+}
+
+// 初始化搜索选择框实例
+let openaiModelSelect, ai302ModelSelect;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 初始化搜索选择框
+    initSearchableSelects();
     // 加载初始配置
     loadAllConfigs();
     // 检查图片服务状态
     checkImageServiceStatus();
 });
+
+// 初始化搜索选择框
+function initSearchableSelects() {
+    // 初始化OpenAI模型搜索选择框
+    if (document.getElementById('openai_model_container')) {
+        openaiModelSelect = new SearchableSelect('openai_model_container');
+    }
+    
+    // 初始化302AI模型搜索选择框
+    if (document.getElementById('302ai_model_container')) {
+        ai302ModelSelect = new SearchableSelect('302ai_model_container');
+    }
+}
 
 // 标签页切换功能
 function switchTab(tabName) {
@@ -1961,6 +2309,9 @@ async function testProvider(providerName) {
                 break;
             case 'ollama':
                 testResult = await testOllamaProvider(config);
+                break;
+            case '302ai':
+                testResult = await test302AIProvider(config);
                 break;
             default:
                 throw new Error(`不支持的提供者: ${providerName}`);
@@ -2396,6 +2747,88 @@ async function testOllamaProvider(config) {
     }
 }
 
+// 测试 302.AI 提供者
+async function test302AIProvider(config) {
+    try {
+        let apiKey = config['302ai_api_key'];
+        let baseUrl = config['302ai_base_url'] || 'https://api.302.ai/v1';
+        let model = config['302ai_model'] || 'gpt-4o';
+
+        // 如果前端没有填写API Key，尝试从后端获取
+        if (!apiKey) {
+            const configResponse = await fetch('/api/config/ai_providers');
+            if (configResponse.ok) {
+                const configResult = await configResponse.json();
+                if (configResult.success && configResult.config['302ai_api_key']) {
+                    apiKey = configResult.config['302ai_api_key'];
+                }
+            }
+        }
+
+        // 如果仍然没有API Key，提示用户
+        if (!apiKey) {
+            throw new Error('请先配置 302.AI API Key，可通过 https://share.302.ai/5ml9vD 获取');
+        }
+
+        // 如果没有填写 Base URL，使用默认值
+        if (!baseUrl) {
+            baseUrl = 'https://api.302.ai/v1';
+        }
+
+        // 如果没有填写模型，使用默认值
+        if (!model) {
+            model = 'gpt-4o';
+        }
+
+        // 302.AI已经在隐藏字段中包含完整URL，无需额外处理
+
+        // 调用 302.AI API 进行测试（兼容OpenAI格式）
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: 'Say "Hello, I am working!" in exactly 5 words.'
+                    }
+                ],
+                max_tokens: 20,
+                temperature: 0
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        return {
+            success: true,
+            provider: '302ai',
+            model: model,
+            response_preview: data.choices[0].message.content,
+            usage: data.usage || {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+            }
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message,
+            detail: `302.AI 测试失败: ${error.message}`
+        };
+    }
+}
+
 async function testCurrentProvider() {
     await testProvider('{{ current_provider }}');
 }
@@ -2641,15 +3074,62 @@ async function saveProviderConfig(provider) {
                 // 重新加载配置
                 loadAllConfigs();
             } else {
-                showNotification(`${provider} 配置保存失败: ${result.errors || '未知错误'}`, 'error');
+                // 正确处理错误消息
+                let errorMsg = '未知错误';
+                if (result.errors) {
+                    if (typeof result.errors === 'string') {
+                        errorMsg = result.errors;
+                    } else if (Array.isArray(result.errors)) {
+                        errorMsg = result.errors.join('; ');
+                    } else if (typeof result.errors === 'object') {
+                        // 处理对象形式的错误
+                        const errorMessages = [];
+                        for (const [key, value] of Object.entries(result.errors)) {
+                            if (Array.isArray(value)) {
+                                errorMessages.push(`${key}: ${value.join(', ')}`);
+                            } else {
+                                errorMessages.push(`${key}: ${value}`);
+                            }
+                        }
+                        errorMsg = errorMessages.length > 0 ? errorMessages.join('; ') : JSON.stringify(result.errors);
+                    } else {
+                        errorMsg = String(result.errors);
+                    }
+                } else if (result.message) {
+                    errorMsg = result.message;
+                } else if (result.error) {
+                    errorMsg = result.error;
+                } else if (result.detail) {
+                    errorMsg = result.detail;
+                }
+                showNotification(`${provider} 配置保存失败: ${errorMsg}`, 'error');
             }
         } else {
-            showNotification(`${provider} 配置保存失败`, 'error');
+            // 尝试解析错误响应
+            let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error) {
+                    errorMsg = errorData.error;
+                } else if (errorData.detail) {
+                    errorMsg = errorData.detail;
+                } else if (errorData.message) {
+                    errorMsg = errorData.message;
+                }
+            } catch (parseError) {
+                console.error('解析错误响应失败:', parseError);
+            }
+            showNotification(`${provider} 配置保存失败: ${errorMsg}`, 'error');
         }
 
         closeTestModal();
     } catch (error) {
-        showNotification('保存配置失败: ' + error.message, 'error');
+        console.error('保存配置失败:', error);
+        let errorMsg = error.message || '网络连接失败';
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            errorMsg = '网络连接失败，请检查服务器状态';
+        }
+        showNotification('保存配置失败: ' + errorMsg, 'error');
         closeTestModal();
     }
 }
@@ -3197,11 +3677,11 @@ function toggleProviderSpecificConfig() {
 
 // 获取并显示OpenAI模型列表
 async function fetchAndShowModels() {
-    const selectElement = document.getElementById('openai_model_select');
     const inputElement = document.getElementById('openai_model_input');
     const fetchButton = document.getElementById('openai_model_fetch_btn');
+    const containerElement = document.getElementById('openai_model_container');
 
-    if (!selectElement || !inputElement || !fetchButton) return;
+    if (!inputElement || !fetchButton || !openaiModelSelect) return;
 
     try {
         // 设置加载状态
@@ -3255,55 +3735,34 @@ async function fetchAndShowModels() {
         const models = await fetchOpenAIModels(baseUrl, apiKey);
 
         if (models && models.length > 0) {
-            // 如果当前是输入模式，切换到选择模式
-            if (selectElement.style.display === 'none') {
-                // 清空现有选项
-                selectElement.innerHTML = '<option value="">选择模型...</option>';
-
-                // 添加模型选项
-                models.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model.id;
-                    option.textContent = model.id;
-                    selectElement.appendChild(option);
-                });
-
-                // 保存当前输入框的值
-                const currentValue = inputElement.value;
-
-                // 切换显示
+            // 转换为搜索选择框的选项格式
+            const options = models.map(model => ({
+                value: model.id,
+                label: model.id
+            }));
+            
+            // 保存当前输入框的值
+            const currentValue = inputElement.value;
+            
+            // 设置搜索选择框的选项
+            openaiModelSelect.setOptions(options);
+            
+            // 如果当前搜索选择框是隐藏的，显示它并隐藏输入框
+            if (containerElement.style.display === 'none') {
+                containerElement.style.display = 'block';
                 inputElement.style.display = 'none';
-                selectElement.style.display = 'block';
-
-                // 设置选择框的值
-                if (currentValue && selectElement.querySelector(`option[value="${currentValue}"]`)) {
-                    selectElement.value = currentValue;
-                } else {
-                    selectElement.value = ''; // 显示"选择模型..."
-                    inputElement.placeholder = '选择模型...'; // 同时更新输入框的placeholder
+                
+                // 如果有当前值，设置到搜索选择框中
+                if (currentValue) {
+                    openaiModelSelect.setValue(currentValue);
                 }
-
-                // 监听选择变化
-                selectElement.onchange = function() {
-                    if (this.value) {
-                        inputElement.value = this.value;
-                        inputElement.placeholder = this.value; // 更新placeholder为选中的模型
-                    } else {
-                        inputElement.value = '';
-                        inputElement.placeholder = '选择模型...';
-                    }
-                };
-
-                showNotification(`成功获取到 ${models.length} 个模型，请选择一个模型`, 'success');
             } else {
-                // 如果已经是选择模式，切换回输入模式
-                selectElement.style.display = 'none';
+                // 如果搜索选择框已经显示，切换回输入模式
+                containerElement.style.display = 'none';
                 inputElement.style.display = 'block';
-                // 如果没有值且placeholder是"选择模型..."，恢复原始placeholder
-                if (!inputElement.value && inputElement.placeholder === '选择模型...') {
-                    inputElement.placeholder = '{{ current_config.get("openai_model", "gpt-4o") }}';
-                }
             }
+
+            showNotification(`成功获取到 ${models.length} 个模型，请选择一个模型`, 'success');
         } else {
             showNotification('未能获取到模型列表，请检查Base URL和API Key配置', 'warning');
         }
@@ -3316,6 +3775,187 @@ async function fetchAndShowModels() {
         fetchButton.classList.remove('loading');
         fetchButton.disabled = false;
         fetchButton.textContent = '📋';
+    }
+}
+
+// 获取并显示302AI模型列表
+async function fetch302AIModels() {
+    const inputElement = document.getElementById('302ai_model_input');
+    const fetchButton = document.getElementById('302ai_model_fetch_btn');
+    const containerElement = document.getElementById('302ai_model_container');
+
+    if (!inputElement || !fetchButton || !ai302ModelSelect) return;
+
+    try {
+        // 设置加载状态
+        fetchButton.classList.add('loading');
+        fetchButton.disabled = true;
+        fetchButton.textContent = '⏳';
+
+        // 获取Base URL - 只使用前端页面填写的信息
+        const baseUrlInput = document.querySelector('input[name="302ai_base_url"]');
+        let baseUrl = baseUrlInput ? baseUrlInput.value.trim() : '';
+
+        // 如果没有设置Base URL，使用默认值
+        if (!baseUrl) {
+            baseUrl = 'https://api.302.ai/v1';
+        }
+
+        // 302.AI已经在隐藏字段中包含完整URL，无需额外处理
+
+        // 获取API Key - 优先使用前端页面填写的信息，如果没有则从后端获取
+        const apiKeyInput = document.querySelector('input[name="302ai_api_key"]');
+        let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
+        // 如果前端没有填写API Key，尝试从后端获取
+        if (!apiKey) {
+            try {
+                const configResponse = await fetch('/api/config/ai_providers');
+                if (configResponse.ok) {
+                    const configResult = await configResponse.json();
+                    if (configResult.success && configResult.config['302ai_api_key']) {
+                        apiKey = configResult.config['302ai_api_key'];
+                    }
+                }
+            } catch (error) {
+                console.error('获取后端配置失败:', error);
+            }
+        }
+
+        if (!apiKey) {
+            showNotification('请先配置 302.AI API Key，可通过 https://share.302.ai/5ml9vD 获取', 'warning');
+            return;
+        }
+
+        // 获取模型列表（使用302.AI的兼容OpenAI格式）
+        const models = await fetch302AIModelsList(baseUrl, apiKey);
+
+        if (models && models.length > 0) {
+            // 转换为搜索选择框的选项格式
+            const options = models.map(model => ({
+                value: model.id,
+                label: model.id
+            }));
+            
+            // 保存当前输入框的值
+            const currentValue = inputElement.value;
+            
+            // 设置搜索选择框的选项
+            ai302ModelSelect.setOptions(options);
+            
+            // 如果当前搜索选择框是隐藏的，显示它并隐藏输入框
+            if (containerElement.style.display === 'none') {
+                containerElement.style.display = 'block';
+                inputElement.style.display = 'none';
+                
+                // 如果有当前值，设置到搜索选择框中
+                if (currentValue) {
+                    ai302ModelSelect.setValue(currentValue);
+                }
+            } else {
+                // 如果搜索选择框已经显示，切换回输入模式
+                containerElement.style.display = 'none';
+                inputElement.style.display = 'block';
+            }
+
+            showNotification(`成功获取到 ${models.length} 个302.AI模型，请选择一个模型`, 'success');
+        } else {
+            showNotification('未能获取到模型列表，请检查Base URL和API Key配置', 'warning');
+        }
+
+    } catch (error) {
+        console.error('获取302.AI模型列表失败:', error);
+        showNotification('获取模型列表失败: ' + error.message, 'error');
+    } finally {
+        // 恢复按钮状态
+        fetchButton.classList.remove('loading');
+        fetchButton.disabled = false;
+        fetchButton.textContent = '📋';
+    }
+}
+
+// 从302.AI API获取模型列表（兼容OpenAI格式）
+async function fetch302AIModelsList(baseUrl, apiKey) {
+    try {
+        // 直接调用302.AI的models端点（兼容OpenAI格式）
+        const response = await fetch(`${baseUrl}/models`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            // 尝试解析错误响应
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error && errorData.error.message) {
+                    errorMessage = errorData.error.message;
+                } else if (errorData.error) {
+                    errorMessage = errorData.error;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch (parseError) {
+                // 如果无法解析错误响应，使用默认错误信息
+            }
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        
+        // 处理302.AI的响应格式（兼容OpenAI格式）
+        let models = null;
+        
+        // 检查各种可能的响应格式
+        if (data.data && Array.isArray(data.data)) {
+            // OpenAI 兼容格式
+            models = data.data;
+        } else if (Array.isArray(data)) {
+            // 直接返回数组的情况
+            models = data;
+        }
+        
+        if (models) {
+            // 过滤并排序模型列表，优先显示常用的聊天模型
+            const sortedModels = models
+                .filter(model => model.id || model.name) // 确保有ID或name
+                .map(model => {
+                    // 标准化模型对象
+                    return {
+                        id: model.id || model.name,
+                        name: model.name || model.id
+                    };
+                })
+                .sort((a, b) => {
+                    // 优先级排序：gpt-4 > claude-3 > gpt-3.5 > 其他
+                    const getPriority = (id) => {
+                        if (id.includes('gpt-4')) return 4;
+                        if (id.includes('claude-3')) return 3;
+                        if (id.includes('gpt-3.5')) return 2;
+                        return 1;
+                    };
+                    
+                    const priorityA = getPriority(a.id.toLowerCase());
+                    const priorityB = getPriority(b.id.toLowerCase());
+                    
+                    if (priorityA !== priorityB) {
+                        return priorityB - priorityA; // 高优先级在前
+                    }
+                    
+                    return a.id.localeCompare(b.id); // 同优先级按字母排序
+                });
+            
+            return sortedModels;
+        }
+        
+        return null;
+        
+    } catch (error) {
+        console.error('从302.AI获取模型列表失败:', error);
+        throw error;
     }
 }
 

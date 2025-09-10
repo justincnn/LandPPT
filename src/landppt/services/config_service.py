@@ -53,6 +53,11 @@ class ConfigService:
             "ollama_base_url": {"type": "url", "category": "ai_providers", "default": "http://localhost:11434"},
             "ollama_model": {"type": "text", "category": "ai_providers", "default": "llama2"},
             
+            # 302.AI Configuration
+            "302ai_api_key": {"type": "password", "category": "ai_providers"},
+            "302ai_base_url": {"type": "url", "category": "ai_providers", "default": "https://api.302.ai/v1"},
+            "302ai_model": {"type": "text", "category": "ai_providers", "default": "gpt-4o"},
+            
             "default_ai_provider": {"type": "select", "category": "ai_providers", "default": "openai"},
             
             # Generation Parameters
