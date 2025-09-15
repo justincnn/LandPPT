@@ -207,6 +207,7 @@ docker logs -f landppt
 - OpenAI API Key
 - Anthropic API Key
 - Google API Key
+- 302.AI API Key
 - 或配置本地Ollama服务
 
 ### 3. 创建PPT项目

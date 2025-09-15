@@ -211,6 +211,7 @@ Configure your AI API keys in the settings page:
 - OpenAI API Key
 - Anthropic API Key
 - Google API Key
+- 302.AI API Key
 - Or configure local Ollama service
 
 ### 3. Create PPT Projects
