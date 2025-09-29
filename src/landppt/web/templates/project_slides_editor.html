@@ -8238,8 +8238,8 @@
                     },
                     body: JSON.stringify({
                         scenario: '{{ project.scenario }}',
-                        topic: '{{ project.topic }}',
-                        requirements: '{{ project.requirements or "" }}',
+                        topic: `{{ project.topic }}`,
+                        requirements: `{{ (project.requirements or "") }}`,
                         language: 'zh'
                     })
                 })
