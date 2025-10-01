@@ -61,9 +61,13 @@ class ConfigService:
             "default_ai_provider": {"type": "select", "category": "ai_providers", "default": "openai"},
             
             # Generation Parameters
-            "max_tokens": {"type": "number", "category": "generation_params", "default": "2000"},
+            "max_tokens": {"type": "number", "category": "generation_params", "default": "16384"},
             "temperature": {"type": "number", "category": "generation_params", "default": "0.7"},
             "top_p": {"type": "number", "category": "generation_params", "default": "1.0"},
+            
+            # Parallel Generation Configuration
+            "enable_parallel_generation": {"type": "boolean", "category": "generation_params", "default": "false"},
+            "parallel_slides_count": {"type": "number", "category": "generation_params", "default": "3"},
             
             "tavily_api_key": {"type": "password", "category": "generation_params"},
             "tavily_max_results": {"type": "number", "category": "generation_params", "default": "10"},

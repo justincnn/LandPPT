@@ -333,6 +333,68 @@
                 </div>
             </div>
 
+            <!-- 并行生成PPT配置 -->
+            <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <h4 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    <span>🚀</span> 并行生成PPT
+                </h4>
+                
+                <div style="margin-bottom: 20px;">
+                    <label class="toggle-label" style="cursor: pointer; user-select: none;">
+                        <div class="toggle-switch">
+                            <input type="checkbox" name="enable_parallel_generation" id="enable_parallel_generation"
+                                   onchange="toggleParallelGenerationOptions()">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: #495057; margin-bottom: 4px;">启用并行生成</div>
+                            <small style="color: #6c757d; font-weight: 400;">启用后可以同时生成多个幻灯片，显著提高生成速度</small>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="parallel-generation-options" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="parallel_slides_count" style="font-weight: 600; color: #495057; display: block; margin-bottom: 12px;">
+                            并行生成页数
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
+                            <input type="number"
+                                   name="parallel_slides_count"
+                                   id="parallel_slides_count"
+                                   value="{{ current_config.get('parallel_slides_count', '3') }}"
+                                   min="1"
+                                   max="10"
+                                   style="flex: 0 0 100px; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1em;"
+                                   oninput="updateParallelSlidesDisplay(this.value); document.getElementById('parallel_slides_range').value = this.value;">
+                            <input type="range"
+                                   id="parallel_slides_range"
+                                   min="1"
+                                   max="10"
+                                   value="{{ current_config.get('parallel_slides_count', '3') }}"
+                                   style="flex: 1; accent-color: #667eea;"
+                                   oninput="document.getElementById('parallel_slides_count').value = this.value; updateParallelSlidesDisplay(this.value);">
+                            <span id="parallel_slides_display" style="flex: 0 0 80px; text-align: center; font-weight: 600; color: #667eea; font-size: 1.1em; padding: 8px 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                {{ current_config.get('parallel_slides_count', '3') }} 页
+                            </span>
+                        </div>
+                        <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                            💡 <strong>提示：</strong>数值越大，生成速度越快，但对AI服务的并发请求压力也越大。<br>
+                            推荐值：<span style="color: #667eea; font-weight: 500;">3-5页</span>（平衡速度与稳定性）
+                        </small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; padding: 12px 16px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 4px solid #667eea;">
+                    <p style="margin: 0; font-size: 0.9em; color: #495057; line-height: 1.6;">
+                        <strong>⚠️ 注意事项：</strong><br>
+                        • 启用并行生成可能会增加AI API的调用频率和费用<br>
+                        • 部分AI提供商可能有并发请求限制，请根据实际情况调整<br>
+                        • 如遇到频率限制错误，建议降低并行页数或关闭此功能
+                    </p>
+                </div>
+            </div>
+
             <!-- 研究功能配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <h4 style="color: #e74c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
@@ -2896,6 +2958,28 @@ function populateProviderForms() {
     });
 }
 
+// 切换并行生成选项显示
+function toggleParallelGenerationOptions() {
+    const enableCheckbox = document.getElementById('enable_parallel_generation');
+    const optionsDiv = document.getElementById('parallel-generation-options');
+    
+    if (enableCheckbox && optionsDiv) {
+        if (enableCheckbox.checked) {
+            optionsDiv.style.display = 'block';
+        } else {
+            optionsDiv.style.display = 'none';
+        }
+    }
+}
+
+// 更新并行页数显示
+function updateParallelSlidesDisplay(value) {
+    const displaySpan = document.getElementById('parallel_slides_display');
+    if (displaySpan) {
+        displaySpan.textContent = value + ' 页';
+    }
+}
+
 function populateGenerationParams() {
     const tab = document.getElementById('generation-params');
     if (!tab) return;
@@ -2923,6 +3007,11 @@ function populateGenerationParams() {
             }
         }
     });
+    
+    // 触发并行生成选项显示更新
+    setTimeout(() => {
+        toggleParallelGenerationOptions();
+    }, 100);
 }
 
 
@@ -4061,6 +4150,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 延迟执行以确保DOM完全加载
     setTimeout(() => {
         toggleImageServiceOptions();
+        toggleParallelGenerationOptions();
         initOpenAIModelInput();
     }, 100);
 });

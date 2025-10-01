@@ -85,6 +85,10 @@ class AIConfig(BaseSettings):
     temperature: float = Field(default=0.7, env="TEMPERATURE")
     top_p: float = Field(default=1.0, env="TOP_P")
     
+    # Parallel Generation Configuration
+    enable_parallel_generation: bool = Field(default=False, env="ENABLE_PARALLEL_GENERATION")
+    parallel_slides_count: int = Field(default=3, env="PARALLEL_SLIDES_COUNT")
+    
     # Feature Flags
     enable_network_mode: bool = Field(default=True, env="ENABLE_NETWORK_MODE")
     enable_local_models: bool = Field(default=False, env="ENABLE_LOCAL_MODELS")
@@ -233,6 +237,10 @@ def reload_ai_config():
     ai_config.max_tokens = int(os.environ.get('MAX_TOKENS', str(ai_config.max_tokens)))
     ai_config.temperature = float(os.environ.get('TEMPERATURE', str(ai_config.temperature)))
     ai_config.top_p = float(os.environ.get('TOP_P', str(ai_config.top_p)))
+    
+    # Update parallel generation configuration
+    ai_config.enable_parallel_generation = os.environ.get('ENABLE_PARALLEL_GENERATION', str(ai_config.enable_parallel_generation)).lower() == 'true'
+    ai_config.parallel_slides_count = int(os.environ.get('PARALLEL_SLIDES_COUNT', str(ai_config.parallel_slides_count)))
 
     # Update Tavily configuration
     ai_config.tavily_api_key = os.environ.get('TAVILY_API_KEY', ai_config.tavily_api_key)

@@ -463,6 +463,80 @@ class EnhancedPPTService(PPTService):
             else:
                 raise Exception(f"AI生成大纲失败：{str(e)}。请重新生成大纲。")
     
+    async def generate_slides_parallel(self, slide_requests: List[Dict[str, Any]], scenario: str, topic: str, language: str = "zh") -> List[str]:
+        """并行生成多个幻灯片内容
+        
+        Args:
+            slide_requests: 幻灯片请求列表，每个包含slide_title等信息
+            scenario: 场景
+            topic: 主题
+            language: 语言
+            
+        Returns:
+            生成的幻灯片内容列表
+        """
+        try:
+            # 检查是否启用并行生成
+            if not ai_config.enable_parallel_generation:
+                # 如果未启用并行生成，则顺序生成
+                results = []
+                for req in slide_requests:
+                    content = await self.generate_slide_content(
+                        req.get('slide_title', req.get('title', '')),
+                        scenario,
+                        topic,
+                        language
+                    )
+                    results.append(content)
+                return results
+            
+            # 并行生成
+            tasks = []
+            for req in slide_requests:
+                task = self.generate_slide_content(
+                    req.get('slide_title', req.get('title', '')),
+                    scenario,
+                    topic,
+                    language
+                )
+                tasks.append(task)
+            
+            # 等待所有任务完成
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # 处理异常结果
+            processed_results = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"生成第 {i+1} 个幻灯片时出错: {str(result)}")
+                    # 使用默认内容作为后备
+                    slide_title = slide_requests[i].get('slide_title', slide_requests[i].get('title', ''))
+                    processed_results.append(f"• {slide_title}的相关内容\n• 详细说明和分析\n• 实际应用案例")
+                else:
+                    processed_results.append(result)
+            
+            logger.info(f"并行生成完成：成功生成 {len([r for r in results if not isinstance(r, Exception)])} / {len(results)} 个幻灯片")
+            return processed_results
+            
+        except Exception as e:
+            logger.error(f"并行生成幻灯片失败: {str(e)}")
+            # 降级到顺序生成
+            results = []
+            for req in slide_requests:
+                try:
+                    content = await self.generate_slide_content(
+                        req.get('slide_title', req.get('title', '')),
+                        scenario,
+                        topic,
+                        language
+                    )
+                    results.append(content)
+                except Exception as slide_error:
+                    logger.error(f"生成幻灯片失败: {str(slide_error)}")
+                    slide_title = req.get('slide_title', req.get('title', ''))
+                    results.append(f"• {slide_title}的相关内容\n• 详细说明和分析\n• 实际应用案例")
+            return results
+    
     async def generate_slide_content(self, slide_title: str, scenario: str, topic: str, language: str = "zh") -> str:
         """Generate slide content using AI"""
         try:
@@ -3035,98 +3109,186 @@ class EnhancedPPTService(PPTService):
             if not project.slides_data:
                 project.slides_data = []
 
-            # Generate each slide individually
-            for i, slide in enumerate(slides):
-                try:
-                    # Check if slide already exists
+            # 检查是否启用并行生成
+            parallel_enabled = ai_config.enable_parallel_generation
+            parallel_count = ai_config.parallel_slides_count if parallel_enabled else 1
+            
+            if parallel_enabled:
+                logger.info(f"🚀 并行生成已启用，每批生成 {parallel_count} 页")
+            else:
+                logger.info(f"📝 使用顺序生成模式")
+            
+            # 批量生成幻灯片（支持并行和顺序两种模式）
+            i = 0
+            while i < len(slides):
+                # 确定本批次要生成的幻灯片
+                batch_end = min(i + parallel_count, len(slides))
+                batch_slides = slides[i:batch_end]
+                
+                # 收集本批次需要生成的幻灯片
+                slides_to_generate = []
+                slides_to_skip = []
+                
+                for idx in range(i, batch_end):
+                    slide = slides[idx]
+                    
+                    # 检查是否已存在
                     existing_slide = None
-                    if project.slides_data and i < len(project.slides_data):
-                        existing_slide = project.slides_data[i]
-
-                    # If slide exists and has content (either user-edited or AI-generated), skip generation
+                    if project.slides_data and idx < len(project.slides_data):
+                        existing_slide = project.slides_data[idx]
+                    
                     if existing_slide and existing_slide.get('html_content'):
+                        # 幻灯片已存在，跳过
                         if existing_slide.get('is_user_edited', False):
-                            logger.info(f"Skipping slide {i+1} generation - user has edited this slide")
-                            skip_message = f'第{i+1}页已被用户编辑，跳过重新生成'
+                            skip_message = f'第{idx+1}页已被用户编辑，跳过重新生成'
                         else:
-                            logger.info(f"Skipping slide {i+1} generation - slide already exists")
-                            skip_message = f'第{i+1}页已存在，跳过生成'
-
-                        # Send skip message
+                            skip_message = f'第{idx+1}页已存在，跳过生成'
+                        
                         skip_data = {
                             'type': 'slide_skipped',
-                            'current': i + 1,
+                            'current': idx + 1,
                             'total': len(slides),
                             'message': skip_message,
                             'slide_data': existing_slide
                         }
                         yield f"data: {json.dumps(skip_data)}\n\n"
-                        continue
+                        slides_to_skip.append(idx)
+                    else:
+                        # 需要生成
+                        slides_to_generate.append((idx, slide))
+                
+                # 如果有需要生成的幻灯片
+                if slides_to_generate:
+                    if parallel_enabled and len(slides_to_generate) > 1:
+                        # 并行生成
+                        logger.info(f"📦 并行生成 {len(slides_to_generate)} 页")
+                        
+                        # 发送进度消息
+                        for idx, slide in slides_to_generate:
+                            progress_data = {
+                                'type': 'progress',
+                                'current': idx + 1,
+                                'total': len(slides),
+                                'message': f'正在并行生成第{idx+1}页：{slide.get("title", "")}...'
+                            }
+                            yield f"data: {json.dumps(progress_data)}\n\n"
+                        
+                        # 创建并行任务
+                        tasks = []
+                        for idx, slide in slides_to_generate:
+                            task = self._generate_single_slide_html_with_prompts(
+                                slide, confirmed_requirements, system_prompt,
+                                idx + 1, len(slides), slides, project.slides_data, project_id
+                            )
+                            tasks.append(task)
+                        
+                        # 并行执行
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        
+                        # 处理结果
+                        for (idx, slide), result in zip(slides_to_generate, results):
+                            try:
+                                if isinstance(result, Exception):
+                                    raise result
+                                
+                                html_content = result
+                                logger.info(f"✅ 并行生成第{idx+1}页成功")
+                            except Exception as e:
+                                logger.error(f"❌ 并行生成第{idx+1}页失败: {e}")
+                                html_content = f"<div style='padding: 50px; text-align: center; color: red;'>生成失败：{str(e)}</div>"
+                            
+                            # 创建幻灯片数据
+                            slide_data = {
+                                "page_number": idx + 1,
+                                "title": slide.get('title', f'第{idx+1}页'),
+                                "html_content": html_content,
+                                "is_user_edited": False
+                            }
+                            
+                            # 更新项目数据
+                            while len(project.slides_data) <= idx:
+                                project.slides_data.append(None)
+                            project.slides_data[idx] = slide_data
+                            
+                            # 保存到数据库
+                            try:
+                                from .db_project_manager import DatabaseProjectManager
+                                db_manager = DatabaseProjectManager()
+                                project.updated_at = time.time()
+                                await db_manager.save_single_slide(project_id, idx, slide_data)
+                                logger.info(f"💾 第{idx+1}页已保存到数据库")
+                            except Exception as save_error:
+                                logger.error(f"保存第{idx+1}页失败: {save_error}")
+                            
+                            # 发送幻灯片数据
+                            slide_response = {'type': 'slide', 'slide_data': slide_data}
+                            yield f"data: {json.dumps(slide_response)}\n\n"
+                    else:
+                        # 顺序生成（未启用并行或只有一页）
+                        for idx, slide in slides_to_generate:
+                            try:
+                                # 发送进度更新
+                                slide_title = slide.get('title', '')
+                                progress_data = {
+                                    'type': 'progress',
+                                    'current': idx + 1,
+                                    'total': len(slides),
+                                    'message': f'正在生成第{idx+1}页：{slide_title}...'
+                                }
+                                yield f"data: {json.dumps(progress_data)}\n\n"
+                                logger.info(f"Generating slide {idx+1}/{len(slides)}: {slide_title}")
 
-                    # Send progress update
-                    slide_title = slide.get('title', '')
-                    progress_data = {
-                        'type': 'progress',
-                        'current': i + 1,
-                        'total': len(slides),
-                        'message': f'正在生成第{i+1}页：{slide_title}...'
-                    }
-                    yield f"data: {json.dumps(progress_data)}\n\n"
-                    logger.info(f"Generating slide {i+1}/{len(slides)}: {slide_title}")
+                                # 生成HTML
+                                html_content = await self._generate_single_slide_html_with_prompts(
+                                    slide, confirmed_requirements, system_prompt,
+                                    idx + 1, len(slides), slides, project.slides_data, project_id
+                                )
 
-                    # Generate HTML for this slide with context
-                    html_content = await self._generate_single_slide_html_with_prompts(
-                        slide, confirmed_requirements, system_prompt, i + 1, len(slides), slides, project.slides_data, project_id
-                    )
-                    logger.debug(f"Successfully generated slide {i+1}/{len(slides)}: {html_content}")
+                                # 创建幻灯片数据
+                                slide_data = {
+                                    "page_number": idx + 1,
+                                    "title": slide.get('title', f'第{idx+1}页'),
+                                    "html_content": html_content,
+                                    "is_user_edited": False
+                                }
 
-                    # Create slide data
-                    slide_data = {
-                        "page_number": i + 1,
-                        "title": slide.get('title', f'第{i+1}页'),
-                        "html_content": html_content,
-                        "is_user_edited": False  # Mark as AI-generated
-                    }
+                                # 更新项目数据
+                                while len(project.slides_data) <= idx:
+                                    project.slides_data.append(None)
+                                project.slides_data[idx] = slide_data
 
-                    # Update project slides data
-                    while len(project.slides_data) <= i:
-                        project.slides_data.append(None)
-                    project.slides_data[i] = slide_data
+                                # 保存到数据库
+                                try:
+                                    from .db_project_manager import DatabaseProjectManager
+                                    db_manager = DatabaseProjectManager()
+                                    project.updated_at = time.time()
+                                    await db_manager.save_single_slide(project_id, idx, slide_data)
+                                    logger.info(f"Successfully saved slide {idx+1} to database for project {project_id}")
+                                except Exception as save_error:
+                                    logger.error(f"Failed to save slide {idx+1} to database: {save_error}")
 
-                    # 立即保存当前页面到数据库，确保实时同步和独立的创建时间
-                    try:
-                        from .db_project_manager import DatabaseProjectManager
-                        db_manager = DatabaseProjectManager()
+                                # 发送幻灯片数据
+                                slide_response = {'type': 'slide', 'slide_data': slide_data}
+                                yield f"data: {json.dumps(slide_response)}\n\n"
 
-                        # 更新项目的slides_data和updated_at
-                        project.updated_at = time.time()
+                            except Exception as e:
+                                logger.error(f"Error generating slide {idx+1}: {e}")
+                                # 发送错误幻灯片
+                                error_slide = {
+                                    "page_number": idx + 1,
+                                    "title": slide.get('title', f'第{idx+1}页'),
+                                    "html_content": f"<div style='padding: 50px; text-align: center; color: red;'>生成失败：{str(e)}</div>"
+                                }
 
-                        # 保存单个slide到数据库，保持独立的创建时间
-                        await db_manager.save_single_slide(project_id, i, slide_data)
-                        logger.info(f"Successfully saved slide {i+1} to database for project {project_id}")
-                    except Exception as save_error:
-                        logger.error(f"Failed to save slide {i+1} to database: {save_error}")
-                        # 继续生成，不因保存失败而中断
+                                while len(project.slides_data) <= idx:
+                                    project.slides_data.append(None)
+                                project.slides_data[idx] = error_slide
 
-                    # Send slide data
-                    slide_response = {'type': 'slide', 'slide_data': slide_data}
-                    yield f"data: {json.dumps(slide_response)}\n\n"
-
-                except Exception as e:
-                    logger.error(f"Error generating slide {i+1}: {e}")
-                    # Send error for this slide
-                    error_slide = {
-                        "page_number": i + 1,
-                        "title": slide.get('title', f'第{i+1}页'),
-                        "html_content": f"<div style='padding: 50px; text-align: center; color: red;'>生成失败：{str(e)}</div>"
-                    }
-
-                    while len(project.slides_data) <= i:
-                        project.slides_data.append(None)
-                    project.slides_data[i] = error_slide
-
-                    error_response = {'type': 'slide', 'slide_data': error_slide}
-                    yield f"data: {json.dumps(error_response)}\n\n"
+                                error_response = {'type': 'slide', 'slide_data': error_slide}
+                                yield f"data: {json.dumps(error_response)}\n\n"
+                
+                # 移动到下一批
+                i = batch_end
 
             # Generate combined HTML
             project.slides_html = self._combine_slides_to_full_html(
