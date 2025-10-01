@@ -1468,10 +1468,20 @@ async def confirm_project_requirements(
         # 如果是文件项目，保存文件信息
         if content_source == "file" and file_outline and 'file_info' in file_outline:
             file_info = file_outline['file_info']
-            confirmed_requirements.update({
-                "file_path": file_info['file_path'],
-                "filename": file_info['filename']
-            })
+            file_path = file_info.get('file_path') or file_info.get('merged_file_path')
+            filename = file_info.get('filename') or file_info.get('merged_filename')
+            uploaded_files = file_info.get('uploaded_files')
+
+            file_metadata = {}
+            if file_path:
+                file_metadata["file_path"] = file_path
+            if filename:
+                file_metadata["filename"] = filename
+            if uploaded_files:
+                file_metadata["uploaded_files"] = uploaded_files
+
+            if file_metadata:
+                confirmed_requirements.update(file_metadata)
 
         # Store confirmed requirements in project
         # 直接确认需求并更新TODO板，无需AI生成待办清单
@@ -5206,9 +5216,10 @@ async def _process_uploaded_files_for_outline(
             # 创建文件大纲生成请求
             from ..api.models import FileOutlineGenerationRequest
             filenames_str = ", ".join([f.filename for f in files])
+            merged_filename = f"merged_content_{len(files)}_files.md"
             outline_request = FileOutlineGenerationRequest(
                 file_path=merged_file_path,
-                filename=f"merged_content_{len(files)}_files.md",
+                filename=merged_filename,
                 topic=topic if topic.strip() else None,
                 scenario="general",
                 requirements=requirements,
@@ -5230,13 +5241,23 @@ async def _process_uploaded_files_for_outline(
                 logger.info(f"Successfully generated outline from {len(files)} files: {filenames_str}")
                 # 在大纲中添加文件信息，用于重新生成
                 outline_with_file_info = result.outline.copy()
+                original_filenames = [f.filename for f in files]
+                file_paths_without_merge = saved_file_paths[:-1]  # 排除临时合并文件
+                uploaded_files_info = [
+                    {'filename': name, 'file_path': path}
+                    for name, path in zip(original_filenames, file_paths_without_merge)
+                ]
                 outline_with_file_info['file_info'] = {
-                    'file_paths': saved_file_paths[:-1],  # 排除临时合并文件
+                    'file_paths': file_paths_without_merge,
                     'merged_file_path': merged_file_path,
-                    'filenames': [f.filename for f in files],
+                    'merged_filename': merged_filename,
+                    'filenames': original_filenames,
                     'files_count': len(files),
                     'processing_mode': file_processing_mode,
-                    'analysis_depth': content_analysis_depth
+                    'analysis_depth': content_analysis_depth,
+                    'file_path': merged_file_path,
+                    'filename': merged_filename,
+                    'uploaded_files': uploaded_files_info
                 }
                 return outline_with_file_info
             else:

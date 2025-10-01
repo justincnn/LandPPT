@@ -3169,7 +3169,7 @@ class EnhancedPPTService(PPTService):
                                 'type': 'progress',
                                 'current': idx + 1,
                                 'total': len(slides),
-                                'message': f'正在并行生成第{idx+1}页：{slide.get("title", "")}...'
+                                'message': f'正在生成第{idx+1}-{idx+1+len(slides_to_generate)}页...'
                             }
                             yield f"data: {json.dumps(progress_data)}\n\n"
                         
