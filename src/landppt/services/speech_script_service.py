@@ -471,13 +471,9 @@ class SpeechScriptService:
                     error_parts.append(f"{len(skipped_slides)}页被跳过")
                 error_message = "部分页面生成失败: " + ", ".join(error_parts)
 
-            # Final progress update
-            if success:
-                progress_tracker.complete_task(
-                    task_id,
-                    f"生成完成！成功 {len(successful_scripts)}/{total_slides} 页"
-                )
-            else:
+            # Final progress update - DO NOT mark as completed here
+            # The task will be marked as completed in routes.py after database save
+            if not success:
                 progress_tracker.fail_task(task_id, error_message or "生成失败")
 
             if progress_callback:

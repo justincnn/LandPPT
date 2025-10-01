@@ -3039,6 +3039,7 @@ async def generate_speech_script(
                         'speaking_pace': customization.speaking_pace
                     }
 
+                    saved_count = 0
                     for script in result.scripts:
                         await repo.save_speech_script(
                             project_id=project_id,
@@ -3048,9 +3049,21 @@ async def generate_speech_script(
                             generation_params=generation_params,
                             estimated_duration=script.estimated_duration
                         )
+                        saved_count += 1
+                        logger.debug(f"Saved script {saved_count}/{len(result.scripts)} for slide {script.slide_index}")
 
+                    # Ensure all changes are committed before closing
+                    repo.db.commit()
                     repo.close()
-                    logger.info(f"Task {task_id} completed successfully")
+                    logger.info(f"All {saved_count} scripts saved and committed to database for task {task_id}")
+
+                    # NOW mark the task as completed after database save
+                    from ..services.progress_tracker import progress_tracker
+                    progress_tracker.complete_task(
+                        task_id,
+                        f"生成完成！成功 {saved_count} 页"
+                    )
+                    logger.info(f"Task {task_id} marked as completed")
                 else:
                     logger.error(f"Generation failed for task {task_id}: {result.error_message}")
 
@@ -3229,8 +3242,12 @@ async def get_current_speech_scripts(
 
         repo = SpeechScriptRepository()
 
+        # Expire all objects to ensure fresh data from database
+        repo.db.expire_all()
+
         # 获取项目的当前演讲稿
         scripts = await repo.get_current_speech_scripts_by_project(project_id)
+        logger.info(f"Found {len(scripts)} speech scripts for project {project_id}")
 
         # 转换为JSON格式
         scripts_data = []
@@ -3254,6 +3271,8 @@ async def get_current_speech_scripts(
                 "created_at": script.created_at,
                 "updated_at": script.updated_at
             })
+
+        repo.close()
 
         return {
             "success": True,

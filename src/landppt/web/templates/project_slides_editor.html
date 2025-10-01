@@ -12331,45 +12331,15 @@
                             clearInterval(interval);
                             updateProgressToast(progressToast, progress.message, 100);
 
-                            // Fetch the actual generation result
-                            setTimeout(async () => {
-                                try {
-                                    const resultResponse = await fetch(`/api/projects/{{ project.project_id }}/speech-scripts/result/${taskId}`);
-                                    const resultData = await resultResponse.json();
+                            // Close progress toast and start polling for data
+                            setTimeout(() => {
+                                closeProgressToast(progressToast);
+                                showNotification('演讲稿生成完成！', 'success');
 
-                                    closeProgressToast(progressToast);
-
-                                    if (resultData.success) {
-                                        showNotification('演讲稿生成完成！', 'success');
-
-                                        // Store the result and show preview
-                                        speechScriptData = resultData;
-                                        showSpeechScriptPreview(resultData);
-
-                                        // Show additional notification for partial failures
-                                        const metadata = resultData.generation_metadata;
-                                        if (metadata && (metadata.failed_slides > 0 || metadata.skipped_slides > 0)) {
-                                            setTimeout(() => {
-                                                let warningMessage = '部分页面生成失败：';
-                                                if (metadata.failed_slides > 0) {
-                                                    warningMessage += `${metadata.failed_slides}页失败`;
-                                                }
-                                                if (metadata.skipped_slides > 0) {
-                                                    if (metadata.failed_slides > 0) warningMessage += '，';
-                                                    warningMessage += `${metadata.skipped_slides}页跳过`;
-                                                }
-                                                showNotification(warningMessage, 'warning');
-                                            }, 1000);
-                                        }
-                                    } else {
-                                        showNotification(`获取结果失败: ${resultData.error}`, 'error');
-                                    }
-                                } catch (error) {
-                                    console.error('Failed to fetch generation result:', error);
-                                    closeProgressToast(progressToast);
-                                    showNotification('获取生成结果失败', 'error');
-                                }
-                            }, 1000);
+                                // 使用轮询机制等待数据库数据可用
+                                console.log('Starting to poll for speech scripts...');
+                                pollForSpeechScripts();
+                            }, 500);
 
                         } else if (progress.status === 'failed') {
                             clearInterval(interval);
@@ -13039,23 +13009,71 @@
             }
         }
 
+        async function pollForSpeechScripts() {
+            const maxAttempts = 30; // 最多尝试20次
+            const pollInterval = 1000; // 每500ms查询一次
+            let attempts = 0;
+
+            const poll = async () => {
+                attempts++;
+                console.log(`Polling attempt ${attempts}/${maxAttempts}...`);
+
+                try {
+                    const response = await fetch(`/api/projects/{{ project.project_id }}/speech-scripts`);
+                    const result = await response.json();
+
+                    if (result.success && result.scripts && result.scripts.length > 0) {
+                        console.log(`Found ${result.scripts.length} scripts, displaying...`);
+                        // 找到数据，显示演讲稿
+                        showCurrentSpeechScripts();
+                        return;
+                    }
+
+                    // 如果还没到最大尝试次数，继续轮询
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, pollInterval);
+                    } else {
+                        console.warn('Polling timeout: No scripts found after max attempts');
+                        showNotification('获取演讲稿超时，请手动刷新页面后查看', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    // 出错继续尝试
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, pollInterval);
+                    } else {
+                        showNotification('获取演讲稿失败，请刷新页面重试', 'error');
+                    }
+                }
+            };
+
+            // 开始轮询
+            poll();
+        }
+
         async function showCurrentSpeechScripts() {
             try {
                 // Close current dialog
                 closeSpeechScriptDialog();
 
+                console.log('Fetching speech scripts from API...');
                 // Fetch current speech scripts
                 const response = await fetch(`/api/projects/{{ project.project_id }}/speech-scripts`);
                 const result = await response.json();
 
+                console.log('API response:', result);
+
                 if (!result.success) {
+                    console.error('API returned error:', result.error);
                     showNotification(`获取演讲稿失败: ${result.error}`, 'error');
                     return;
                 }
 
                 const scripts = result.scripts;
+                console.log(`Found ${scripts.length} scripts`);
 
                 if (scripts.length === 0) {
+                    console.warn('No scripts found in database');
                     showNotification('暂无演讲稿，请先生成演讲稿', 'info');
                     return;
                 }
