@@ -759,10 +759,29 @@
 
             <!-- File Upload Section (hidden by default) -->
             <div id="file-upload-section-todo" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">📁 上传文件</label>
+                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">📁 上传文件 (支持多文件)</label>
                 <input type="file" id="file_upload_todo" name="file_upload" accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.xlsx,.csv"
+                       multiple
                        style="width: 100%; padding: 8px; border: 2px dashed #3498db; background: #f8f9fa; border-radius: 6px;">
-                <small style="color: #7f8c8d; display: block; margin-top: 5px;">支持 PDF、DOCX、TXT、MD 等格式，最大 100MB</small>
+                <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+                    📌 支持同时选择多个文件 | 支持 PDF、DOCX、TXT、MD 等格式 | 单个文件最大 100MB
+                </small>
+
+                <!-- Multiple Files List Display -->
+                <div id="selected-files-list-todo" style="margin-top: 10px; display: none;">
+                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: #2c3e50;">已选择的文件：</strong>
+                            <button type="button" onclick="clearAllFiles()"
+                                    style="padding: 4px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                清除所有
+                            </button>
+                        </div>
+                        <div id="files-list-container-todo" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Files will be listed here -->
+                        </div>
+                    </div>
+                </div>
 
                 <!-- File Processing Options -->
                 <div id="file-processing-options-todo" style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e9ecef; display: none;">
@@ -5242,6 +5261,175 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// 清除所有已选择的文件
+function clearAllFiles() {
+    const fileInput = document.getElementById('file_upload_todo');
+    if (fileInput) {
+        fileInput.value = '';
+        updateFilesList();
+    }
+}
+
+// 移除单个文件
+function removeFile(index) {
+    const fileInput = document.getElementById('file_upload_todo');
+    if (!fileInput || !fileInput.files) return;
+
+    const dt = new DataTransfer();
+    const files = Array.from(fileInput.files);
+
+    files.forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+
+    fileInput.files = dt.files;
+    updateFilesList();
+}
+
+// 更新文件列表显示
+function updateFilesList() {
+    const fileInput = document.getElementById('file_upload_todo');
+    const filesList = document.getElementById('selected-files-list-todo');
+    const filesContainer = document.getElementById('files-list-container-todo');
+    const processingOptions = document.getElementById('file-processing-options-todo');
+    const pdfProcessingMode = document.getElementById('pdf-processing-mode-todo');
+
+    if (!fileInput || !filesList || !filesContainer) return;
+
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        filesList.style.display = 'none';
+        if (processingOptions) processingOptions.style.display = 'none';
+        if (pdfProcessingMode) pdfProcessingMode.style.display = 'none';
+        return;
+    }
+
+    // 显示文件列表
+    filesList.style.display = 'block';
+
+    // 显示文件处理选项
+    if (processingOptions) {
+        processingOptions.style.display = 'block';
+    }
+
+    // 检查是否有PDF文件
+    let hasPdf = false;
+    for (let i = 0; i < files.length; i++) {
+        const fileExt = '.' + files[i].name.split('.').pop().toLowerCase();
+        if (fileExt === '.pdf') {
+            hasPdf = true;
+            break;
+        }
+    }
+
+    // 根据是否有PDF显示/隐藏PDF处理选项
+    if (pdfProcessingMode) {
+        pdfProcessingMode.style.display = hasPdf ? 'block' : 'none';
+    }
+
+    // 生成文件列表HTML
+    let html = '';
+    let totalSize = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
+        totalSize += file.size;
+
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-bottom: 5px; border-left: 3px solid #3498db;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; color: #2c3e50;">${i + 1}. ${file.name}</div>
+                    <div style="font-size: 12px; color: #7f8c8d;">
+                        <span>${fileExt.toUpperCase()}</span> |
+                        <span>${sizeInMB} MB</span>
+                    </div>
+                </div>
+                <button type="button" onclick="removeFile(${i})"
+                        style="padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                    删除
+                </button>
+            </div>
+        `;
+    }
+
+    // 添加总计信息
+    html += `
+        <div style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px; text-align: center;">
+            <strong style="color: #2c3e50;">共 ${files.length} 个文件 | 总大小: ${(totalSize / 1024 / 1024).toFixed(2)} MB</strong>
+        </div>
+    `;
+
+    filesContainer.innerHTML = html;
+
+    // 自动填充主题（如果为空且只有一个文件）
+    const topicInput = document.getElementById('topic');
+    if (topicInput && !topicInput.value.trim() && files.length === 1) {
+        const baseName = files[0].name.replace(/\.[^/.]+$/, "");
+        topicInput.value = baseName;
+    } else if (topicInput && !topicInput.value.trim() && files.length > 1) {
+        topicInput.value = `合并文档 (${files.length}个文件)`;
+    }
+}
+
+// 监听文件选择变化 - 支持多文件
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('file_upload_todo');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            const processingOptions = document.getElementById('file-processing-options-todo');
+            const pdfProcessingMode = document.getElementById('pdf-processing-mode-todo');
+
+            if (files && files.length > 0) {
+                // 验证所有文件
+                const allowedTypes = ['.pdf', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.xlsx', '.csv'];
+                let hasInvalidFile = false;
+                let hasOversizedFile = false;
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+
+                    // 验证文件大小
+                    if (file.size > 100 * 1024 * 1024) {
+                        alert(`文件 "${file.name}" 大小超过100MB限制`);
+                        hasOversizedFile = true;
+                        break;
+                    }
+
+                    // 验证文件类型
+                    if (!allowedTypes.includes(fileExt)) {
+                        alert(`文件 "${file.name}" 格式不支持\n支持的格式: ${allowedTypes.join(', ')}`);
+                        hasInvalidFile = true;
+                        break;
+                    }
+                }
+
+                if (hasInvalidFile || hasOversizedFile) {
+                    e.target.value = '';
+                    if (processingOptions) processingOptions.style.display = 'none';
+                    if (pdfProcessingMode) pdfProcessingMode.style.display = 'none';
+                    return;
+                }
+
+                // 更新文件列表显示
+                updateFilesList();
+            } else {
+                // 如果没有选择文件，隐藏处理选项
+                const filesList = document.getElementById('selected-files-list-todo');
+                if (filesList) filesList.style.display = 'none';
+                if (processingOptions) processingOptions.style.display = 'none';
+                if (pdfProcessingMode) pdfProcessingMode.style.display = 'none';
+            }
+        });
+    }
+});
+
 // 表单提交处理
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('requirements-form');
@@ -5250,7 +5438,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fileRadio = document.querySelector('input[name="content_source"][value="file"]');
             const fileInput = document.getElementById('file_upload_todo');
 
-            if (fileRadio && fileRadio.checked && fileInput && !fileInput.files[0]) {
+            if (fileRadio && fileRadio.checked && fileInput && fileInput.files.length === 0) {
                 e.preventDefault();
                 alert('请选择要上传的文件');
                 return false;

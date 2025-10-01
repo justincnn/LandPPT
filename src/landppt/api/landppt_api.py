@@ -695,7 +695,7 @@ async def generate_outline_from_file(request: FileOutlineGenerationRequest):
 
 @router.post("/files/upload-and-generate-outline")
 async def upload_file_and_generate_outline(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     topic: Optional[str] = Form(None),
     scenario: str = Form("general"),
     page_count_mode: str = Form("ai_decide"),
@@ -710,31 +710,54 @@ async def upload_file_and_generate_outline(
     tech_highlights: Optional[str] = Form(None),
     target_audience: Optional[str] = Form(None)
 ):
-    """上传文件并直接生成PPT大纲"""
+    """上传多个文件并直接生成PPT大纲"""
     try:
-        # 验证文件
-        is_valid, message = file_processor.validate_file(file.filename, file.size)
-        if not is_valid:
-            raise HTTPException(status_code=400, detail=message)
+        # 验证所有文件
+        for file in files:
+            is_valid, message = file_processor.validate_file(file.filename, file.size)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=f"{file.filename}: {message}")
 
-        # 保存临时文件
+        # 保存所有临时文件并处理
         import tempfile
         import os
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+        temp_file_paths = []
+        all_processed_content = []
 
         try:
+            # 保存并处理每个文件
+            for file in files:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
+                    content = await file.read()
+                    temp_file.write(content)
+                    temp_file_path = temp_file.name
+                    temp_file_paths.append(temp_file_path)
+
+                # 处理单个文件
+                file_result = await file_processor.process_file(temp_file_path, file.filename)
+                all_processed_content.append({
+                    "filename": file.filename,
+                    "content": file_result.processed_content
+                })
+
+            # 合并所有文件内容为一个Markdown文档
+            merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+
+            # 创建临时合并文件
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
+                merged_file.write(merged_content)
+                merged_file_path = merged_file.name
+                temp_file_paths.append(merged_file_path)
+
             # 解析多选字段
             focus_content_list = focus_content.split(',') if focus_content else []
             tech_highlights_list = tech_highlights.split(',') if tech_highlights else []
 
-            # 创建请求对象
+            # 创建请求对象，使用合并后的文件
             outline_request = FileOutlineGenerationRequest(
-                file_path=temp_file_path,
-                filename=file.filename,
+                file_path=merged_file_path,
+                filename=f"merged_content_{len(files)}_files.md",
                 topic=topic,
                 scenario=scenario,
                 requirements="",  # API调用暂时没有requirements参数
@@ -751,17 +774,27 @@ async def upload_file_and_generate_outline(
 
             # 生成大纲
             result = await ppt_service.generate_outline_from_file(outline_request)
+
+            # 在结果中添加文件列表信息
+            if result.success and result.metadata:
+                result.metadata["source_files"] = [f.filename for f in files]
+                result.metadata["files_count"] = len(files)
+
             return result
 
         finally:
-            # 清理临时文件
-            if os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
+            # 清理所有临时文件
+            for temp_path in temp_file_paths:
+                if os.path.exists(temp_path):
+                    try:
+                        os.unlink(temp_path)
+                    except Exception as e:
+                        logger.warning(f"Failed to delete temp file {temp_path}: {e}")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error uploading file and generating outline: {e}")
+        logger.error(f"Error uploading files and generating outline: {e}")
         return FileOutlineGenerationResponse(
             success=False,
             error=str(e),

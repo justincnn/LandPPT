@@ -363,35 +363,131 @@ class FileProcessor:
     def _create_content_sections(self, content: str) -> List[Dict[str, str]]:
         """Create structured sections from content"""
         sections = []
-        
+
         # Split content into logical sections
         paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
-        
+
         # Create title slide
         sections.append({
             'type': 'title',
             'title': '文档内容展示',
             'subtitle': '基于上传文档生成'
         })
-        
+
         # Create content slides (max 10)
         for i, paragraph in enumerate(paragraphs[:9]):
             if len(paragraph) > 50:  # Only use substantial paragraphs
                 # Try to extract a title from the first sentence
                 sentences = paragraph.split('。')
                 title = sentences[0][:30] + '...' if len(sentences[0]) > 30 else sentences[0]
-                
+
                 sections.append({
                     'type': 'content',
                     'title': title or f'内容 {i+1}',
                     'content': paragraph[:300] + '...' if len(paragraph) > 300 else paragraph
                 })
-        
+
         # Add thank you slide
         sections.append({
             'type': 'thankyou',
             'title': '谢谢观看',
             'subtitle': '基于文档内容生成'
         })
-        
+
         return sections
+
+    def merge_multiple_files_to_markdown(self, files_content: List[Dict[str, str]]) -> str:
+        """
+        将多个文件的内容合并为一个完整的Markdown文档
+
+        Args:
+            files_content: 文件内容列表，每项包含 filename 和 content
+
+        Returns:
+            合并后的Markdown格式内容
+        """
+        if not files_content:
+            return ""
+
+        # 如果只有一个文件，直接返回其内容
+        if len(files_content) == 1:
+            return files_content[0]["content"]
+
+        # 构建合并后的Markdown文档
+        merged_parts = []
+
+        # 添加文档标题
+        merged_parts.append("# 合并文档内容\n")
+        merged_parts.append(f"*本文档由 {len(files_content)} 个源文件合并生成*\n")
+        merged_parts.append("---\n")
+
+        # 添加目录
+        merged_parts.append("## 📋 文档目录\n")
+        for i, file_info in enumerate(files_content, 1):
+            filename = file_info["filename"]
+            merged_parts.append(f"{i}. [{filename}](#{self._sanitize_anchor(filename)})\n")
+        merged_parts.append("\n---\n")
+
+        # 添加每个文件的内容
+        for i, file_info in enumerate(files_content, 1):
+            filename = file_info["filename"]
+            content = file_info["content"]
+
+            # 添加文件标题（作为一级标题）
+            merged_parts.append(f"\n## {i}. {filename} {{#{self._sanitize_anchor(filename)}}}\n")
+
+            # 添加分隔线
+            merged_parts.append("---\n")
+
+            # 添加文件内容
+            # 如果内容已经包含Markdown格式，保持原样
+            # 否则将其格式化为段落
+            if content.strip():
+                # 检查是否已经是Markdown格式
+                if self._is_markdown_formatted(content):
+                    merged_parts.append(f"{content}\n")
+                else:
+                    # 将纯文本内容转换为段落
+                    paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+                    for paragraph in paragraphs:
+                        merged_parts.append(f"{paragraph}\n\n")
+            else:
+                merged_parts.append("*（此文件无内容或内容提取失败）*\n")
+
+            # 添加文件结束标记
+            merged_parts.append("\n")
+
+        # 添加文档结尾
+        merged_parts.append("\n---\n")
+        merged_parts.append("*文档结束*\n")
+
+        return "".join(merged_parts)
+
+    def _sanitize_anchor(self, text: str) -> str:
+        """将文本转换为合法的Markdown锚点"""
+        # 移除特殊字符，只保留字母数字和中文
+        sanitized = re.sub(r'[^\w\u4e00-\u9fff-]', '-', text)
+        # 移除多余的连字符
+        sanitized = re.sub(r'-+', '-', sanitized)
+        # 移除首尾的连字符
+        sanitized = sanitized.strip('-')
+        return sanitized.lower()
+
+    def _is_markdown_formatted(self, content: str) -> bool:
+        """检查内容是否已经是Markdown格式"""
+        # 简单检查是否包含常见的Markdown语法
+        markdown_indicators = [
+            r'^#{1,6}\s',  # 标题
+            r'\*\*.*\*\*',  # 粗体
+            r'\*.*\*',  # 斜体
+            r'^\s*[-*+]\s',  # 列表
+            r'^\s*\d+\.\s',  # 有序列表
+            r'\[.*\]\(.*\)',  # 链接
+            r'```',  # 代码块
+        ]
+
+        for indicator in markdown_indicators:
+            if re.search(indicator, content, re.MULTILINE):
+                return True
+
+        return False

@@ -1408,12 +1408,12 @@ async def confirm_project_requirements(
     custom_style_prompt: str = Form(None),
     description: str = Form(None),
     content_source: str = Form("manual"),
-    file_upload: Optional[UploadFile] = File(None),
+    file_upload: List[UploadFile] = File(None),
     file_processing_mode: str = Form("markitdown"),
     content_analysis_depth: str = Form("standard"),
     user: User = Depends(get_current_user_required)
 ):
-    """Confirm project requirements and generate TODO list"""
+    """Confirm project requirements and generate TODO list - 支持多文件上传"""
     try:
         # Get project to access original requirements
         project = await ppt_service.project_manager.get_project(project_id)
@@ -1428,9 +1428,9 @@ async def confirm_project_requirements(
         # Handle file upload if content source is file
         file_outline = None
         if content_source == "file" and file_upload:
-            # Process uploaded file and generate outline
+            # Process uploaded files (support multiple files) and generate outline
             # 使用项目创建时的具体要求而不是description
-            file_outline = await _process_uploaded_file_for_outline(
+            file_outline = await _process_uploaded_files_for_outline(
                 file_upload, topic, target_audience, page_count_mode, min_pages, max_pages,
                 fixed_pages, ppt_style, custom_style_prompt,
                 file_processing_mode, content_analysis_depth, project.requirements
@@ -5136,6 +5136,130 @@ async def web_upload_page(
         "request": request
     })
 
+async def _process_uploaded_files_for_outline(
+    file_uploads: List[UploadFile],
+    topic: str,
+    target_audience: str,
+    page_count_mode: str,
+    min_pages: int,
+    max_pages: int,
+    fixed_pages: int,
+    ppt_style: str,
+    custom_style_prompt: str,
+    file_processing_mode: str,
+    content_analysis_depth: str,
+    requirements: str = None
+) -> Optional[Dict[str, Any]]:
+    """处理上传的多个文件并生成PPT大纲"""
+    try:
+        from ..services.file_processor import FileProcessor
+        file_processor = FileProcessor()
+
+        # 过滤掉None值（如果没有文件上传）
+        files = [f for f in file_uploads if f is not None]
+        if not files:
+            logger.error("No files provided")
+            return None
+
+        saved_file_paths = []
+        all_processed_content = []
+
+        try:
+            # 处理每个文件
+            for file_upload in files:
+                # 验证文件
+                is_valid, message = file_processor.validate_file(file_upload.filename, file_upload.size)
+                if not is_valid:
+                    logger.error(f"File validation failed for {file_upload.filename}: {message}")
+                    continue
+
+                # 读取文件内容并保存到项目文件目录
+                content = await file_upload.read()
+                project_file_path = await run_blocking_io(
+                    _save_project_file_sync, content, file_upload.filename
+                )
+                saved_file_paths.append(project_file_path)
+
+                # 处理单个文件内容
+                file_result = await file_processor.process_file(project_file_path, file_upload.filename)
+                all_processed_content.append({
+                    "filename": file_upload.filename,
+                    "content": file_result.processed_content
+                })
+
+            if not all_processed_content:
+                logger.error("No files were successfully processed")
+                return None
+
+            # 合并所有文件内容为一个Markdown文档
+            merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+
+            # 创建临时合并文件
+            import tempfile
+            import os
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
+                merged_file.write(merged_content)
+                merged_file_path = merged_file.name
+
+            saved_file_paths.append(merged_file_path)
+
+            # 创建文件大纲生成请求
+            from ..api.models import FileOutlineGenerationRequest
+            filenames_str = ", ".join([f.filename for f in files])
+            outline_request = FileOutlineGenerationRequest(
+                file_path=merged_file_path,
+                filename=f"merged_content_{len(files)}_files.md",
+                topic=topic if topic.strip() else None,
+                scenario="general",
+                requirements=requirements,
+                target_audience=target_audience,
+                page_count_mode=page_count_mode,
+                min_pages=min_pages,
+                max_pages=max_pages,
+                fixed_pages=fixed_pages,
+                ppt_style=ppt_style,
+                custom_style_prompt=custom_style_prompt,
+                file_processing_mode=file_processing_mode,
+                content_analysis_depth=content_analysis_depth
+            )
+
+            # 使用enhanced_ppt_service生成大纲
+            result = await ppt_service.generate_outline_from_file(outline_request)
+
+            if result.success:
+                logger.info(f"Successfully generated outline from {len(files)} files: {filenames_str}")
+                # 在大纲中添加文件信息，用于重新生成
+                outline_with_file_info = result.outline.copy()
+                outline_with_file_info['file_info'] = {
+                    'file_paths': saved_file_paths[:-1],  # 排除临时合并文件
+                    'merged_file_path': merged_file_path,
+                    'filenames': [f.filename for f in files],
+                    'files_count': len(files),
+                    'processing_mode': file_processing_mode,
+                    'analysis_depth': content_analysis_depth
+                }
+                return outline_with_file_info
+            else:
+                logger.error(f"Failed to generate outline from files: {result.error}")
+                # 如果生成失败，清理文件
+                for file_path in saved_file_paths:
+                    await run_blocking_io(_cleanup_project_file_sync, file_path)
+                return None
+
+        except Exception as e:
+            # 清理所有已保存的文件
+            for file_path in saved_file_paths:
+                try:
+                    await run_blocking_io(_cleanup_project_file_sync, file_path)
+                except:
+                    pass
+            raise e
+
+    except Exception as e:
+        logger.error(f"Error processing uploaded files for outline: {e}")
+        return None
+
+
 async def _process_uploaded_file_for_outline(
     file_upload: UploadFile,
     topic: str,
@@ -5150,65 +5274,12 @@ async def _process_uploaded_file_for_outline(
     content_analysis_depth: str,
     requirements: str = None
 ) -> Optional[Dict[str, Any]]:
-    """处理上传的文件并生成PPT大纲"""
-    try:
-        # 验证文件
-        from ..services.file_processor import FileProcessor
-        file_processor = FileProcessor()
-
-        is_valid, message = file_processor.validate_file(file_upload.filename, file_upload.size)
-        if not is_valid:
-            logger.error(f"File validation failed: {message}")
-            return None
-
-        # 读取文件内容并保存到项目文件目录（在线程池中执行）
-        content = await file_upload.read()
-        project_file_path = await run_blocking_io(
-            _save_project_file_sync, content, file_upload.filename
-        )
-
-        # 创建文件大纲生成请求
-        from ..api.models import FileOutlineGenerationRequest
-        outline_request = FileOutlineGenerationRequest(
-            file_path=project_file_path,
-            filename=file_upload.filename,
-            topic=topic if topic.strip() else None,
-            scenario="general",  # 默认场景，可以根据需要调整
-            requirements=requirements,
-            target_audience=target_audience,
-            page_count_mode=page_count_mode,
-            min_pages=min_pages,
-            max_pages=max_pages,
-            fixed_pages=fixed_pages,
-            ppt_style=ppt_style,
-            custom_style_prompt=custom_style_prompt,
-            file_processing_mode=file_processing_mode,
-            content_analysis_depth=content_analysis_depth
-        )
-
-        # 使用enhanced_ppt_service生成大纲
-        result = await ppt_service.generate_outline_from_file(outline_request)
-
-        if result.success:
-            logger.info(f"Successfully generated outline from file: {file_upload.filename}")
-            # 在大纲中添加文件信息，用于重新生成
-            outline_with_file_info = result.outline.copy()
-            outline_with_file_info['file_info'] = {
-                'file_path': project_file_path,
-                'filename': file_upload.filename,
-                'processing_mode': file_processing_mode,
-                'analysis_depth': content_analysis_depth
-            }
-            return outline_with_file_info
-        else:
-            logger.error(f"Failed to generate outline from file: {result.error}")
-            # 如果生成失败，清理文件
-            await run_blocking_io(_cleanup_project_file_sync, project_file_path)
-            return None
-
-    except Exception as e:
-        logger.error(f"Error processing uploaded file for outline: {e}")
-        return None
+    """处理上传的单个文件并生成PPT大纲（向后兼容）"""
+    return await _process_uploaded_files_for_outline(
+        [file_upload], topic, target_audience, page_count_mode, min_pages, max_pages,
+        fixed_pages, ppt_style, custom_style_prompt, file_processing_mode,
+        content_analysis_depth, requirements
+    )
 
 
 def _save_temp_file_sync(content: bytes, filename: str) -> str:
