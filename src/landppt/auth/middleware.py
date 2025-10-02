@@ -88,10 +88,10 @@ class AuthMiddleware:
             # Get database session
             db_gen = get_db()
             db = next(db_gen)
-            
+
             try:
                 user = self.auth_service.get_user_by_session(db, session_id)
-                
+
                 if not user:
                     # Invalid session, redirect to login
                     if path.startswith("/api/"):
@@ -104,17 +104,17 @@ class AuthMiddleware:
                         response = RedirectResponse(url="/auth/login", status_code=302)
                         response.delete_cookie("session_id")
                         return response
-                
+
                 # Add user to request state
                 request.state.user = user
-                
+
                 # Continue with request
                 response = await call_next(request)
                 return response
-                
+
             finally:
                 db.close()
-                
+
         except Exception as e:
             logger.error(f"Authentication middleware error: {e}")
             if path.startswith("/api/"):
@@ -152,7 +152,10 @@ def get_current_user_optional(
     request: Request,
     db: Session = Depends(get_db)
 ) -> Optional[User]:
-    """Get current user if authenticated, None otherwise"""
+    """
+    Get current user if authenticated, None otherwise.
+    For use with FastAPI dependency injection.
+    """
     session_id = request.cookies.get("session_id")
     if not session_id:
         return None
@@ -165,7 +168,10 @@ def get_current_user_required(
     request: Request,
     db: Session = Depends(get_db)
 ) -> User:
-    """Get current user, raise exception if not authenticated"""
+    """
+    Get current user, raise exception if not authenticated.
+    For use with FastAPI dependency injection.
+    """
     user = get_current_user_optional(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -176,7 +182,10 @@ def get_current_admin_user(
     request: Request,
     db: Session = Depends(get_db)
 ) -> User:
-    """Get current admin user, raise exception if not admin"""
+    """
+    Get current admin user, raise exception if not admin.
+    For use with FastAPI dependency injection.
+    """
     user = get_current_user_required(request, db)
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin privileges required")

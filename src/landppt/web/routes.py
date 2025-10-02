@@ -117,6 +117,11 @@ class SpeechScriptExportRequest(BaseModel):
     scripts_data: List[Dict[str, Any]]
     include_metadata: bool = True
 
+# 图片导出PPTX请求数据模型
+class ImagePPTXExportRequest(BaseModel):
+    slides: Optional[List[Dict[str, Any]]] = None  # 包含index, html_content, title
+    images: Optional[List[Dict[str, Any]]] = None  # 包含index, data(base64), width, height (向后兼容)
+
 # Helper function to extract slides from HTML content
 async def _extract_slides_from_html(slides_html: str, existing_slides_data: list) -> list:
     """
@@ -4025,6 +4030,153 @@ async def export_project_pptx(project_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/export/pptx-images")
+async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExportRequest):
+    """Export project as PPTX using high-quality Playwright screenshots"""
+    try:
+        from io import BytesIO
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # 验证是否有幻灯片数据
+        slides = getattr(request, 'slides', None)
+        if not slides or len(slides) == 0:
+            raise HTTPException(status_code=400, detail="No slides provided")
+
+        # 检查Playwright是否可用
+        pdf_converter = get_pdf_converter()
+        if not pdf_converter.is_available():
+            raise HTTPException(
+                status_code=503,
+                detail="Screenshot service unavailable. Please ensure Playwright is installed."
+            )
+
+        # 创建后台任务
+        from ..services.background_tasks import get_task_manager
+        task_manager = get_task_manager()
+
+        # 创建临时目录和PPTX文件路径
+        temp_dir = tempfile.mkdtemp()
+        with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_pptx_file:
+            temp_pptx_path = temp_pptx_file.name
+
+        # 定义HTML到图片到PPTX的任务函数
+        async def html_to_pptx_task():
+            """使用Playwright截图并生成PPTX"""
+            screenshot_paths = []
+            try:
+                logging.info(f"Starting screenshot-based PPTX export for {len(slides)} slides")
+
+                # 第1步：为每张幻灯片创建临时HTML文件
+                html_files = []
+                for i, slide in enumerate(slides):
+                    html_file = os.path.join(temp_dir, f"slide_{i}.html")
+                    with open(html_file, 'w', encoding='utf-8') as f:
+                        f.write(slide['html_content'])
+                    html_files.append(html_file)
+
+                # 第2步：使用Playwright对每张幻灯片进行截图
+                for i, html_file in enumerate(html_files):
+                    screenshot_path = os.path.join(temp_dir, f"slide_{i}.png")
+
+                    # 使用PDF converter的截图功能
+                    success = await pdf_converter.screenshot_html(
+                        html_file,
+                        screenshot_path,
+                        width=1280,
+                        height=720
+                    )
+
+                    if success:
+                        screenshot_paths.append(screenshot_path)
+                        logging.info(f"Screenshot {i+1}/{len(html_files)} completed")
+                    else:
+                        logging.warning(f"Screenshot {i+1} failed, skipping")
+
+                if len(screenshot_paths) == 0:
+                    raise Exception("No screenshots were generated")
+
+                # 第3步：将截图转换为PPTX
+                logging.info("Creating PPTX from screenshots...")
+                prs = Presentation()
+
+                # 设置幻灯片尺寸为16:9
+                prs.slide_width = Inches(10)
+                prs.slide_height = Inches(5.625)
+
+                for screenshot_path in screenshot_paths:
+                    # 添加空白幻灯片
+                    blank_slide_layout = prs.slide_layouts[6]
+                    slide = prs.slides.add_slide(blank_slide_layout)
+
+                    # 添加截图，填充整个幻灯片
+                    left = Inches(0)
+                    top = Inches(0)
+                    width = prs.slide_width
+                    height = prs.slide_height
+
+                    slide.shapes.add_picture(screenshot_path, left, top, width=width, height=height)
+
+                # 保存PPTX文件
+                prs.save(temp_pptx_path)
+                logging.info(f"PPTX saved to {temp_pptx_path}")
+
+                return {
+                    "success": True,
+                    "pptx_path": temp_pptx_path
+                }
+
+            except Exception as e:
+                logging.error(f"HTML to PPTX conversion failed: {e}")
+                import traceback
+                traceback.print_exc()
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+            finally:
+                # 清理临时HTML和截图文件
+                try:
+                    import shutil
+                    if os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir)
+                        logging.info(f"Cleaned up temp directory: {temp_dir}")
+                except Exception as cleanup_error:
+                    logging.warning(f"Failed to cleanup temp directory: {cleanup_error}")
+
+        # 提交后台任务
+        task_id = task_manager.submit_task(
+            task_type="html_to_pptx_screenshot",
+            func=html_to_pptx_task,
+            metadata={
+                "project_id": project_id,
+                "project_topic": project.topic,
+                "slide_count": len(slides),
+                "pptx_path": temp_pptx_path
+            }
+        )
+
+        # 立即返回任务ID
+        return JSONResponse({
+            "status": "processing",
+            "task_id": task_id,
+            "message": "PPTX generation with screenshots started in background",
+            "polling_endpoint": f"/api/landppt/tasks/{task_id}"
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"PPTX screenshot export error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -4487,9 +4487,18 @@
                 <button class="btn btn-primary" onclick="exportToPDF()" title="导出为PDF文件">
                     <i class="fas fa-file-pdf"></i>
                 </button>
-                <button class="btn btn-warning" onclick="exportToPPTX()" title="导出为PowerPoint文件">
-                    <i class="fas fa-file-powerpoint"></i>
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-warning" onclick="exportToPPTX()" title="导出为PowerPoint文件">
+                        <i class="fas fa-file-powerpoint"></i>
+                    </button>
+                    <button type="button" class="btn btn-warning dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="exportToPPTX(); return false;">标准导出</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportToPPTXAsImages(); return false;">以图片形式导出</a></li>
+                    </ul>
+                </div>
                 <button class="btn btn-success" onclick="downloadHTML()" title="下载HTML文件">
                     <i class="fas fa-download"></i>
                 </button>
@@ -8645,6 +8654,80 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        // 将HTML页面转换为图片并导出为PPTX（使用后端Playwright截图）
+        async function exportToPPTXAsImages() {
+            if (pptxExportInProgress) {
+                showNotification('PPTX导出正在进行中，请稍候...', 'warning');
+                return;
+            }
+
+            pptxExportInProgress = true;
+            const progressToast = showProgressToast('正在准备图片导出...');
+
+            try {
+                // 使用slidesData数组
+                if (!slidesData || slidesData.length === 0) {
+                    throw new Error('未找到幻灯片内容');
+                }
+
+                updateProgressToast(progressToast, `正在准备 ${slidesData.length} 张幻灯片...`, 10);
+
+                // 提取每张幻灯片的HTML内容
+                const slides = slidesData.map((slide, index) => ({
+                    index: index,
+                    html_content: slide.html_content,
+                    title: slide.title || `幻灯片 ${index + 1}`
+                }));
+
+                updateProgressToast(progressToast, '正在发送到服务器进行高质量渲染...', 20);
+
+                // 发送HTML内容到后端，让后端使用Playwright进行截图和生成PPTX
+                const response = await fetch(`/api/projects/{{ project.project_id }}/export/pptx-images`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        slides: slides
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`服务返回异常(${response.status})`);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                let data = {};
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    throw new Error('服务器返回了未知的响应格式。');
+                }
+
+                if (data.status === 'processing' && data.task_id) {
+                    updateProgressToast(progressToast, 'PPTX生成任务已启动，正在后台处理...', 80);
+                    await trackPptxExportTask(data.task_id, progressToast);
+                } else if (data.download_url) {
+                    updateProgressToast(progressToast, '转换完成，正在下载...', 100);
+                    triggerFileDownload(data.download_url);
+                    closeProgressToast(progressToast);
+                    showNotification('PPTX转换完成，正在下载...', 'success');
+                } else {
+                    throw new Error(data.error || data.message || 'PPTX导出请求未能启动。');
+                }
+
+            } catch (error) {
+                console.error('PPTX image export error:', error);
+                clearPptxExportPolling();
+                closeProgressToast(progressToast);
+                showNotification(`图片导出失败: ${error.message || error}`, 'error');
+            } finally {
+                pptxExportInProgress = false;
+                clearPptxExportPolling();
+            }
+        }
+
 
         function downloadHTML() {
             // 显示提示信息

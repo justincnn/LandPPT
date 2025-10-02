@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 import logging
 
 from .auth_service import get_auth_service, AuthService
-from .middleware import get_current_user_optional, get_current_user_required
+from .middleware import get_current_user_optional, get_current_user_required, get_current_user
 from ..database.database import get_db
 from ..database.models import User
 
@@ -27,11 +27,11 @@ async def login_page(
     username: str = None
 ):
     """Login page"""
-    # Check if user is already logged in
-    user = get_current_user_optional(request)
+    # Check if user is already logged in using request.state.user set by middleware
+    user = get_current_user(request)
     if user:
         return RedirectResponse(url="/dashboard", status_code=302)
-    
+
     return templates.TemplateResponse("login.html", {
         "request": request,
         "error": error,

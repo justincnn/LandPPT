@@ -2115,6 +2115,73 @@ class PlaywrightPDFConverter:
                 self.playwright = None
                 logger.debug("🔒 Shared browser and Playwright closed.")
 
+    async def screenshot_html(self, html_file_path: str, screenshot_path: str,
+                            width: int = 1280, height: int = 720) -> bool:
+        """
+        Take a high-quality screenshot of an HTML file using Playwright
+
+        Args:
+            html_file_path: Path to HTML file
+            screenshot_path: Output path for screenshot
+            width: Screenshot width in pixels
+            height: Screenshot height in pixels
+
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info(f"📸 Taking screenshot: {html_file_path} -> {screenshot_path}")
+
+        if not os.path.exists(html_file_path):
+            logger.error(f"❌ HTML file not found: {html_file_path}")
+            return False
+
+        page = None
+        try:
+            # Get or create browser
+            browser = await self._get_or_create_browser()
+            page = await self.context.new_page()
+
+            # Set viewport
+            await page.set_viewport_size({'width': width, 'height': height})
+
+            # Navigate to HTML file
+            absolute_html_path = Path(html_file_path).resolve()
+            await page.goto(f"file://{absolute_html_path}",
+                          wait_until='networkidle',
+                          timeout=60000)
+
+            # Wait for content to be ready (similar to PDF generation)
+            await asyncio.sleep(0.5)
+
+            # Wait for fonts and resources
+            await self._wait_for_fonts_and_resources(page, max_wait_time=30000)
+
+            # Force chart initialization
+            await self._force_chart_initialization(page)
+
+            # Wait for charts and dynamic content
+            await self._wait_for_charts_and_dynamic_content(page, max_wait_time=60000)
+
+            # Take screenshot
+            await page.screenshot(
+                path=screenshot_path,
+                type='png',
+                full_page=False,
+                clip={'x': 0, 'y': 0, 'width': width, 'height': height}
+            )
+
+            logger.info(f"✅ Screenshot saved: {screenshot_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Screenshot failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        finally:
+            if page:
+                await page.close()
+
 
 # Global converter instance
 _pdf_converter = None

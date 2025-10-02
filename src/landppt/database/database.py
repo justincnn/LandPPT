@@ -20,19 +20,35 @@ else:
     ASYNC_DATABASE_URL = DATABASE_URL
 
 # Create engines
+# SQLite-specific configuration for better concurrency
+sqlite_connect_args = {
+    "check_same_thread": False,
+    "timeout": 30,  # Wait up to 30 seconds for lock
+} if "sqlite" in DATABASE_URL else {}
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    echo=False  # Disable SQL logging to reduce noise
+    connect_args=sqlite_connect_args,
+    echo=False,  # Disable SQL logging to reduce noise
+    pool_pre_ping=True,  # Verify connections before using
+    pool_size=10,  # Larger pool for better concurrency
+    max_overflow=20  # Allow overflow connections
 )
 
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=False  # Disable SQL logging to reduce noise
+    echo=False,  # Disable SQL logging to reduce noise
+    pool_pre_ping=True,
+    connect_args={"timeout": 30} if "sqlite" in ASYNC_DATABASE_URL else {}
 )
 
 # Create session makers
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    expire_on_commit=False  # Prevent errors after commit
+)
 AsyncSessionLocal = async_sessionmaker(
     async_engine,
     class_=AsyncSession,

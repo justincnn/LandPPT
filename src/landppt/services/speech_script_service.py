@@ -265,21 +265,11 @@ class SpeechScriptService:
                 project, slide_indices, customization, progress_callback, task_id=task_id
             )
 
-            if result.success and result.scripts:
-                # Add opening and closing remarks for full presentation
-                result.scripts = await self._add_presentation_bookends(
-                    result.scripts, project, customization
-                )
-                
-                # Recalculate total duration
-                total_seconds = sum(
-                    self._parse_duration_to_seconds(script.estimated_duration or "0分钟")
-                    for script in result.scripts
-                )
-                result.total_estimated_duration = self._format_duration_from_seconds(total_seconds)
-            
+            # 不再自动添加开场白和结束语，完全按照选择的页面生成演讲稿
+            # Opening and closing remarks are no longer automatically added
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error generating full presentation scripts: {e}")
             return SpeechScriptResult(
