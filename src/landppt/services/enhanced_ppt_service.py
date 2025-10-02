@@ -5853,6 +5853,123 @@ class EnhancedPPTService(PPTService):
                 }
             }
 
+    async def conduct_research_and_merge_with_files(
+        self,
+        topic: str,
+        language: str,
+        file_paths: Optional[List[str]] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        进行联网搜索并与本地文件整合
+
+        Args:
+            topic: 研究主题
+            language: 语言
+            file_paths: 本地文件路径列表
+            context: 上下文信息(scenario, target_audience等)
+
+        Returns:
+            整合后的Markdown文件路径
+        """
+        try:
+            logger.info(f"开始联网搜索和文件整合流程，主题: {topic}")
+
+            # Step 1: 进行联网搜索
+            logger.info("Step 1: 执行联网搜索...")
+            research_markdown = None
+
+            if self.enhanced_research_service and self.enhanced_research_service.is_available():
+                try:
+                    # 使用增强研究服务进行搜索
+                    research_report = await self.enhanced_research_service.conduct_enhanced_research(
+                        topic=topic,
+                        language=language,
+                        context=context
+                    )
+
+                    # 保存研究报告为Markdown
+                    if self.enhanced_report_generator:
+                        research_markdown = self.enhanced_report_generator.save_report_to_file(research_report)
+                        logger.info(f"✅ 联网搜索完成，研究报告已保存: {research_markdown}")
+                    else:
+                        logger.warning("增强报告生成器不可用")
+
+                except Exception as e:
+                    logger.error(f"联网搜索失败: {e}")
+
+            else:
+                logger.warning("增强研究服务不可用，跳过联网搜索")
+
+            # Step 2: 处理本地文件
+            logger.info("Step 2: 处理本地文件...")
+            local_files_content = []
+
+            if file_paths:
+                from ..services.file_processor import FileProcessor
+                file_processor = FileProcessor()
+
+                for file_path in file_paths:
+                    try:
+                        filename = os.path.basename(file_path)
+                        file_result = await file_processor.process_file(file_path, filename)
+                        local_files_content.append({
+                            "filename": filename,
+                            "content": file_result.processed_content
+                        })
+                        logger.info(f"✅ 文件处理完成: {filename}")
+                    except Exception as e:
+                        logger.error(f"文件处理失败 {file_path}: {e}")
+
+            # Step 3: 整合搜索结果和本地文件
+            logger.info("Step 3: 整合搜索结果和本地文件...")
+            merged_content_parts = []
+
+            # 添加整合文档标题
+            merged_content_parts.append(f"# {topic}\n")
+            merged_content_parts.append(f"*整合文档 - 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}*\n")
+            merged_content_parts.append("---\n\n")
+
+            # 优先添加联网搜索结果
+            if research_markdown and os.path.exists(research_markdown):
+                merged_content_parts.append("## 📡 联网搜索结果\n\n")
+                with open(research_markdown, 'r', encoding='utf-8') as f:
+                    search_content = f.read()
+                merged_content_parts.append(search_content)
+                merged_content_parts.append("\n\n---\n\n")
+                logger.info("✅ 已添加联网搜索内容")
+
+            # 添加本地文件内容
+            if local_files_content:
+                merged_content_parts.append("## 📁 本地文件内容\n\n")
+
+                for i, file_info in enumerate(local_files_content, 1):
+                    merged_content_parts.append(f"### {i}. {file_info['filename']}\n\n")
+                    merged_content_parts.append(file_info['content'])
+                    merged_content_parts.append("\n\n---\n\n")
+
+                logger.info(f"✅ 已添加 {len(local_files_content)} 个本地文件内容")
+
+            # Step 4: 保存整合后的文件
+            merged_content = "".join(merged_content_parts)
+
+            # 创建临时文件
+            temp_dir = Path(tempfile.gettempdir()) / "landppt_merged"
+            temp_dir.mkdir(exist_ok=True)
+
+            merged_filename = f"merged_{int(time.time())}_{topic[:30]}.md"
+            merged_file_path = temp_dir / merged_filename
+
+            with open(merged_file_path, 'w', encoding='utf-8') as f:
+                f.write(merged_content)
+
+            logger.info(f"✅ 整合完成，文件保存至: {merged_file_path}")
+            return str(merged_file_path)
+
+        except Exception as e:
+            logger.error(f"联网搜索和文件整合失败: {e}")
+            raise
+
     async def generate_outline_from_file(self, request) -> Dict[str, Any]:
         """使用summeryanyfile从文件生成PPT大纲"""
         # 导入必要的模块

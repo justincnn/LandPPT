@@ -8486,27 +8486,28 @@
             }
         }
 
-        function exportToPDF() {
-            // 显示提示信息
-            showNotification('正在生成PDF文件...', 'info');
+        let pptxExportInProgress = false;
+        let pptxExportPollingTimer = null;
 
-            // 直接下载PDF文件
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `/api/projects/{{ project.project_id }}/export/pdf`;
-            downloadLink.download = '';
-            downloadLink.style.display = 'none';
+        async function exportToPDF() {
+            const progressToast = showProgressToast('正在生成PDF文件...');
+            updateProgressToast(progressToast, '正在生成PDF文件...', 20);
 
-            // 添加到页面并触发下载
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            try {
+                triggerFileDownload(`/api/projects/{{ project.project_id }}/export/pdf`);
 
-            // 延迟显示成功消息
-            setTimeout(() => {
+                updateProgressToast(progressToast, '正在准备下载...', 60);
+                await new Promise(resolve => setTimeout(resolve, 1200));
+
+                updateProgressToast(progressToast, 'PDF文件正在下载...', 100);
+                setTimeout(() => closeProgressToast(progressToast), 400);
                 showNotification('PDF文件生成完成，正在下载...', 'success');
-            }, 1000);
+            } catch (error) {
+                console.error('PDF export error:', error);
+                closeProgressToast(progressToast);
+                showNotification(`PDF导出失败: ${error.message || error}`, 'error');
+            }
         }
-
 
 
         function exportToPDFClientSide() {
@@ -8517,26 +8518,132 @@
            // window.open(`/api/projects/{{ project.project_id }}/export/pdf?fallback=true`, '_blank');
         }
 
-        function exportToPPTX() {
-            // 显示提示信息
-            showNotification('正在生成PPTX文件...', 'info');
-            showNotification('此过程需要先生成PDF再转换为PPTX，请耐心等待...', 'warning');
+        async function exportToPPTX() {
+            if (pptxExportInProgress) {
+                showNotification('PPTX导出正在进行中，请稍候...', 'warning');
+                return;
+            }
 
-            // 直接下载PPTX文件
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `/api/projects/{{ project.project_id }}/export/pptx`;
-            downloadLink.download = '';
-            downloadLink.style.display = 'none';
+            pptxExportInProgress = true;
+            const progressToast = showProgressToast('正在准备PPTX导出任务...');
+            updateProgressToast(progressToast, '正在准备导出文件...', 10);
 
-            // 添加到页面并触发下载
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            try {
+                const response = await fetch(`/api/projects/{{ project.project_id }}/export/pptx`);
+                if (!response.ok) {
+                    throw new Error(`服务返回异常(${response.status})`);
+                }
 
-            // 延迟显示成功消息
-            setTimeout(() => {
-                showNotification('PPTX文件生成完成，正在下载...', 'success');
-            }, 2000);
+                const contentType = response.headers.get('content-type') || '';
+                let data = {};
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    throw new Error('服务器返回了未知的响应格式。');
+                }
+
+                if (data.status === 'processing' && data.task_id) {
+                    updateProgressToast(progressToast, 'PPTX转换任务已启动，正在后台处理...', 20);
+                    await trackPptxExportTask(data.task_id, progressToast);
+                } else if (data.download_url) {
+                    updateProgressToast(progressToast, '转换完成，正在下载...', 100);
+                    triggerFileDownload(data.download_url);
+                    closeProgressToast(progressToast);
+                    showNotification('PPTX转换完成，正在下载...', 'success');
+                } else {
+                    throw new Error(data.error || data.message || 'PPTX导出请求未能启动。');
+                }
+            } catch (error) {
+                console.error('PPTX export error:', error);
+                clearPptxExportPolling();
+                closeProgressToast(progressToast);
+                showNotification(`PPTX导出失败: ${error.message || error}`, 'error');
+            } finally {
+                pptxExportInProgress = false;
+                clearPptxExportPolling();
+            }
+        }
+
+        function clearPptxExportPolling() {
+            if (pptxExportPollingTimer) {
+                clearTimeout(pptxExportPollingTimer);
+                pptxExportPollingTimer = null;
+            }
+        }
+
+        async function trackPptxExportTask(taskId, progressToast) {
+            return new Promise((resolve, reject) => {
+                const pollInterval = 2000;
+                const maxAttempts = 300;
+                let attempts = 0;
+
+                const poll = async () => {
+                    attempts += 1;
+                    try {
+                        const response = await fetch(`/api/landppt/tasks/${taskId}`);
+                        if (!response.ok) {
+                            throw new Error(`任务状态查询失败(${response.status})`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'completed' && data.result && data.result.success) {
+                            updateProgressToast(progressToast, '转换完成，正在准备下载...', 100);
+                            clearPptxExportPolling();
+                            setTimeout(() => closeProgressToast(progressToast), 400);
+                            const downloadUrl = data.download_url || `/api/landppt/tasks/${taskId}/download`;
+                            triggerFileDownload(downloadUrl);
+                            showNotification('PPTX转换完成，正在下载...', 'success');
+                            resolve();
+                            return;
+                        }
+
+                        if (data.status === 'failed') {
+                            const errorMessage = data.error || (data.result && data.result.error) || 'PPTX转换失败';
+                            throw new Error(errorMessage);
+                        }
+
+                        const statusTextMap = {
+                            pending: '任务已排队，等待开始...',
+                            running: '正在转换PPTX，请稍候...',
+                        };
+                        const message = statusTextMap[data.status] || '转换任务进行中，请稍候...';
+
+                        let progressValue = 20 + Math.round((attempts / maxAttempts) * 70);
+                        if (typeof data.progress === 'number') {
+                            const reported = Math.round(data.progress);
+                            progressValue = Math.max(progressValue, Math.min(95, reported));
+                        }
+                        progressValue = Math.min(progressValue, 95);
+
+                        updateProgressToast(progressToast, message, progressValue);
+                    } catch (pollError) {
+                        clearPptxExportPolling();
+                        reject(pollError);
+                        return;
+                    }
+
+                    if (attempts >= maxAttempts) {
+                        clearPptxExportPolling();
+                        reject(new Error('等待PPTX转换超时，请稍后重试。'));
+                        return;
+                    }
+
+                    pptxExportPollingTimer = setTimeout(poll, pollInterval);
+                };
+
+                pptxExportPollingTimer = setTimeout(poll, pollInterval);
+            });
+        }
+
+        function triggerFileDownload(url) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function downloadHTML() {

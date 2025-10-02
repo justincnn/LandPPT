@@ -5,6 +5,7 @@ Uses Apryse SDK to convert PDF files to PowerPoint presentations
 
 import os
 import sys
+import asyncio
 import tempfile
 import logging
 import platform
@@ -276,14 +277,109 @@ class PDFToPPTXConverter:
         """Check if the converter is available and ready to use"""
         return self._check_sdk_availability() and self._initialize_sdk()
     
+
+
+    async def convert_pdf_to_pptx_async(
+        self,
+        pdf_path: str,
+        output_path: Optional[str] = None,
+        timeout: Optional[float] = None,
+    ) -> Tuple[bool, str]:
+        if not self.is_available():
+            error_msg = "PDF to PPTX converter is not available. Please check Apryse SDK installation and license."
+            logger.error(error_msg)
+            return False, error_msg
+
+        pdf_path_obj = Path(pdf_path).expanduser().resolve()
+        if not pdf_path_obj.exists():
+            error_msg = f"Input PDF file not found: {pdf_path_obj}"
+            logger.error(error_msg)
+            return False, error_msg
+
+        if output_path is None:
+            output_path_obj = pdf_path_obj.with_suffix('.pptx')
+        else:
+            output_path_obj = Path(output_path).expanduser()
+            if not output_path_obj.is_absolute():
+                output_path_obj = output_path_obj.resolve()
+
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        command = [
+            sys.executable,
+            '-m',
+            'landppt.services.pdf_to_pptx_worker',
+            '--input',
+            str(pdf_path_obj),
+            '--output',
+            str(output_path_obj),
+        ]
+
+        env = os.environ.copy()
+        src_path = str(Path(__file__).resolve().parents[2])
+        pythonpath = env.get('PYTHONPATH')
+        if pythonpath:
+            existing = pythonpath.split(os.pathsep)
+            if src_path not in existing:
+                env['PYTHONPATH'] = os.pathsep.join([src_path, pythonpath])
+        else:
+            env['PYTHONPATH'] = src_path
+
+        project_root = str(Path(__file__).resolve().parents[3])
+
+        logger.info(f"[Async Worker] Launching PDF to PPTX worker: {pdf_path_obj} -> {output_path_obj}")
+
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+            cwd=project_root,
+        )
+
+        try:
+            if timeout is not None:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            else:
+                stdout, stderr = await process.communicate()
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            error_msg = f"PDF to PPTX conversion timed out after {timeout} seconds"
+            logger.error(error_msg)
+            return False, error_msg
+
+        stdout_text = stdout.decode('utf-8', errors='ignore').strip()
+        stderr_text = stderr.decode('utf-8', errors='ignore').strip()
+
+        if stdout_text:
+            logger.debug(f"[Async Worker] stdout: {stdout_text}")
+        if stderr_text:
+            logger.debug(f"[Async Worker] stderr: {stderr_text}")
+
+        if process.returncode == 0:
+            if not output_path_obj.exists() or output_path_obj.stat().st_size == 0:
+                error_msg = f"Worker reported success but output file is missing or empty: {output_path_obj}"
+                logger.error(error_msg)
+                return False, error_msg
+
+            logger.info(f"[Async Worker] PDF to PPTX conversion successful: {output_path_obj}")
+            return True, str(output_path_obj)
+
+        error_msg = stderr_text or stdout_text or f"Worker exited with code {process.returncode}"
+        logger.error(f"[Async Worker] PDF to PPTX conversion failed: {error_msg}")
+        return False, error_msg
+
     def convert_pdf_to_pptx(self, pdf_path: str, output_path: Optional[str] = None) -> Tuple[bool, str]:
         """
         Convert PDF file to PPTX format
-        
+
+        Note: This is a blocking I/O operation. Should be called via run_blocking_io() or in a thread pool.
+
         Args:
             pdf_path: Path to the input PDF file
             output_path: Path for the output PPTX file (optional, will generate if not provided)
-        
+
         Returns:
             Tuple of (success: bool, output_path: str)
         """
@@ -291,35 +387,35 @@ class PDFToPPTXConverter:
             error_msg = "PDF to PPTX converter is not available. Please check Apryse SDK installation and license."
             logger.error(error_msg)
             return False, error_msg
-        
+
         # Validate input file
         if not os.path.exists(pdf_path):
             error_msg = f"Input PDF file not found: {pdf_path}"
             logger.error(error_msg)
             return False, error_msg
-        
+
         # Generate output path if not provided
         if output_path is None:
             pdf_name = Path(pdf_path).stem
             output_path = str(Path(pdf_path).parent / f"{pdf_name}.pptx")
-        
+
         try:
             from apryse_sdk.PDFNetPython import Convert
-            
-            logger.info(f"Converting PDF to PowerPoint: {pdf_path} -> {output_path}")
-            
-            # Perform the conversion
+
+            logger.info(f"[Thread Pool] Converting PDF to PowerPoint: {pdf_path} -> {output_path}")
+
+            # Perform the conversion (blocking operation, but should be in thread pool)
             Convert.ToPowerPoint(pdf_path, output_path)
-            
+
             # Verify output file was created
             if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                logger.info(f"PDF to PPTX conversion successful: {output_path}")
+                logger.info(f"[Thread Pool] PDF to PPTX conversion successful: {output_path}")
                 return True, output_path
             else:
                 error_msg = "Conversion completed but output file is empty or not created"
                 logger.error(error_msg)
                 return False, error_msg
-                
+
         except Exception as e:
             error_msg = f"PDF to PPTX conversion failed: {str(e)}"
             logger.error(error_msg)

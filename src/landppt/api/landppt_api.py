@@ -708,9 +708,11 @@ async def upload_file_and_generate_outline(
     content_analysis_depth: str = Form("standard"),
     focus_content: Optional[str] = Form(None),
     tech_highlights: Optional[str] = Form(None),
-    target_audience: Optional[str] = Form(None)
+    target_audience: Optional[str] = Form(None),
+    network_mode: bool = Form(False),  # 是否启用联网搜索（与项目创建保持一致）
+    language: str = Form("zh")  # 语言参数
 ):
-    """上传多个文件并直接生成PPT大纲"""
+    """上传多个文件并直接生成PPT大纲，支持联网搜索集成"""
     try:
         # 验证所有文件
         for file in files:
@@ -741,14 +743,47 @@ async def upload_file_and_generate_outline(
                     "content": file_result.processed_content
                 })
 
-            # 合并所有文件内容为一个Markdown文档
-            merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+            # 如果启用联网搜索，先进行搜索并整合
+            merged_file_path = None
+            if network_mode and topic:
+                logger.info(f"启用联网搜索模式，主题: {topic}")
 
-            # 创建临时合并文件
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
-                merged_file.write(merged_content)
-                merged_file_path = merged_file.name
+                # 构建上下文信息
+                context = {
+                    'scenario': scenario,
+                    'target_audience': target_audience or '普通大众',
+                    'requirements': '',
+                    'ppt_style': ppt_style,
+                    'description': f'文件数量: {len(files)}'
+                }
+
+                # 获取所有文件路径
+                file_paths_for_merge = [path for path in temp_file_paths if not path.endswith('.md')]
+
+                # 进行联网搜索并与文件整合
+                merged_file_path = await ppt_service.conduct_research_and_merge_with_files(
+                    topic=topic,
+                    language=language,
+                    file_paths=file_paths_for_merge,
+                    context=context
+                )
+
                 temp_file_paths.append(merged_file_path)
+                logger.info(f"✅ 联网搜索和文件整合完成: {merged_file_path}")
+
+                # 使用整合后的文件作为最终文件
+                final_filename = f"merged_with_search_{len(files)}_files.md"
+            else:
+                # 不使用联网搜索，仅合并所有文件内容
+                merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+
+                # 创建临时合并文件
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
+                    merged_file.write(merged_content)
+                    merged_file_path = merged_file.name
+                    temp_file_paths.append(merged_file_path)
+
+                final_filename = f"merged_content_{len(files)}_files.md"
 
             # 解析多选字段
             focus_content_list = focus_content.split(',') if focus_content else []
@@ -757,7 +792,7 @@ async def upload_file_and_generate_outline(
             # 创建请求对象，使用合并后的文件
             outline_request = FileOutlineGenerationRequest(
                 file_path=merged_file_path,
-                filename=f"merged_content_{len(files)}_files.md",
+                filename=final_filename,
                 topic=topic,
                 scenario=scenario,
                 requirements="",  # API调用暂时没有requirements参数
@@ -769,7 +804,8 @@ async def upload_file_and_generate_outline(
                 custom_style_prompt=custom_style_prompt,
                 file_processing_mode=file_processing_mode,
                 content_analysis_depth=content_analysis_depth,
-                target_audience=target_audience
+                target_audience=target_audience,
+                language=language
             )
 
             # 生成大纲
@@ -779,6 +815,9 @@ async def upload_file_and_generate_outline(
             if result.success and result.metadata:
                 result.metadata["source_files"] = [f.filename for f in files]
                 result.metadata["files_count"] = len(files)
+                result.metadata["network_mode"] = network_mode
+                if network_mode:
+                    result.metadata["search_topic"] = topic
 
             return result
 

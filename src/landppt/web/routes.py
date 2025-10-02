@@ -3,7 +3,7 @@ Web interface routes for LandPPT
 """
 
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Depends
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import json
@@ -1413,12 +1413,17 @@ async def confirm_project_requirements(
     content_analysis_depth: str = Form("standard"),
     user: User = Depends(get_current_user_required)
 ):
-    """Confirm project requirements and generate TODO list - 支持多文件上传"""
+    """Confirm project requirements and generate TODO list - 支持多文件上传和联网搜索集成"""
     try:
         # Get project to access original requirements
         project = await ppt_service.project_manager.get_project(project_id)
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
+
+        # Extract network_mode from project metadata (set during project creation)
+        network_mode = False
+        if project.project_metadata and isinstance(project.project_metadata, dict):
+            network_mode = project.project_metadata.get("network_mode", False)
 
         # Process audience information
         target_audience = audience_type
@@ -1429,11 +1434,14 @@ async def confirm_project_requirements(
         file_outline = None
         if content_source == "file" and file_upload:
             # Process uploaded files (support multiple files) and generate outline
-            # 使用项目创建时的具体要求而不是description
+            # 使用项目创建时的 network_mode 参数
             file_outline = await _process_uploaded_files_for_outline(
                 file_upload, topic, target_audience, page_count_mode, min_pages, max_pages,
                 fixed_pages, ppt_style, custom_style_prompt,
-                file_processing_mode, content_analysis_depth, project.requirements
+                file_processing_mode, content_analysis_depth, project.requirements,
+                enable_web_search=network_mode,  # 使用项目的 network_mode
+                scenario=project.scenario,  # 传递场景参数
+                language="zh"  # 传递语言参数
             )
 
             # Update topic if it was extracted from file
@@ -3957,69 +3965,156 @@ async def export_project_pptx(project_id: str):
                 pass
             raise HTTPException(status_code=500, detail="PDF generation failed")
 
-        # Step 2: Convert PDF to PPTX
-        logging.info("Step 2: Converting PDF to PPTX")
+        # Step 2: 启动PDF转PPTX后台任务
+        logging.info("Step 2: Starting PDF to PPTX conversion task")
 
-        # Create temporary PPTX file
+        from ..services.background_tasks import get_task_manager, TaskStatus
+
+        task_manager = get_task_manager()
+
+        # 创建临时PPTX文件路径
         with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_pptx_file:
             temp_pptx_path = temp_pptx_file.name
 
-        try:
-            # Perform PDF to PPTX conversion in thread pool to avoid blocking
-            conversion_success, result_path = await run_blocking_io(
-                converter.convert_pdf_to_pptx, temp_pdf_path, temp_pptx_path
-            )
-
-            if not conversion_success:
-                raise HTTPException(status_code=500, detail=f"PDF to PPTX conversion failed: {result_path}")
-
-            # Verify PPTX file was created successfully
-            if not os.path.exists(temp_pptx_path) or os.path.getsize(temp_pptx_path) == 0:
-                raise HTTPException(status_code=500, detail="PPTX file was not created or is empty")
-
-            # Return PPTX file
-            logging.info("PPTX generated successfully")
-            safe_filename = urllib.parse.quote(f"{project.topic}_PPT.pptx", safe='')
-
-            # 使用BackgroundTask来清理临时文件
-            from starlette.background import BackgroundTask
-
-            def cleanup_temp_files():
-                try:
-                    os.unlink(temp_pdf_path)
-                except:
-                    pass
-                try:
-                    os.unlink(temp_pptx_path)
-                except:
-                    pass
-
-            return FileResponse(
-                temp_pptx_path,
-                media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                headers={
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
-                    "X-Conversion-Method": "PDF-to-PPTX"
-                },
-                background=BackgroundTask(cleanup_temp_files)
-            )
-
-        except Exception as e:
-            # Clean up temp files on error
+        # 定义转换任务函数
+        async def pdf_to_pptx_task():
+            """PDF to PPTX conversion task (runs in subprocess)."""
             try:
-                os.unlink(temp_pdf_path)
-            except:
-                pass
-            try:
-                os.unlink(temp_pptx_path)
-            except:
-                pass
-            raise HTTPException(status_code=500, detail=f"PPTX conversion error: {str(e)}")
+                success, result = await converter.convert_pdf_to_pptx_async(
+                    temp_pdf_path,
+                    temp_pptx_path
+                )
+                if success:
+                    return {
+                        "success": True,
+                        "pptx_path": temp_pptx_path,
+                        "pdf_path": temp_pdf_path
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": result
+                    }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+
+
+        # 提交后台任务
+        task_id = task_manager.submit_task(
+            task_type="pdf_to_pptx_conversion",
+            func=pdf_to_pptx_task,
+            metadata={
+                "project_id": project_id,
+                "project_topic": project.topic,
+                "pdf_path": temp_pdf_path,
+                "pptx_path": temp_pptx_path
+            }
+        )
+
+        # 立即返回任务ID，不等待任务完成
+        return JSONResponse({
+            "status": "processing",
+            "task_id": task_id,
+            "message": "PPTX conversion started in background",
+            "polling_endpoint": f"/api/landppt/tasks/{task_id}"
+        })
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 后台任务查询端点
+@router.get("/api/landppt/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """查询后台任务状态"""
+    from ..services.background_tasks import get_task_manager
+
+    task_manager = get_task_manager()
+    task = task_manager.get_task(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    response = {
+        "task_id": task.task_id,
+        "task_type": task.task_type,
+        "status": task.status.value,
+        "progress": task.progress,
+        "created_at": task.created_at.isoformat(),
+        "updated_at": task.updated_at.isoformat(),
+        "metadata": task.metadata
+    }
+
+    # 如果任务完成，添加结果信息
+    if task.status.value == "completed" and task.result:
+        response["result"] = task.result
+        # 如果是PDF转PPTX任务，提供下载链接
+        if task.task_type == "pdf_to_pptx_conversion" and task.result.get("success"):
+            response["download_url"] = f"/api/landppt/tasks/{task_id}/download"
+
+    # 如果任务失败，添加错误信息
+    if task.status.value == "failed":
+        response["error"] = task.error
+
+    return JSONResponse(response)
+
+
+@router.get("/api/landppt/tasks/{task_id}/download")
+async def download_task_result(task_id: str):
+    """下载任务结果文件"""
+    from ..services.background_tasks import get_task_manager, TaskStatus
+    from starlette.background import BackgroundTask
+
+    task_manager = get_task_manager()
+    task = task_manager.get_task(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task.status != TaskStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail=f"Task not completed yet (status: {task.status.value})")
+
+    if not task.result or not task.result.get("success"):
+        raise HTTPException(status_code=400, detail="Task failed or no result available")
+
+    pptx_path = task.result.get("pptx_path")
+    pdf_path = task.result.get("pdf_path")
+
+    if not pptx_path or not os.path.exists(pptx_path):
+        raise HTTPException(status_code=404, detail="Result file not found")
+
+    # 获取项目主题作为文件名
+    project_topic = task.metadata.get("project_topic", "PPT")
+    safe_filename = urllib.parse.quote(f"{project_topic}_PPT.pptx", safe='')
+
+    # 清理临时文件的后台任务
+    def cleanup_temp_files():
+        try:
+            if pdf_path and os.path.exists(pdf_path):
+                os.unlink(pdf_path)
+        except:
+            pass
+        try:
+            if pptx_path and os.path.exists(pptx_path):
+                os.unlink(pptx_path)
+        except:
+            pass
+
+    return FileResponse(
+        pptx_path,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
+            "X-Conversion-Method": "PDF-to-PPTX-Background"
+        },
+        background=BackgroundTask(cleanup_temp_files)
+    )
+
 
 @router.get("/api/projects/{project_id}/export/html")
 async def export_project_html(project_id: str):
@@ -5158,9 +5253,12 @@ async def _process_uploaded_files_for_outline(
     custom_style_prompt: str,
     file_processing_mode: str,
     content_analysis_depth: str,
-    requirements: str = None
+    requirements: str = None,
+    enable_web_search: bool = False,  # 新增参数
+    scenario: str = "general",  # 新增参数
+    language: str = "zh"  # 新增参数
 ) -> Optional[Dict[str, Any]]:
-    """处理上传的多个文件并生成PPT大纲"""
+    """处理上传的多个文件并生成PPT大纲，支持联网搜索集成"""
     try:
         from ..services.file_processor import FileProcessor
         file_processor = FileProcessor()
@@ -5201,15 +5299,45 @@ async def _process_uploaded_files_for_outline(
                 logger.error("No files were successfully processed")
                 return None
 
-            # 合并所有文件内容为一个Markdown文档
-            merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+            # 决定是否使用联网搜索并整合
+            merged_file_path = None
+            merged_filename = None
 
-            # 创建临时合并文件
-            import tempfile
-            import os
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
-                merged_file.write(merged_content)
-                merged_file_path = merged_file.name
+            if enable_web_search and topic and topic.strip():
+                # 使用联网搜索并整合本地文件
+                logger.info(f"启用联网搜索模式，主题: {topic}")
+
+                # 构建上下文信息
+                context = {
+                    'scenario': scenario,
+                    'target_audience': target_audience or '普通大众',
+                    'requirements': requirements or '',
+                    'ppt_style': ppt_style,
+                    'description': f'文件数量: {len(files)}'
+                }
+
+                # 进行联网搜索并与文件整合
+                merged_file_path = await ppt_service.conduct_research_and_merge_with_files(
+                    topic=topic,
+                    language=language,
+                    file_paths=saved_file_paths,
+                    context=context
+                )
+
+                merged_filename = f"merged_with_search_{len(files)}_files.md"
+                logger.info(f"✅ 联网搜索和文件整合完成: {merged_file_path}")
+            else:
+                # 不使用联网搜索，仅合并所有文件内容
+                merged_content = file_processor.merge_multiple_files_to_markdown(all_processed_content)
+
+                # 创建临时合并文件
+                import tempfile
+                import os
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.md', encoding='utf-8') as merged_file:
+                    merged_file.write(merged_content)
+                    merged_file_path = merged_file.name
+
+                merged_filename = f"merged_content_{len(files)}_files.md"
 
             saved_file_paths.append(merged_file_path)
 
