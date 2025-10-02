@@ -11,6 +11,9 @@ import json
 import asyncio
 from pathlib import Path
 
+from ..ai import get_role_provider
+from ..core.config import ai_config
+
 from .models.slide_image_info import (
     SlideImageInfo, SlideImagesCollection, SlideImageRequirements,
     ImageRequirement, ImageSource, ImagePurpose
@@ -23,13 +26,28 @@ logger = logging.getLogger(__name__)
 class PPTImageProcessor:
     """PPT图片处理器"""
     
-    def __init__(self, image_service=None, ai_provider=None):
+    def __init__(self, image_service=None, ai_provider=None, provider_override: Optional[str] = None):
         self.image_service = image_service
         self.ai_provider = ai_provider
+        self.provider_override = provider_override
         self._base_url = None
         # 搜索缓存，避免重复搜索
         self._search_cache = {}
         self._search_lock = asyncio.Lock()
+
+    async def _text_completion(self, *, prompt: str, **kwargs):
+        """调用角色为图片分析的模型"""
+        if self.ai_provider:
+            provider = self.ai_provider
+            if "model" not in kwargs:
+                role_settings = ai_config.get_model_config_for_role("image_prompt", provider_override=self.provider_override)
+                if role_settings.get("model"):
+                    kwargs["model"] = role_settings["model"]
+        else:
+            provider, role_settings = get_role_provider("image_prompt", provider_override=self.provider_override)
+            if role_settings.get("model"):
+                kwargs.setdefault("model", role_settings["model"])
+        return await provider.text_completion(prompt=prompt, **kwargs)
 
     def _get_base_url(self) -> str:
         """获取基础URL，用于构建绝对图片链接"""
@@ -136,10 +154,6 @@ class PPTImageProcessor:
                                            template_html: str = "", enabled_sources: List[ImageSource] = None,
                                            image_config: Dict[str, Any] = None) -> Optional[SlideImageRequirements]:
         """使用AI分析幻灯片的图片需求"""
-        if not self.ai_provider:
-            logger.warning("AI提供者未初始化")
-            return None
-
         # 提取幻灯片内容信息
         slide_title = slide_data.get('title', '')
         slide_content = slide_data.get('content_points', [])
@@ -264,7 +278,7 @@ class PPTImageProcessor:
 
 请直接返回纯JSON格式的结果："""
 
-                response = await self.ai_provider.text_completion(
+                response = await self._text_completion(
                     prompt=prompt,
                     temperature=0.7
                 )
@@ -1135,10 +1149,6 @@ class PPTImageProcessor:
                                                requirement: ImageRequirement = None) -> Optional[str]:
         """使用AI生成本地图片搜索关键词"""
         try:
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化")
-                return None
-
             # 构建需求信息
             requirement_info = ""
             if requirement:
@@ -1167,7 +1177,7 @@ class PPTImageProcessor:
 示例格式：商务 会议 图表 business chart
 请只回复关键词，不要其他内容："""
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.5
             )
@@ -1280,10 +1290,6 @@ class PPTImageProcessor:
                                       requirement: ImageRequirement = None) -> Optional[str]:
         """使用AI生成网络搜索关键词"""
         try:
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化")
-                return None
-
             # 检测项目语言
             project_language = self._detect_project_language(project_topic, slide_title, slide_content)
 
@@ -1325,7 +1331,7 @@ class PPTImageProcessor:
 示例格式：{example_format}
 请只回复关键词，不要其他内容："""
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.5
             )
@@ -1371,10 +1377,6 @@ class PPTImageProcessor:
                                         requirement: ImageRequirement = None) -> tuple:
         """使用AI决定图片的最佳尺寸"""
         try:
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化，使用默认尺寸")
-                return (2048, 1152)  # 默认16:9横向
-
             # 构建需求信息
             requirement_info = ""
             if requirement:
@@ -1412,7 +1414,7 @@ class PPTImageProcessor:
 3. 考虑PPT演示的整体效果
 4. 只回复对应的数字编号（1-5），不要其他内容"""
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.3
             )
@@ -1443,10 +1445,6 @@ class PPTImageProcessor:
                                       image_index: int = 1) -> Optional[str]:
         """使用AI生成图片生成提示词"""
         try:
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化")
-                return None
-
             # 构建包含模板HTML的提示词
             template_context = ""
             if template_html.strip():
@@ -1505,7 +1503,7 @@ class PPTImageProcessor:
 
 请生成一个完整的英文提示词（不超过120词），直接输出提示词，不要添加任何其他内容"""
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.7
             )
@@ -1522,9 +1520,6 @@ class PPTImageProcessor:
                                  project_scenario: str, page_number: int, total_pages: int) -> bool:
         """使用AI判断该页是否需要或适合插入图片"""
         try:
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化，默认不添加图片")
-                return False
 
             # 提取幻灯片内容信息
             slide_title = slide_data.get('title', '')
@@ -1573,7 +1568,7 @@ class PPTImageProcessor:
 
 请基于以上标准进行专业判断，只回复"是"或"否"："""
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.7
             )
@@ -1596,9 +1591,6 @@ class PPTImageProcessor:
                 logger.warning("没有图片需要插入")
                 return slide_html
 
-            if not self.ai_provider:
-                logger.warning("AI提供者未初始化，使用默认插入逻辑")
-                return await self._insert_images_with_default_logic(slide_html, images_collection, slide_title)
 
             # 准备图片信息
             images_info = []
@@ -1646,7 +1638,7 @@ class PPTImageProcessor:
 - **页眉页脚保持原样**
 """
             # 调用AI进行智能插入
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.3
             )

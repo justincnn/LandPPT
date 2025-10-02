@@ -9,7 +9,7 @@ import base64
 from typing import Dict, Any, List, Optional
 from io import BytesIO
 
-from ..ai import get_ai_provider, AIMessage, MessageRole
+from ..ai import get_ai_provider, get_role_provider, AIMessage, MessageRole
 from ..ai.base import TextContent, ImageContent, MessageContentType
 from ..core.config import ai_config
 from ..database.service import DatabaseService
@@ -28,12 +28,51 @@ class GlobalMasterTemplateService:
     @property
     def ai_provider(self):
         """Dynamically get AI provider to ensure latest config"""
-        provider_name = self.provider_name or ai_config.default_ai_provider
-        return get_ai_provider(provider_name)
+        provider, _ = get_role_provider("template", provider_override=self.provider_name)
+        return provider
+
+    def _get_template_role_provider(self):
+        """Get provider and settings for template generation role"""
+        return get_role_provider("template", provider_override=self.provider_name)
+
+    async def _text_completion(self, *, prompt: str, **kwargs):
+        provider, settings = self._get_template_role_provider()
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        return await provider.text_completion(prompt=prompt, **kwargs)
+
+    async def _chat_completion(self, *, messages: List[AIMessage], **kwargs):
+        provider, settings = self._get_template_role_provider()
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        return await provider.chat_completion(messages=messages, **kwargs)
+
+    async def _stream_text_completion(self, *, prompt: str, **kwargs):
+        provider, settings = self._get_template_role_provider()
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        if hasattr(provider, 'stream_text_completion'):
+            async for chunk in provider.stream_text_completion(prompt=prompt, **kwargs):
+                yield chunk
+        else:
+            response = await provider.text_completion(prompt=prompt, **kwargs)
+            yield response.content
+
+    async def _stream_chat_completion(self, *, messages: List[AIMessage], **kwargs):
+        provider, settings = self._get_template_role_provider()
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        if hasattr(provider, 'stream_chat_completion'):
+            async for chunk in provider.stream_chat_completion(messages=messages, **kwargs):
+                yield chunk
+        else:
+            response = await provider.chat_completion(messages=messages, **kwargs)
+            yield response.content
 
     async def create_template(self, template_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new global master template"""
         try:
+            template_settings = ai_config.get_model_config_for_role("template", provider_override=self.provider_name)
             # Validate required fields
             required_fields = ['template_name', 'html_template']
             for field in required_fields:
@@ -634,6 +673,7 @@ class GlobalMasterTemplateService:
 """
 
         try:
+            template_settings = ai_config.get_model_config_for_role("template", provider_override=self.provider_name)
             # 构建AI消息
             if generation_mode != "text_only" and reference_image:
                 # 多模态消息
@@ -650,7 +690,8 @@ class GlobalMasterTemplateService:
                     async for chunk in self.ai_provider.stream_chat_completion(
                         messages=messages,
                         max_tokens=ai_config.max_tokens,
-                        temperature=0.7
+                        temperature=0.7,
+                        model=template_settings.get('model')
                     ):
                         full_response += chunk
                         yield {
@@ -659,7 +700,7 @@ class GlobalMasterTemplateService:
                         }
                 else:
                     # 使用标准聊天API
-                    response = await self.ai_provider.chat_completion(
+                    response = await self._chat_completion(
                         messages=messages,
                         max_tokens=ai_config.max_tokens,
                         temperature=0.7
@@ -678,7 +719,8 @@ class GlobalMasterTemplateService:
                     async for chunk in self.ai_provider.stream_text_completion(
                         prompt=ai_prompt,
                         max_tokens=ai_config.max_tokens,
-                        temperature=0.7
+                        temperature=0.7,
+                        model=template_settings.get('model')
                     ):
                         full_response += chunk
                         yield {
@@ -690,7 +732,8 @@ class GlobalMasterTemplateService:
                     response = await self.ai_provider.text_completion(
                         prompt=ai_prompt,
                         max_tokens=ai_config.max_tokens,
-                        temperature=0.7
+                        temperature=0.7,
+                        model=template_settings.get('model')
                     )
                     full_response = response.content
 
@@ -763,7 +806,8 @@ class GlobalMasterTemplateService:
                 async for chunk in self.ai_provider.stream_text_completion(
                     prompt=ai_prompt,
                     max_tokens=ai_config.max_tokens,
-                    temperature=0.7
+                    temperature=0.7,
+                    model=template_settings.get('model')
                 ):
                     full_response += chunk
                     yield {
@@ -804,7 +848,8 @@ class GlobalMasterTemplateService:
                 response = await self.ai_provider.text_completion(
                     prompt=ai_prompt,
                     max_tokens=ai_config.max_tokens,
-                    temperature=0.7
+                    temperature=0.7,
+                    model=template_settings.get('model')
                 )
 
                 yield {'type': 'thinking', 'content': '✨ 完成模板调整...\n'}

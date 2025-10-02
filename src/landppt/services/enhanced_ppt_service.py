@@ -17,7 +17,7 @@ from ..api.models import (
     PPTGenerationRequest, PPTOutline, EnhancedPPTOutline,
     SlideContent, PPTProject, TodoBoard
 )
-from ..ai import get_ai_provider, AIMessage, MessageRole
+from ..ai import get_ai_provider, get_role_provider, AIMessage, MessageRole
 from ..core.config import ai_config
 from .ppt_service import PPTService
 from .db_project_manager import DatabaseProjectManager
@@ -182,44 +182,49 @@ class EnhancedPPTService(PPTService):
                 # If reload fails, reinitialize
                 self._initialize_research_services()
 
-    def _get_model_name_for_provider(self, provider_name: str) -> str:
-        """根据provider获取正确的模型名称"""
-        if provider_name == "openai":
-            return ai_config.openai_model
-        elif provider_name == "anthropic":
-            return ai_config.anthropic_model
-        elif provider_name == "ollama":
-            return ai_config.ollama_model
-        elif provider_name == "google" or provider_name == "gemini":
-            return ai_config.google_model
-        else:
-            # 默认返回OpenAI模型
-            return ai_config.openai_model
-
-    def _get_current_ai_config(self):
+    def _get_current_ai_config(self, role: str = "default"):
         """获取当前最新的AI配置"""
-        current_provider = self.provider_name or ai_config.default_ai_provider
-        model_name = self._get_model_name_for_provider(current_provider)
-
+        role_settings = ai_config.get_model_config_for_role(role, provider_override=self.provider_name)
         return {
-            "llm_model": model_name,
-            "llm_provider": current_provider,
+            "llm_model": role_settings.get("model"),
+            "llm_provider": role_settings.get("provider"),
             "temperature": getattr(ai_config, 'temperature', 0.7),
             "max_tokens": getattr(ai_config, 'max_tokens', 2000)
         }
+
+    def _get_role_provider(self, role: str):
+        """获取指定任务角色的提供者和配置"""
+        return get_role_provider(role, provider_override=self.provider_name)
+
+    async def _text_completion_for_role(self, role: str, *, prompt: str, **kwargs):
+        """调用指定角色的模型进行文本补全"""
+        provider, settings = self._get_role_provider(role)
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        return await provider.text_completion(prompt=prompt, **kwargs)
+
+    async def _chat_completion_for_role(self, role: str, *, messages: List[AIMessage], **kwargs):
+        """调用指定角色的模型进行对话补全"""
+        provider, settings = self._get_role_provider(role)
+        if settings.get("model"):
+            kwargs.setdefault("model", settings["model"])
+        return await provider.chat_completion(messages=messages, **kwargs)
 
     def update_ai_config(self):
         """更新AI配置到最新状态"""
         self.config = self._get_current_ai_config()
         logger.info(f"AI配置已更新: provider={self.config['llm_provider']}, model={self.config['llm_model']}")
 
-    def _configure_summeryfile_api(self, generator):
+    def _configure_summeryfile_api(self, generator, role: str = "default"):
         """配置summeryanyfile的API设置"""
         try:
             import os
-            # 获取当前provider的配置
-            current_provider = self.provider_name or ai_config.default_ai_provider
-            provider_config = ai_config.get_provider_config(current_provider)
+            # 获取当前角色的配置
+            role_settings = ai_config.get_model_config_for_role(role, provider_override=self.provider_name)
+            current_provider = role_settings.get("provider")
+            provider_config = ai_config.get_provider_config(current_provider).copy()
+            if role_settings.get("model"):
+                provider_config["model"] = role_settings["model"]
 
             # 设置通用配置参数
             if provider_config.get("max_tokens"):
@@ -228,40 +233,55 @@ class EnhancedPPTService(PPTService):
                 os.environ["TEMPERATURE"] = str(provider_config["temperature"])
 
             if current_provider == "openai":
-                # 设置OpenAI API配置
                 if provider_config.get("api_key"):
                     os.environ["OPENAI_API_KEY"] = provider_config["api_key"]
                 if provider_config.get("base_url"):
                     os.environ["OPENAI_BASE_URL"] = provider_config["base_url"]
+                if provider_config.get("model"):
+                    os.environ["OPENAI_MODEL"] = provider_config["model"]
 
                 logger.info(f"已配置summeryanyfile OpenAI API: model={provider_config.get('model')}, base_url={provider_config.get('base_url')}")
 
             elif current_provider == "anthropic":
-                # 设置Anthropic API配置
                 if provider_config.get("api_key"):
                     os.environ["ANTHROPIC_API_KEY"] = provider_config["api_key"]
+                if provider_config.get("model"):
+                    os.environ["ANTHROPIC_MODEL"] = provider_config["model"]
 
                 logger.info(f"已配置summeryanyfile Anthropic API: model={provider_config.get('model')}")
 
-            elif current_provider == "google" or current_provider == "gemini":
-                # 设置Google/Gemini API配置
+            elif current_provider in ("google", "gemini"):
                 if provider_config.get("api_key"):
                     os.environ["GOOGLE_API_KEY"] = provider_config["api_key"]
+                if provider_config.get("model"):
+                    os.environ["GOOGLE_MODEL"] = provider_config["model"]
+                if provider_config.get("base_url"):
+                    os.environ["GOOGLE_BASE_URL"] = provider_config["base_url"]
 
                 logger.info(f"已配置summeryanyfile Google/Gemini API: model={provider_config.get('model')}")
 
             elif current_provider == "ollama":
-                # 设置Ollama API配置
                 if provider_config.get("base_url"):
                     os.environ["OLLAMA_BASE_URL"] = provider_config["base_url"]
+                if provider_config.get("model"):
+                    os.environ["OLLAMA_MODEL"] = provider_config["model"]
 
                 logger.info(f"已配置summeryanyfile Ollama API: model={provider_config.get('model')}, base_url={provider_config.get('base_url')}")
+
+            elif current_provider == "302ai":
+                if provider_config.get("api_key"):
+                    os.environ["302AI_API_KEY"] = provider_config["api_key"]
+                if provider_config.get("base_url"):
+                    os.environ["302AI_BASE_URL"] = provider_config["base_url"]
+                if provider_config.get("model"):
+                    os.environ["302AI_MODEL"] = provider_config["model"]
+
+                logger.info(f"已配置summeryanyfile 302.AI API: model={provider_config.get('model')}, base_url={provider_config.get('base_url')}")
 
             logger.info(f"已配置summeryanyfile通用参数: max_tokens={provider_config.get('max_tokens')}, temperature={provider_config.get('temperature')}")
 
         except Exception as e:
-            logger.warning(f"配置summeryanyfile API时出错: {e}")
-
+            logger.warning(f"配置summeryanyfile API时出现问题: {e}")
     def get_cache_stats(self) -> Dict[str, Any]:
         """
         获取文件缓存统计信息
@@ -436,7 +456,7 @@ class EnhancedPPTService(PPTService):
             prompt = self._create_outline_prompt(request, research_context, page_count_settings)
 
             # Generate outline using AI
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("outline",
                 prompt=prompt,
                 max_tokens=ai_config.max_tokens,
                 temperature=ai_config.temperature
@@ -542,7 +562,7 @@ class EnhancedPPTService(PPTService):
         try:
             prompt = self._create_slide_content_prompt(slide_title, scenario, topic, language)
             
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("slide_generation",
                 prompt=prompt,
                 max_tokens=ai_config.max_tokens,  # Use smaller limit for slide content
                 temperature=ai_config.temperature
@@ -560,7 +580,7 @@ class EnhancedPPTService(PPTService):
         try:
             prompt = self._create_enhancement_prompt(content, scenario, language)
             
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("outline",
                 prompt=prompt,
                 max_tokens=ai_config.max_tokens,  # Use smaller limit for content enhancement
                 temperature=max(ai_config.temperature - 0.1, 0.1)  # Slightly lower temperature for enhancement
@@ -1024,7 +1044,7 @@ class EnhancedPPTService(PPTService):
 请根据以上信息完成当前阶段的任务。
 """
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("default",
                 prompt=context,
                 system_prompt=system_prompt,
                 max_tokens=ai_config.max_tokens,
@@ -1385,7 +1405,7 @@ class EnhancedPPTService(PPTService):
 
             # Generate outline content directly without initial message
             try:
-                response = await self.ai_provider.text_completion(
+                response = await self._text_completion_for_role("outline",
                     prompt=prompt,
                     max_tokens=ai_config.max_tokens,
                     temperature=ai_config.temperature
@@ -1674,7 +1694,7 @@ class EnhancedPPTService(PPTService):
             repair_prompt = self._build_repair_prompt(outline_data, validation_errors, confirmed_requirements)
 
             # 调用AI进行修复
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("outline",
                 prompt=repair_prompt,
                 max_tokens=ai_config.max_tokens,
                 temperature=0.3  # 使用较低的温度以确保更准确的修复
@@ -2468,7 +2488,7 @@ class EnhancedPPTService(PPTService):
                 page_count_mode=page_count_mode
             )
 
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("outline",
                 prompt=context,
                 system_prompt=system_prompt,
                 max_tokens=ai_config.max_tokens,
@@ -3345,7 +3365,7 @@ class EnhancedPPTService(PPTService):
             subtask=subtask
         )
 
-        response = await self.ai_provider.text_completion(
+        response = await self._text_completion_for_role("default",
             prompt=context,
             system_prompt=system_prompt,
             max_tokens=ai_config.max_tokens,
@@ -3435,7 +3455,7 @@ class EnhancedPPTService(PPTService):
 
             image_processor = PPTImageProcessor(
                 image_service=self.image_service,
-                ai_provider=self.ai_provider
+                provider_override=self.provider_name
             )
 
             # 处理图片，返回图片集合
@@ -3547,7 +3567,7 @@ class EnhancedPPTService(PPTService):
             prompt = prompts_manager.get_style_genes_extraction_prompt(template_html)
 
             # 调用AI分析
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("creative",
                 prompt=prompt,
                 max_tokens=ai_config.max_tokens,
                 temperature=0.3
@@ -3685,7 +3705,7 @@ class EnhancedPPTService(PPTService):
             prompt = prompts_manager.get_unified_design_guide_prompt(slide_data, page_number, total_pages)
 
             # 调用AI生成指导
-            response = await self.ai_provider.text_completion(
+            response = await self._text_completion_for_role("creative",
                 prompt=prompt,
                 max_tokens=ai_config.max_tokens,
                 temperature=0.7  # 适中温度平衡创意性和实用性
@@ -4241,7 +4261,7 @@ class EnhancedPPTService(PPTService):
                 # Use the existing ai_config from imports
 
                 # Generate HTML
-                response = await self.ai_provider.text_completion(
+                response = await self._text_completion_for_role("slide_generation",
                     prompt=retry_context,
                     system_prompt=system_prompt,
                     max_tokens=ai_config.max_tokens,  # Increase token limit for retries
@@ -5985,7 +6005,7 @@ class EnhancedPPTService(PPTService):
                 from summeryanyfile.core.models import ProcessingConfig, ChunkStrategy
 
                 # 获取最新的AI配置
-                current_ai_config = self._get_current_ai_config()
+                current_ai_config = self._get_current_ai_config("outline")
                 logger.info(f"使用最新AI配置: provider={current_ai_config['llm_provider']}, model={current_ai_config['llm_model']}")
 
                 # 创建配置 - 使用最新的AI配置
@@ -6023,7 +6043,7 @@ class EnhancedPPTService(PPTService):
                 generator = PPTOutlineGenerator(config, use_magic_pdf=use_magic_pdf, cache_dir=str(cache_dir))
 
                 # 设置API配置到LLM管理器
-                self._configure_summeryfile_api(generator)
+                self._configure_summeryfile_api(generator, role="outline")
 
                 # 从文件生成大纲
                 logger.info(f"正在使用summeryanyfile处理文件: {request.file_path}")

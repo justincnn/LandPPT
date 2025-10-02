@@ -60,6 +60,22 @@ class ConfigService:
             
             "default_ai_provider": {"type": "select", "category": "ai_providers", "default": "openai"},
             
+            # Model Role Overrides
+            "default_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "default_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "outline_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "outline_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "creative_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "creative_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "image_prompt_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "image_prompt_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "slide_generation_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "slide_generation_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "editor_assistant_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "editor_assistant_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "template_generation_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "template_generation_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            
             # Generation Parameters
             "max_tokens": {"type": "number", "category": "generation_params", "default": "16384"},
             "temperature": {"type": "number", "category": "generation_params", "default": "0.7"},
@@ -232,7 +248,7 @@ class ConfigService:
 
             # Reload AI configuration if any AI-related config was updated
             ai_related_keys = [k for k in config.keys() if k in self.config_schema and
-                             self.config_schema[k]["category"] in ["ai_providers", "generation_params"]]
+                             self.config_schema[k]["category"] in ["ai_providers", "generation_params", "model_roles"]]
             if ai_related_keys:
                 self._reload_ai_config()
 

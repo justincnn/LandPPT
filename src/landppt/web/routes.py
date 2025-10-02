@@ -27,7 +27,7 @@ from ..services.enhanced_ppt_service import EnhancedPPTService
 from ..services.pdf_to_pptx_converter import get_pdf_to_pptx_converter
 from ..services.pyppeteer_pdf_converter import get_pdf_converter
 from ..core.config import ai_config
-from ..ai import get_ai_provider, AIMessage, MessageRole
+from ..ai import get_ai_provider, get_role_provider, AIMessage, MessageRole
 from ..auth.middleware import get_current_user_required, get_current_user_optional
 from ..database.models import User
 from ..utils.thread_pool import run_blocking_io, to_thread
@@ -2046,7 +2046,7 @@ async def ai_slide_edit(
     """AI编辑幻灯片接口"""
     try:
         # 获取AI提供者
-        ai_provider = get_ai_provider()
+        provider, settings = get_role_provider("editor")
 
         # 构建AI编辑上下文
         outline_info = ""
@@ -2105,10 +2105,11 @@ async def ai_slide_edit(
         messages.append(AIMessage(role=MessageRole.USER, content=context))
 
         # 调用AI生成回复
-        response = await ai_provider.chat_completion(
+        response = await provider.chat_completion(
             messages=messages,
             max_tokens=ai_config.max_tokens,
-            temperature=0.7
+            temperature=0.7,
+            model=settings.get('model')
         )
 
         ai_response = response.content
@@ -2143,7 +2144,7 @@ async def ai_slide_edit_stream(
     """AI编辑幻灯片流式接口"""
     try:
         # 获取AI提供者
-        ai_provider = get_ai_provider()
+        provider, settings = get_role_provider("editor")
 
         # 构建AI编辑上下文
         outline_info = ""
@@ -2245,14 +2246,26 @@ async def ai_slide_edit_stream(
 
                 # 流式生成AI回复
                 full_response = ""
-                async for chunk in ai_provider.stream_chat_completion(
-                    messages=messages,
-                    max_tokens=ai_config.max_tokens,
-                    temperature=0.7
-                ):
-                    if chunk:
-                        full_response += chunk
-                        yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
+                if hasattr(provider, 'stream_chat_completion'):
+                    async for chunk in provider.stream_chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get('model')
+                    ):
+                        if chunk:
+                            full_response += chunk
+                            yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
+                else:
+                    response = await provider.chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get('model')
+                    )
+                    if response.content:
+                        full_response = response.content
+                        yield f"data: {json.dumps({'type': 'content', 'content': response.content})}\n\n"
 
                 # 检查是否包含HTML代码 - 改进版本，支持多种格式
                 new_html_content = None
@@ -2321,7 +2334,7 @@ async def ai_regenerate_image(
                 "message": "图像服务不可用"
             }
 
-        ai_provider = get_ai_provider()
+        provider, settings = get_role_provider("editor")
         if not ai_provider:
             return {
                 "success": False,
@@ -2735,7 +2748,7 @@ async def ai_enhance_bullet_point(
     """AI增强要点接口"""
     try:
         # 获取AI提供者
-        ai_provider = get_ai_provider()
+        provider, settings = get_role_provider("outline")
 
         # 构建上下文信息
         context_info = ""
@@ -2793,10 +2806,11 @@ async def ai_enhance_bullet_point(
 """
 
         # 调用AI生成增强内容
-        response = await ai_provider.text_completion(
+        response = await provider.text_completion(
             prompt=context,
             max_tokens=ai_config.max_tokens // 2,  # 使用较小的token限制
-            temperature=0.7
+            temperature=0.7,
+            model=settings.get('model')
         )
 
         enhanced_text = response.content.strip()
@@ -2827,7 +2841,7 @@ async def ai_enhance_all_bullet_points(
     """AI增强所有要点接口"""
     try:
         # 获取AI提供者
-        ai_provider = get_ai_provider()
+        provider, settings = get_role_provider("outline")
 
         # 构建上下文信息
         context_info = ""

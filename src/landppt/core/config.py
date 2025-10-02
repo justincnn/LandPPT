@@ -3,7 +3,7 @@ Configuration management for LandPPT AI features
 """
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, ClassVar
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
@@ -80,6 +80,22 @@ class AIConfig(BaseSettings):
     # Provider Selection
     default_ai_provider: str = Field(default="openai", env="DEFAULT_AI_PROVIDER")
     
+    # Model Role Configuration
+    default_model_provider: Optional[str] = Field(default=None, env="DEFAULT_MODEL_PROVIDER")
+    default_model_name: Optional[str] = Field(default=None, env="DEFAULT_MODEL_NAME")
+    outline_model_provider: Optional[str] = Field(default=None, env="OUTLINE_MODEL_PROVIDER")
+    outline_model_name: Optional[str] = Field(default=None, env="OUTLINE_MODEL_NAME")
+    creative_model_provider: Optional[str] = Field(default=None, env="CREATIVE_MODEL_PROVIDER")
+    creative_model_name: Optional[str] = Field(default=None, env="CREATIVE_MODEL_NAME")
+    image_prompt_model_provider: Optional[str] = Field(default=None, env="IMAGE_PROMPT_MODEL_PROVIDER")
+    image_prompt_model_name: Optional[str] = Field(default=None, env="IMAGE_PROMPT_MODEL_NAME")
+    slide_generation_model_provider: Optional[str] = Field(default=None, env="SLIDE_GENERATION_MODEL_PROVIDER")
+    slide_generation_model_name: Optional[str] = Field(default=None, env="SLIDE_GENERATION_MODEL_NAME")
+    editor_assistant_model_provider: Optional[str] = Field(default=None, env="EDITOR_ASSISTANT_MODEL_PROVIDER")
+    editor_assistant_model_name: Optional[str] = Field(default=None, env="EDITOR_ASSISTANT_MODEL_NAME")
+    template_generation_model_provider: Optional[str] = Field(default=None, env="TEMPLATE_GENERATION_MODEL_PROVIDER")
+    template_generation_model_name: Optional[str] = Field(default=None, env="TEMPLATE_GENERATION_MODEL_NAME")
+
     # Generation Parameters
     max_tokens: int = Field(default=16384, env="MAX_TOKENS")
     temperature: float = Field(default=0.7, env="TEMPERATURE")
@@ -104,6 +120,94 @@ class AIConfig(BaseSettings):
         "extra": "ignore"
     }
 
+
+
+    MODEL_ROLE_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        "default": ("default_model_provider", "default_model_name"),
+        "outline": ("outline_model_provider", "outline_model_name"),
+        "creative": ("creative_model_provider", "creative_model_name"),
+        "image_prompt": ("image_prompt_model_provider", "image_prompt_model_name"),
+        "slide_generation": ("slide_generation_model_provider", "slide_generation_model_name"),
+        "editor": ("editor_assistant_model_provider", "editor_assistant_model_name"),
+        "template": ("template_generation_model_provider", "template_generation_model_name"),
+    }
+
+    MODEL_ROLE_LABELS: ClassVar[dict[str, str]] = {
+        "default": "默认模型",
+        "outline": "大纲生成 / 要点增强模型",
+        "creative": "创意指导模型",
+        "image_prompt": "配图与提示词模型",
+        "slide_generation": "幻灯片生成模型",
+        "editor": "AI编辑助手模型",
+        "template": "AI模板生成模型",
+    }
+
+
+
+    @staticmethod
+    def _normalize_optional_str(value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            value = str(value)
+        value = value.strip()
+        return value or None
+
+    def _normalize_provider(self, provider: Optional[str]) -> Optional[str]:
+        normalized = self._normalize_optional_str(provider)
+        return normalized.lower() if normalized else None
+
+    def _get_default_model_for_provider(self, provider: Optional[str]) -> Optional[str]:
+        provider_key = self._normalize_provider(provider)
+        if provider_key == "openai":
+            return self._normalize_optional_str(self.openai_model)
+        if provider_key == "anthropic":
+            return self._normalize_optional_str(self.anthropic_model)
+        if provider_key in ("google", "gemini"):
+            return self._normalize_optional_str(self.google_model)
+        if provider_key == "302ai":
+            return self._normalize_optional_str(self.ai_302ai_model)
+        if provider_key == "ollama":
+            return self._normalize_optional_str(self.ollama_model)
+        if provider_key == "azure_openai":
+            return self._normalize_optional_str(getattr(self, "azure_openai_deployment_name", None))
+        return self._normalize_optional_str(self.openai_model)
+
+    def get_model_config_for_role(self, role: str, provider_override: Optional[str] = None) -> Dict[str, Optional[str]]:
+        role_key = (role or "default").lower()
+        if role_key not in self.MODEL_ROLE_FIELDS:
+            raise ValueError(f"Unknown model role: {role}")
+
+        provider_field, model_field = self.MODEL_ROLE_FIELDS[role_key]
+        configured_provider = self._normalize_provider(getattr(self, provider_field, None))
+        configured_model = self._normalize_optional_str(getattr(self, model_field, None))
+        override_provider = self._normalize_provider(provider_override)
+
+        effective_provider = override_provider or configured_provider or self._normalize_provider(self.default_ai_provider) or "openai"
+
+        if override_provider:
+            if override_provider == configured_provider and configured_model:
+                effective_model = configured_model
+            else:
+                effective_model = self._get_default_model_for_provider(override_provider)
+        else:
+            effective_model = configured_model or self._get_default_model_for_provider(effective_provider)
+
+        return {
+            "role": role_key,
+            "provider": effective_provider,
+            "model": effective_model
+        }
+
+    def get_all_model_roles(self) -> Dict[str, Dict[str, Optional[str]]]:
+        roles = {}
+        for role_key, (provider_field, model_field) in self.MODEL_ROLE_FIELDS.items():
+            roles[role_key] = {
+                "provider": self._normalize_optional_str(getattr(self, provider_field, None)),
+                "model": self._normalize_optional_str(getattr(self, model_field, None)),
+                "label": self.MODEL_ROLE_LABELS.get(role_key)
+            }
+        return roles
 
 
     def get_provider_config(self, provider: Optional[str] = None) -> Dict[str, Any]:
@@ -234,6 +338,55 @@ def reload_ai_config():
     ai_config.ai_302ai_base_url = os.environ.get('302AI_BASE_URL', ai_config.ai_302ai_base_url)
     ai_config.ai_302ai_model = os.environ.get('302AI_MODEL', ai_config.ai_302ai_model)
     ai_config.default_ai_provider = os.environ.get('DEFAULT_AI_PROVIDER', ai_config.default_ai_provider)
+    model_provider_env = os.environ.get('DEFAULT_MODEL_PROVIDER')
+    ai_config.default_model_provider = (ai_config._normalize_optional_str(model_provider_env)
+                                        if model_provider_env is not None else ai_config.default_model_provider)
+    model_name_env = os.environ.get('DEFAULT_MODEL_NAME')
+    ai_config.default_model_name = (ai_config._normalize_optional_str(model_name_env)
+                                    if model_name_env is not None else ai_config.default_model_name)
+
+    outline_provider_env = os.environ.get('OUTLINE_MODEL_PROVIDER')
+    ai_config.outline_model_provider = (ai_config._normalize_optional_str(outline_provider_env)
+                                        if outline_provider_env is not None else ai_config.outline_model_provider)
+    outline_model_env = os.environ.get('OUTLINE_MODEL_NAME')
+    ai_config.outline_model_name = (ai_config._normalize_optional_str(outline_model_env)
+                                    if outline_model_env is not None else ai_config.outline_model_name)
+
+    creative_provider_env = os.environ.get('CREATIVE_MODEL_PROVIDER')
+    ai_config.creative_model_provider = (ai_config._normalize_optional_str(creative_provider_env)
+                                         if creative_provider_env is not None else ai_config.creative_model_provider)
+    creative_model_env = os.environ.get('CREATIVE_MODEL_NAME')
+    ai_config.creative_model_name = (ai_config._normalize_optional_str(creative_model_env)
+                                     if creative_model_env is not None else ai_config.creative_model_name)
+
+    image_prompt_provider_env = os.environ.get('IMAGE_PROMPT_MODEL_PROVIDER')
+    ai_config.image_prompt_model_provider = (ai_config._normalize_optional_str(image_prompt_provider_env)
+                                             if image_prompt_provider_env is not None else ai_config.image_prompt_model_provider)
+    image_prompt_model_env = os.environ.get('IMAGE_PROMPT_MODEL_NAME')
+    ai_config.image_prompt_model_name = (ai_config._normalize_optional_str(image_prompt_model_env)
+                                         if image_prompt_model_env is not None else ai_config.image_prompt_model_name)
+
+    slide_provider_env = os.environ.get('SLIDE_GENERATION_MODEL_PROVIDER')
+    ai_config.slide_generation_model_provider = (ai_config._normalize_optional_str(slide_provider_env)
+                                                 if slide_provider_env is not None else ai_config.slide_generation_model_provider)
+    slide_model_env = os.environ.get('SLIDE_GENERATION_MODEL_NAME')
+    ai_config.slide_generation_model_name = (ai_config._normalize_optional_str(slide_model_env)
+                                             if slide_model_env is not None else ai_config.slide_generation_model_name)
+
+    editor_provider_env = os.environ.get('EDITOR_ASSISTANT_MODEL_PROVIDER')
+    ai_config.editor_assistant_model_provider = (ai_config._normalize_optional_str(editor_provider_env)
+                                                 if editor_provider_env is not None else ai_config.editor_assistant_model_provider)
+    editor_model_env = os.environ.get('EDITOR_ASSISTANT_MODEL_NAME')
+    ai_config.editor_assistant_model_name = (ai_config._normalize_optional_str(editor_model_env)
+                                             if editor_model_env is not None else ai_config.editor_assistant_model_name)
+
+    template_provider_env = os.environ.get('TEMPLATE_GENERATION_MODEL_PROVIDER')
+    ai_config.template_generation_model_provider = (ai_config._normalize_optional_str(template_provider_env)
+                                                   if template_provider_env is not None else ai_config.template_generation_model_provider)
+    template_model_env = os.environ.get('TEMPLATE_GENERATION_MODEL_NAME')
+    ai_config.template_generation_model_name = (ai_config._normalize_optional_str(template_model_env)
+                                               if template_model_env is not None else ai_config.template_generation_model_name)
+
     ai_config.max_tokens = int(os.environ.get('MAX_TOKENS', str(ai_config.max_tokens)))
     ai_config.temperature = float(os.environ.get('TEMPERATURE', str(ai_config.temperature)))
     ai_config.top_p = float(os.environ.get('TOP_P', str(ai_config.top_p)))

@@ -5,7 +5,7 @@ AI provider implementations
 import asyncio
 import json
 import logging
-from typing import List, Dict, Any, Optional, AsyncGenerator, Union
+from typing import List, Dict, Any, Optional, AsyncGenerator, Union, Tuple
 
 from .base import AIProvider, AIMessage, AIResponse, MessageRole, TextContent, ImageContent, MessageContentType
 from ..core.config import ai_config
@@ -662,6 +662,13 @@ _provider_manager = AIProviderManager()
 def get_ai_provider(provider_name: Optional[str] = None) -> AIProvider:
     """Get AI provider instance"""
     return _provider_manager.get_provider(provider_name)
+
+
+def get_role_provider(role: str, provider_override: Optional[str] = None) -> Tuple[AIProvider, Dict[str, Optional[str]]]:
+    """Get provider and settings for a specific task role"""
+    settings = ai_config.get_model_config_for_role(role, provider_override=provider_override)
+    provider = get_ai_provider(settings["provider"])
+    return provider, settings
 
 def reload_ai_providers():
     """Reload all AI providers (clear cache)"""

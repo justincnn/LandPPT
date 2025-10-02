@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}系统配置管理 - LandPPT{% endblock %}
 
@@ -260,8 +260,68 @@
     </div>
 </div>
 
-<!-- 生成参数配置标签页 -->
-<div id="generation-params" class="tab-content" style="display: none;">
+<!-- 鐢熸垚鍙傛暟閰嶇疆鏍囩椤?-->
+<div id="model-roles" class="tab-content">
+    <div style="max-width: 1100px; margin: 0 auto;">
+        <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div>
+                    <h3 style="color: #2c3e50; margin-bottom: 6px;">🧠 模型任务配置</h3>
+                    <p style="color: #7f8c8d; margin: 0;">该区域为高级设置，可为不同功能指定专用提供者和模型，未设置时将继承默认配置。</p>
+                </div>
+                <button type="button" id="model-role-toggle-btn" class="btn btn-secondary" style="min-width: 140px;" onclick="toggleModelRoleSettings()">
+                    展开设置
+                </button>
+            </div>
+        </div>
+        <div id="model-role-settings" style="display: none;">
+            <div class="grid" style="gap: 20px;">
+                {% set model_roles = [
+                    {'label': '默认模型', 'provider_field': 'default_model_provider', 'model_field': 'default_model_name'},
+                    {'label': '大纲生成 / 要点增强', 'provider_field': 'outline_model_provider', 'model_field': 'outline_model_name'},
+                    {'label': '创意指导', 'provider_field': 'creative_model_provider', 'model_field': 'creative_model_name'},
+                    {'label': '配图与提示词', 'provider_field': 'image_prompt_model_provider', 'model_field': 'image_prompt_model_name'},
+                    {'label': '幻灯片生成', 'provider_field': 'slide_generation_model_provider', 'model_field': 'slide_generation_model_name'},
+                    {'label': 'AI编辑助手', 'provider_field': 'editor_assistant_model_provider', 'model_field': 'editor_assistant_model_name'},
+                    {'label': 'AI模板生成', 'provider_field': 'template_generation_model_provider', 'model_field': 'template_generation_model_name'}
+                ] %}
+                {% for role in model_roles %}
+                <div class="card" data-role-model-field="{{ role.model_field }}">
+                    <h4 style="color: #2c3e50; margin-bottom: 15px;">{{ role.label }}</h4>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>首选提供者</label>
+                        <select name="{{ role.provider_field }}" class="model-role-provider" data-model-field="{{ role.model_field }}" style="width: 100%; padding: 10px; border: 1px solid #dcdfe6; border-radius: 6px;">
+                            <option value="">使用默认提供者</option>
+                            {% for provider in available_providers %}
+                            <option value="{{ provider }}" {% if current_config.get(role.provider_field) == provider %}selected{% endif %}>{{ provider }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>模型</label>
+                        <div class="model-input-container">
+                            <div class="searchable-select-container role-model-searchable-select" data-model-field="{{ role.model_field }}" style="display: none;">
+                                <input type="text" class="searchable-select-input role-model-search" data-model-field="{{ role.model_field }}" placeholder="搜索模型...">
+                                <div class="searchable-select-dropdown role-model-dropdown" data-model-field="{{ role.model_field }}">
+                                    <div class="searchable-select-option" data-value="">选择模型...</div>
+                                </div>
+                            </div>
+                            <input type="text" name="{{ role.model_field }}" class="model-input role-model-input" data-model-field="{{ role.model_field }}" value="{{ current_config.get(role.model_field, '') }}" placeholder="留空时使用提供者默认模型">
+                            <button type="button" class="model-fetch-btn openai-fetch-btn" data-model-field="{{ role.model_field }}" onclick="fetchRoleOpenAIModels(this)" style="display: none;" title="获取可用模型列表">
+                                📋
+                            </button>
+                        </div>
+                        <small style="color: #7f8c8d;">留空表示继承该提供者默认模型</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button onclick="saveModelRoleConfig()" class="btn btn-success" style="padding: 12px 30px; font-weight: 600; font-size: 1.05em;">保存模型任务配置</button>
+            </div>
+        </div>
+    </div>
+</div><div id="generation-params" class="tab-content" style="display: none;">
     <div class="card">
         <h3 style="color: #f39c12; margin-bottom: 30px; text-align: center;">🎛️ AI 生成参数配置</h3>
 
@@ -2010,6 +2070,9 @@
 <script>
 // 全局变量
 let currentConfig = {};
+let modelRoleSettingsExpanded = false;
+let roleOpenAIModels = null;
+let roleOpenAIModelsPromise = null;
 let availableProviders = ['openai', 'anthropic', 'google', 'azure_openai', 'ollama', '302ai'];
 
 // 搜索选择框管理
@@ -2226,6 +2289,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAllConfigs();
     // 检查图片服务状态
     checkImageServiceStatus();
+    // 初始化模型任务配置的provider切换监听
+    initModelRoleProviderListeners();
 });
 
 // 初始化搜索选择框
@@ -2276,6 +2341,7 @@ async function loadTabConfig(tabName) {
     try {
         const categoryMap = {
             'ai-providers': 'ai_providers',
+            'model-roles': 'model_roles',
             'generation-params': 'generation_params',
             'app-config': 'app_config',
             'image-service': 'image_service'
@@ -2906,6 +2972,8 @@ async function loadAllConfigs() {
             const result = await response.json();
             if (result.success) {
                 currentConfig = result.config;
+                roleOpenAIModels = null;
+                roleOpenAIModelsPromise = null;
                 populateAllForms();
             }
         }
@@ -2956,6 +3024,170 @@ function populateProviderForms() {
             }
         });
     });
+}
+
+// 切换模型任务配置显示
+function toggleModelRoleSettings() {
+    const settingsDiv = document.getElementById('model-role-settings');
+    const toggleBtn = document.getElementById('model-role-toggle-btn');
+
+    if (settingsDiv && toggleBtn) {
+        if (settingsDiv.style.display === 'none' || !settingsDiv.style.display) {
+            settingsDiv.style.display = 'block';
+            toggleBtn.textContent = '收起设置';
+        } else {
+            settingsDiv.style.display = 'none';
+            toggleBtn.textContent = '展开设置';
+        }
+    }
+}
+
+// 存储每个role的SearchableSelect实例
+const roleModelSelects = {};
+
+// 初始化模型任务配置的provider切换监听器
+function initModelRoleProviderListeners() {
+    const providerSelects = document.querySelectorAll('.model-role-provider');
+
+    providerSelects.forEach(select => {
+        // 初始化时检查provider
+        updateModelRoleFetchButton(select);
+
+        // 添加change事件监听
+        select.addEventListener('change', function() {
+            updateModelRoleFetchButton(this);
+        });
+    });
+}
+
+// 更新获取模型按钮的显示状态
+function updateModelRoleFetchButton(selectElement) {
+    const modelField = selectElement.getAttribute('data-model-field');
+    const fetchBtn = document.querySelector(`.openai-fetch-btn[data-model-field="${modelField}"]`);
+    const searchableContainer = document.querySelector(`.role-model-searchable-select[data-model-field="${modelField}"]`);
+    const modelInput = document.querySelector(`.role-model-input[data-model-field="${modelField}"]`);
+
+    if (!fetchBtn) return;
+
+    const selectedProvider = selectElement.value.toLowerCase();
+
+    // 只有选择openai或302ai时显示按钮
+    if (selectedProvider === 'openai' || selectedProvider === '302ai') {
+        fetchBtn.style.display = 'flex';
+    } else {
+        fetchBtn.style.display = 'none';
+        // 隐藏searchable select容器，显示普通输入框
+        if (searchableContainer) searchableContainer.style.display = 'none';
+        if (modelInput) modelInput.style.display = 'block';
+    }
+}
+
+// 获取OpenAI模型列表
+async function fetchRoleOpenAIModels(buttonElement) {
+    const modelField = buttonElement.getAttribute('data-model-field');
+    const card = buttonElement.closest('.card');
+    const providerSelect = card.querySelector('.model-role-provider');
+    const searchableContainer = document.querySelector(`.role-model-searchable-select[data-model-field="${modelField}"]`);
+    const modelInput = document.querySelector(`.role-model-input[data-model-field="${modelField}"]`);
+
+    if (!providerSelect || !searchableContainer || !modelInput) return;
+
+    const provider = providerSelect.value.toLowerCase();
+
+    // 获取provider的配置信息
+    const providerCard = document.querySelector(`[data-provider="${provider}"]`);
+    if (!providerCard) {
+        showNotification(`未找到 ${provider} 提供者的配置`, 'error');
+        return;
+    }
+
+    try {
+        buttonElement.disabled = true;
+        buttonElement.classList.add('loading');
+        buttonElement.innerHTML = '⏳';
+
+        let models = null;
+
+        if (provider === 'openai') {
+            // 获取OpenAI配置
+            const apiKeyInput = providerCard.querySelector('input[name="openai_api_key"]');
+            const baseUrlInput = providerCard.querySelector('input[name="openai_base_url"]');
+
+            const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+            let baseUrl = baseUrlInput ? baseUrlInput.value.trim() : '';
+
+            if (!apiKey) {
+                showNotification('请先配置OpenAI API Key', 'warning');
+                return;
+            }
+
+            if (!baseUrl) {
+                baseUrl = 'https://api.openai.com/v1';
+            }
+
+            models = await fetchOpenAIModels(baseUrl, apiKey);
+
+        } else if (provider === '302ai') {
+            // 获取302AI配置
+            const apiKeyInput = providerCard.querySelector('input[name="302ai_api_key"]');
+            const baseUrlInput = providerCard.querySelector('input[name="302ai_base_url"]');
+
+            const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+            let baseUrl = baseUrlInput ? baseUrlInput.value.trim() : '';
+
+            if (!apiKey) {
+                showNotification('请先配置302.AI API Key', 'warning');
+                return;
+            }
+
+            if (!baseUrl) {
+                baseUrl = 'https://api.302.ai/v1';
+            }
+
+            models = await fetch302AIModelsList(baseUrl, apiKey);
+        }
+
+        if (!models || models.length === 0) {
+            showNotification('未获取到可用模型', 'warning');
+            return;
+        }
+
+        // 创建或更新SearchableSelect实例
+        const selectId = `role-select-${modelField}`;
+
+        // 如果还没有创建SearchableSelect实例，先设置容器ID
+        if (!roleModelSelects[modelField]) {
+            searchableContainer.id = selectId;
+            roleModelSelects[modelField] = new SearchableSelect(selectId);
+        }
+
+        // 设置模型选项
+        const modelOptions = models.map(model => ({
+            value: model.id || model,
+            label: model.id || model
+        }));
+        roleModelSelects[modelField].setOptions(modelOptions);
+
+        // 隐藏普通输入框，显示searchable select
+        modelInput.style.display = 'none';
+        searchableContainer.style.display = 'block';
+
+        // 如果当前有值，设置到searchable select
+        if (modelInput.value) {
+            roleModelSelects[modelField].selectedValue = modelInput.value;
+            roleModelSelects[modelField].updateDisplayValue();
+        }
+
+        showNotification(`成功获取 ${models.length} 个模型`, 'success');
+
+    } catch (error) {
+        console.error('获取模型列表失败:', error);
+        showNotification('获取模型列表失败: ' + error.message, 'error');
+    } finally {
+        buttonElement.disabled = false;
+        buttonElement.classList.remove('loading');
+        buttonElement.innerHTML = '📋';
+    }
 }
 
 // 切换并行生成选项显示
@@ -3126,7 +3358,51 @@ function updateCurrentProviderDisplay(provider) {
     }
 }
 
-// 保存提供者配置
+// 保存模型任务配置
+async function saveModelRoleConfig() {
+    const tab = document.getElementById('model-roles');
+    if (!tab) return;
+
+    const config = {};
+    tab.querySelectorAll('select, input').forEach(control => {
+        if (!control.name) return;
+        config[control.name] = control.value && typeof control.value === 'string' ? control.value.trim() : control.value;
+    });
+
+    try {
+        showLoading('正在保存模型任务配置...');
+        const response = await fetch('/api/config/model_roles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ config })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                showNotification('模型任务配置保存成功,已实时生效', 'success');
+                loadAllConfigs();
+            } else {
+                const errorMsg = result.errors ? JSON.stringify(result.errors) : (result.message || '未知错误');
+                showNotification('模型任务配置保存失败: ' + errorMsg, 'error');
+            }
+        } else {
+            let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error) errorMsg = errorData.error;
+                else if (errorData.detail) errorMsg = errorData.detail;
+            } catch (_) {}
+            showNotification('模型任务配置保存失败: ' + errorMsg, 'error');
+        }
+    } catch (error) {
+        console.error('保存模型任务配置失败:', error);
+        showNotification('保存模型任务配置失败: ' + error.message, 'error');
+    }
+}
+
 async function saveProviderConfig(provider) {
     const card = document.querySelector(`[data-provider="${provider}"]`);
     if (!card) return;
@@ -4156,3 +4432,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+
+
+
+
+
+
+
+
+
+
