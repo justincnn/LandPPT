@@ -31,8 +31,8 @@ engine = create_engine(
     connect_args=sqlite_connect_args,
     echo=False,  # Disable SQL logging to reduce noise
     pool_pre_ping=True,  # Verify connections before using
-    pool_size=10,  # Larger pool for better concurrency
-    max_overflow=20  # Allow overflow connections
+    pool_size=100,  # Larger pool for better concurrency
+    max_overflow=200  # Allow overflow connections
 )
 
 async_engine = create_async_engine(

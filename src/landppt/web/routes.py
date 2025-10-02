@@ -3990,6 +3990,36 @@ async def export_project_pptx(project_id: str):
                     temp_pptx_path
                 )
                 if success:
+                    # 转换成功后，添加演讲稿到备注
+                    try:
+                        from pptx import Presentation
+                        from ..services.speech_script_repository import SpeechScriptRepository
+
+                        # 获取演讲稿数据
+                        repo = SpeechScriptRepository()
+                        scripts_list = await repo.get_current_speech_scripts_by_project(project_id)
+                        speech_scripts = {script.slide_index: script.script_content for script in scripts_list}
+                        repo.close()
+
+                        if len(speech_scripts) > 0:
+                            # 打开生成的PPTX文件
+                            prs = Presentation(temp_pptx_path)
+
+                            # 为每张幻灯片添加演讲稿备注
+                            for i, slide in enumerate(prs.slides):
+                                if i in speech_scripts:
+                                    notes_slide = slide.notes_slide
+                                    text_frame = notes_slide.notes_text_frame
+                                    text_frame.text = speech_scripts[i]
+                                    logging.info(f"Added speech script to slide {i+1} notes")
+
+                            # 保存修改后的PPTX
+                            prs.save(temp_pptx_path)
+                            logging.info(f"Added {len(speech_scripts)} speech scripts to PPTX notes")
+                    except Exception as e:
+                        logging.warning(f"Failed to add speech scripts to PPTX: {e}")
+                        # 继续执行，即使添加演讲稿失败也返回PPTX
+
                     return {
                         "success": True,
                         "pptx_path": temp_pptx_path,
@@ -4074,7 +4104,22 @@ async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExp
             try:
                 logging.info(f"Starting screenshot-based PPTX export for {len(slides)} slides")
 
-                # 第1步：为每张幻灯片创建临时HTML文件
+                # 第1步：获取演讲稿数据
+                speech_scripts = {}
+                try:
+                    from ..services.speech_script_repository import SpeechScriptRepository
+                    repo = SpeechScriptRepository()
+                    scripts_list = await repo.get_current_speech_scripts_by_project(project_id)
+                    # 构建幻灯片索引到演讲稿的映射
+                    for script in scripts_list:
+                        speech_scripts[script.slide_index] = script.script_content
+                    repo.close()
+                    logging.info(f"Loaded {len(speech_scripts)} speech scripts for slides")
+                except Exception as e:
+                    logging.warning(f"Failed to load speech scripts: {e}")
+                    # 继续执行，即使没有演讲稿也可以生成PPTX
+
+                # 第2步：为每张幻灯片创建临时HTML文件
                 html_files = []
                 for i, slide in enumerate(slides):
                     html_file = os.path.join(temp_dir, f"slide_{i}.html")
@@ -4082,7 +4127,7 @@ async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExp
                         f.write(slide['html_content'])
                     html_files.append(html_file)
 
-                # 第2步：使用Playwright对每张幻灯片进行截图
+                # 第3步：使用Playwright对每张幻灯片进行截图
                 for i, html_file in enumerate(html_files):
                     screenshot_path = os.path.join(temp_dir, f"slide_{i}.png")
 
@@ -4103,7 +4148,7 @@ async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExp
                 if len(screenshot_paths) == 0:
                     raise Exception("No screenshots were generated")
 
-                # 第3步：将截图转换为PPTX
+                # 第4步：将截图转换为PPTX
                 logging.info("Creating PPTX from screenshots...")
                 prs = Presentation()
 
@@ -4111,7 +4156,7 @@ async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExp
                 prs.slide_width = Inches(10)
                 prs.slide_height = Inches(5.625)
 
-                for screenshot_path in screenshot_paths:
+                for i, screenshot_path in enumerate(screenshot_paths):
                     # 添加空白幻灯片
                     blank_slide_layout = prs.slide_layouts[6]
                     slide = prs.slides.add_slide(blank_slide_layout)
@@ -4123,6 +4168,13 @@ async def export_project_pptx_from_images(project_id: str, request: ImagePPTXExp
                     height = prs.slide_height
 
                     slide.shapes.add_picture(screenshot_path, left, top, width=width, height=height)
+
+                    # 如果该幻灯片有演讲稿，添加到备注中
+                    if i in speech_scripts:
+                        notes_slide = slide.notes_slide
+                        text_frame = notes_slide.notes_text_frame
+                        text_frame.text = speech_scripts[i]
+                        logging.info(f"Added speech script to slide {i+1} notes")
 
                 # 保存PPTX文件
                 prs.save(temp_pptx_path)
