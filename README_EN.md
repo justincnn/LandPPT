@@ -54,6 +54,11 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 - **🔍 Deep Research**: Integrated multiple search engines for latest and comprehensive information
 - **🎤 Speech Script Generation**: Intelligent generation of accompanying speech scripts with multiple export formats
 - **👁️ Visual Reference**: AI editing assistant supports image upload and visual content analysis
+- **📂 Multiple File Upload**: Support uploading multiple files simultaneously for efficient batch processing
+- **⚡ Batch Generation**: Support batch PPT page generation for significantly improved speed
+- **🎯 Custom Model Selection**: Customize model selection by function module for precise cost control
+- **📝 Notes Export**: Support exporting speech scripts to PPT notes
+- **🖼️ Image Export**: Support exporting PPT in image format
 - **📱 Responsive Design**: Perfect adaptation to various devices and screen sizes
 - **🔒 Enterprise Security**: Support for local deployment with controllable data security
 
