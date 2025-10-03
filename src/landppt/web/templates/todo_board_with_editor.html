@@ -1033,6 +1033,8 @@
     <script>
         let eventSource = null;
         let slidesData = [];
+        const currentlyGeneratingPages = new Set();
+        let lastKnownTotalSlides = null;
         let currentSlideIndex = 0;
 
         // 连接管理相关变量
@@ -1053,6 +1055,8 @@
             // 重置连接状态
             reconnectAttempts = 0;
             isManualStop = false;
+            currentlyGeneratingPages.clear();
+            lastKnownTotalSlides = null;
 
             // 检查全局模板设置
             console.log('开始检查全局模板设置...');
@@ -1332,6 +1336,8 @@
             generationStarted = false;
             sessionStorage.removeItem(generationKey);
 
+            currentlyGeneratingPages.clear();
+
             updateStatus('生成已停止', 'error');
         }
 
@@ -1342,14 +1348,23 @@
             
             switch(data.type) {
                 case 'progress':
-                    updateStatus(data.message, 'progress');
-                    const progress = (data.current / data.total) * 100;
-                    progressBar.style.width = progress + '%';
+                    if (typeof data.current === 'number') {
+                        currentlyGeneratingPages.add(Number(data.current));
+                    }
+
+                    updateProgressIndicators(data.total);
                     break;
                     
                 case 'slide':
                     if (data.slide_data) {
                         addSlideToContainer(data.slide_data);
+
+                        const pageNumber = Number(data.slide_data.page_number);
+                        if (!Number.isNaN(pageNumber)) {
+                            currentlyGeneratingPages.delete(pageNumber);
+                        }
+
+                        updateProgressIndicators();
                         // 每生成一页就检查是否可以显示编辑器按钮
                         checkAndShowEditorButton();
                     }
@@ -1357,14 +1372,12 @@
 
                 case 'slide_skipped':
                     // 处理跳过的幻灯片（断点续生或用户编辑）
-                    updateStatus(data.message, 'progress');
-                    const skipProgress = (data.current / data.total) * 100;
-                    progressBar.style.width = skipProgress + '%';
-
-                    // 对于跳过的幻灯片，我们不需要重新添加到容器中
-                    // 因为在startGeneration中已经重新渲染了所有已有的幻灯片
-                    // 只需要确保数据同步即可
                     if (data.slide_data) {
+                        const skippedPage = Number(data.slide_data.page_number);
+                        if (!Number.isNaN(skippedPage)) {
+                            currentlyGeneratingPages.delete(skippedPage);
+                        }
+
                         // 确保slidesData中包含这个幻灯片数据
                         const existingDataIndex = slidesData.findIndex(slide => slide.page_number === data.slide_data.page_number);
                         if (existingDataIndex === -1) {
@@ -1378,9 +1391,14 @@
                         }
                         checkAndShowEditorButton();
                     }
+
+                    updateProgressIndicators(data.total);
                     break;
                     
                 case 'complete':
+                    currentlyGeneratingPages.clear();
+                    updateProgressIndicators(data.total);
+
                     updateStatus(data.message, 'complete');
                     progressBar.style.width = '100%';
 
@@ -1414,6 +1432,7 @@
                     break;
 
                 case 'error':
+                    currentlyGeneratingPages.clear();
                     updateStatus(data.message, 'error');
 
                     // 更新连接状态
@@ -1476,6 +1495,107 @@
                 statusDiv.style.borderLeftColor = '#28a745';
                 statusDiv.style.background = '#d4edda';
             }
+        }
+
+        function getCompletedSlidesCount() {
+            return slidesData.reduce((count, slide) => {
+                if (slide && slide.html_content) {
+                    return count + 1;
+                }
+                return count;
+            }, 0);
+        }
+
+        function estimateTotalSlides(totalFromEvent) {
+            if (typeof totalFromEvent === 'number' && totalFromEvent > 0) {
+                lastKnownTotalSlides = totalFromEvent;
+                return totalFromEvent;
+            }
+
+            if (typeof lastKnownTotalSlides === 'number' && lastKnownTotalSlides > 0) {
+                return lastKnownTotalSlides;
+            }
+
+            if (projectOutline && projectOutline.slides && projectOutline.slides.length > 0) {
+                lastKnownTotalSlides = projectOutline.slides.length;
+                return lastKnownTotalSlides;
+            }
+
+            if (projectSlidesData && projectSlidesData.length > 0) {
+                lastKnownTotalSlides = projectSlidesData.length;
+                return lastKnownTotalSlides;
+            }
+
+            return null;
+        }
+
+        function pruneGeneratingPages() {
+            for (const page of Array.from(currentlyGeneratingPages)) {
+                const hasCompletedSlide = slidesData.some(slide => slide && slide.page_number === page && slide.html_content);
+                if (hasCompletedSlide) {
+                    currentlyGeneratingPages.delete(page);
+                }
+            }
+        }
+
+        function formatPageRanges(pages) {
+            if (!pages || pages.length === 0) {
+                return '';
+            }
+
+            const sortedPages = [...pages].sort((a, b) => a - b);
+            const ranges = [];
+            let rangeStart = sortedPages[0];
+            let previous = sortedPages[0];
+
+            for (let i = 1; i < sortedPages.length; i++) {
+                const current = sortedPages[i];
+                if (current === previous + 1) {
+                    previous = current;
+                    continue;
+                }
+
+                ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}-${previous}`);
+                rangeStart = current;
+                previous = current;
+            }
+
+            ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}-${previous}`);
+
+            return ranges.join('、');
+        }
+
+        function updateProgressIndicators(totalFromEvent) {
+            const totalSlides = estimateTotalSlides(totalFromEvent);
+            pruneGeneratingPages();
+
+            const completedSlides = getCompletedSlidesCount();
+            const activePages = Array.from(currentlyGeneratingPages).sort((a, b) => a - b);
+
+            const progressBar = document.getElementById('generationProgress');
+            if (progressBar) {
+                if (totalSlides && totalSlides > 0) {
+                    const percent = Math.min((completedSlides / totalSlides) * 100, 100);
+                    progressBar.style.width = percent + '%';
+                } else if (!progressBar.style.width) {
+                    progressBar.style.width = '0%';
+                }
+            }
+
+            let statusText = '';
+            if (totalSlides && totalSlides > 0) {
+                statusText = `PPT生成中... (${completedSlides}/${totalSlides} 页已完成`;
+            } else {
+                statusText = `PPT生成中... (已完成 ${completedSlides} 页`;
+            }
+
+            if (activePages.length > 0) {
+                statusText += `，正在生成第${formatPageRanges(activePages)}页`;
+            }
+
+            statusText += ')';
+
+            updateStatus(statusText, 'progress');
         }
 
         function addSlideToContainer(slideData) {
@@ -1694,6 +1814,14 @@
         const projectOutline = {{ (project.outline | tojson | safe) if project and project.outline else 'null' }};
         const projectStatus = '{{ project.status if project else "draft" }}';
 
+        if (!lastKnownTotalSlides) {
+            if (projectOutline && projectOutline.slides && projectOutline.slides.length > 0) {
+                lastKnownTotalSlides = projectOutline.slides.length;
+            } else if (projectSlidesData && projectSlidesData.length > 0) {
+                lastKnownTotalSlides = projectSlidesData.length;
+            }
+        }
+
         // 判断PPT是否真正完成：需要检查slides_data数量是否与outline中的slides数量一致
         function isPPTCompleted() {
             if (!projectSlidesData || projectSlidesData.length === 0) {
@@ -1767,6 +1895,8 @@
             updateStatus('PPT已生成完成', 'complete');
             const progressBar = document.getElementById('generationProgress');
             progressBar.style.width = '100%';
+            currentlyGeneratingPages.clear();
+            lastKnownTotalSlides = projectSlidesData.length;
 
             // Display each slide
             projectSlidesData.forEach(slideData => {
@@ -1793,6 +1923,8 @@
             updateStatus(`PPT生成中... (${currentCount}/${expectedCount} 页已完成)`, 'progress');
             const progressBar = document.getElementById('generationProgress');
             progressBar.style.width = progress + '%';
+            lastKnownTotalSlides = expectedCount;
+            currentlyGeneratingPages.clear();
 
             // Display existing slides
             projectSlidesData.forEach((slideData, index) => {

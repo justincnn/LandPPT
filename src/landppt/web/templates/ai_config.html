@@ -394,10 +394,10 @@
                 </div>
             </div>
 
-            <!-- 并行生成PPT配置 -->
+            <!-- 批量生成PPT配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <h4 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🚀</span> 并行生成PPT
+                    <span>🚀</span> 批量生成PPT
                 </h4>
                 
                 <div style="margin-bottom: 20px;">
@@ -408,7 +408,7 @@
                             <span class="toggle-slider"></span>
                         </div>
                         <div>
-                            <div style="font-weight: 600; color: #495057; margin-bottom: 4px;">启用并行生成</div>
+                            <div style="font-weight: 600; color: #495057; margin-bottom: 4px;">启用批量生成</div>
                             <small style="color: #6c757d; font-weight: 400;">启用后可以同时生成多个幻灯片，显著提高生成速度</small>
                         </div>
                     </label>
@@ -417,7 +417,7 @@
                 <div id="parallel-generation-options" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="parallel_slides_count" style="font-weight: 600; color: #495057; display: block; margin-bottom: 12px;">
-                            并行生成页数
+                            批量生成页数
                         </label>
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
                             <input type="number"
@@ -449,7 +449,7 @@
                 <div style="margin-top: 15px; padding: 12px 16px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 4px solid #667eea;">
                     <p style="margin: 0; font-size: 0.9em; color: #495057; line-height: 1.6;">
                         <strong>⚠️ 注意事项：</strong><br>
-                        • 启用并行生成可能会增加AI API的调用频率和费用<br>
+                        • 启用批量生成可能会增加AI API的调用频率和费用<br>
                         • 部分AI提供商可能有并发请求限制，请根据实际情况调整<br>
                         • 如遇到频率限制错误，建议降低并行页数或关闭此功能
                     </p>
@@ -1107,6 +1107,40 @@
 .provider-config-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 35px rgba(31, 38, 135, 0.4);
+}
+
+.provider-config-card,
+#model-role-settings .card {
+    overflow: visible;
+    z-index: 1;
+}
+
+.provider-config-card:focus-within,
+#model-role-settings .card:focus-within {
+    z-index: 50;
+}
+
+.provider-config-card .model-input-container,
+#model-role-settings .model-input-container {
+    position: relative;
+    z-index: 1;
+}
+
+.provider-config-card .model-input-container:focus-within,
+.provider-config-card .searchable-select-container.open,
+#model-role-settings .model-input-container:focus-within,
+#model-role-settings .searchable-select-container.open {
+    z-index: 60;
+}
+
+.provider-config-card .searchable-select-dropdown,
+#model-role-settings .searchable-select-dropdown {
+    z-index: 2000;
+}
+
+.provider-config-card .searchable-select-container.open .searchable-select-dropdown,
+#model-role-settings .searchable-select-container.open .searchable-select-dropdown {
+    z-index: 3000;
 }
 
 .provider-config-form .form-group {
@@ -3191,7 +3225,7 @@ async function fetchRoleOpenAIModels(buttonElement) {
     }
 }
 
-// 切换并行生成选项显示
+// 切换批量生成选项显示
 function toggleParallelGenerationOptions() {
     const enableCheckbox = document.getElementById('enable_parallel_generation');
     const optionsDiv = document.getElementById('parallel-generation-options');
@@ -3220,30 +3254,38 @@ function populateGenerationParams() {
     const inputs = tab.querySelectorAll('input, select');
     inputs.forEach(input => {
         const configKey = input.name;
-        if (currentConfig[configKey]) {
+        const configValue = currentConfig[configKey];
+        if (configValue !== undefined && configValue !== null) {
             if (input.type === 'checkbox') {
-                input.checked = currentConfig[configKey] === 'true';
+                const normalized = typeof configValue === 'string'
+                    ? configValue.toLowerCase()
+                    : configValue;
+                input.checked = normalized === true || normalized === 1 || normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
             } else if (input.type === 'password') {
                 // 对于密码字段，如果有配置值且输入框为空，则显示配置值
-                if (!input.value && currentConfig[configKey]) {
-                    input.value = currentConfig[configKey];
+                if (!input.value && configValue) {
+                    input.value = configValue;
                 }
                 // 如果有配置值，更新placeholder为掩码显示
-                if (currentConfig[configKey]) {
+                if (configValue) {
                     input.placeholder = '••••••••';
                 }
             } else {
                 // 只有当输入框为空时才设置值，避免覆盖模板中已设置的值
-                if (!input.value && currentConfig[configKey]) {
-                    input.value = currentConfig[configKey];
+                if (!input.value && configValue !== '') {
+                    input.value = configValue;
                 }
             }
         }
     });
-    
-    // 触发并行生成选项显示更新
+
+    // 触发批量生成选项显示更新
     setTimeout(() => {
         toggleParallelGenerationOptions();
+        const countInput = document.getElementById('parallel_slides_count');
+        if (countInput) {
+            updateParallelSlidesDisplay(countInput.value || countInput.getAttribute('value') || '0');
+        }
     }, 100);
 }
 

@@ -44,9 +44,25 @@
             transition: all 0.3s ease;
         }
 
-        .slide-display:hover {
+        /* 非全屏时悬停效果 */
+        body:not(.fullscreen-mode) .slide-display:hover {
             transform: scale(1.02);
             box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        }
+
+        /* 全屏时占满整个屏幕 */
+        .fullscreen-mode .slide-display {
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .fullscreen-mode .slide-frame-container,
+        .fullscreen-mode .slide-frame {
+            border-radius: 0;
         }
 
         /* 幻灯片容器 - 支持多iframe缓存 */
@@ -104,6 +120,13 @@
             border-radius: 50px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        /* 全屏时完全隐藏控制栏 */
+        .fullscreen-mode .presentation-controls {
+            display: none;
         }
 
         .control-btn {
@@ -153,6 +176,12 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             z-index: 1000;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        /* 全屏时完全隐藏标题 */
+        .fullscreen-mode .presentation-header {
+            display: none;
         }
 
         .presentation-title {
@@ -166,20 +195,33 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255,0,0,0.7);
+            background: rgba(220,53,69,0.85);
             color: white;
             border: none;
-            padding: 12px 15px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 20px;
             transition: all 0.3s ease;
-            z-index: 1000;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .exit-btn:hover {
-            background: rgba(255,0,0,0.9);
-            transform: scale(1.1);
+            background: rgba(220,53,69,1);
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 6px 20px rgba(220,53,69,0.5);
+        }
+
+        /* 全屏时完全隐藏退出按钮 */
+        .fullscreen-mode .exit-btn {
+            display: none;
         }
 
         .slide-thumbnails {
@@ -198,11 +240,17 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 999;
         }
 
         .slide-thumbnails.show {
             opacity: 1;
+        }
+
+        /* 全屏时完全隐藏缩略图 */
+        .fullscreen-mode .slide-thumbnails {
+            display: none;
         }
 
         .thumbnail {
@@ -262,10 +310,17 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
+            z-index: 1000;
         }
 
         .toggle-thumbnails:hover {
             background: rgba(0,0,0,0.9);
+            transform: scale(1.05);
+        }
+
+        /* 全屏时完全隐藏缩略图切换按钮 */
+        .fullscreen-mode .toggle-thumbnails {
+            display: none;
         }
 
         .loading-overlay {
@@ -375,17 +430,23 @@
             top: 50%;
             right: 20px;
             transform: translateY(-50%);
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.85);
             padding: 15px;
             border-radius: 10px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
             font-size: 12px;
+            z-index: 1002;
         }
 
         .keyboard-hints.show {
+            opacity: 1;
+        }
+
+        /* 全屏时也显示快捷键提示 */
+        .fullscreen-mode .keyboard-hints.show {
             opacity: 1;
         }
 
@@ -506,9 +567,10 @@
 
         <!-- 键盘快捷键提示 -->
         <div class="keyboard-hints" id="keyboardHints">
-            <h6><i class="fas fa-keyboard"></i> 快捷键</h6>
+            <h6><i class="fas fa-keyboard"></i> 快捷键 & 操作</h6>
             <div><span class="key">←/→</span> 上一页/下一页</div>
             <div><span class="key">Space</span> 下一页</div>
+            <div><span class="key">鼠标滚轮</span> 上下翻页</div>
             <div><span class="key">F</span> 全屏切换</div>
             <div><span class="key">T</span> 缩略图</div>
             <div><span class="key">H</span> 显示/隐藏帮助</div>
@@ -568,8 +630,6 @@
 
         // 初始化演示系统
         function initializePresentation() {
-            console.log('初始化演示系统，总幻灯片数:', totalSlides);
-
             // 加载第一张幻灯片
             loadSlideWithCache(0, true);
 
@@ -588,7 +648,6 @@
 
                     if (data.status === 'success' && data.updated_at > {{ project.updated_at }}) {
                         // 数据已更新，刷新幻灯片数据
-                        console.log('检测到幻灯片数据更新，正在刷新...');
                         slidesData = data.slides_data;
                         totalSlides = data.total_slides;
 
@@ -605,7 +664,7 @@
                         showUpdateNotification();
                     }
                 } catch (error) {
-                    console.warn('检查数据更新失败:', error);
+                    // 检查数据更新失败
                 }
             }, 10000); // 每10秒检查一次
         }
@@ -662,8 +721,6 @@
             // 如果是相同的幻灯片，直接返回
             if (index === currentSlideIndex && !isInitial) return;
 
-            console.log(`加载幻灯片 ${index + 1}/${totalSlides}:`, slidesData[index]?.title);
-
             isTransitioning = true;
 
             // 检查是否已缓存
@@ -699,8 +756,6 @@
 
                 // 监听加载完成
                 iframe.onload = function() {
-                    console.log(`幻灯片 ${index + 1} 渲染完成`);
-
                     // 缓存iframe
                     slideFrameCache.set(index, iframe);
                     loadingSlides.delete(index);
@@ -716,7 +771,6 @@
                 };
 
                 iframe.onerror = function() {
-                    console.error(`幻灯片 ${index + 1} 加载失败`);
                     loadingSlides.delete(index);
                     isTransitioning = false;
                     hideLoadingOverlay();
@@ -725,7 +779,6 @@
                 // 添加到容器
                 document.getElementById('slideFrameContainer').appendChild(iframe);
             } else {
-                console.error(`幻灯片 ${index + 1} 数据无效`);
                 loadingSlides.delete(index);
                 isTransitioning = false;
                 hideLoadingOverlay();
@@ -760,9 +813,6 @@
                 // 管理缓存大小
                 manageCacheSize();
             }, 300);
-
-            const stats = getCacheStats();
-            console.log(`切换到幻灯片 ${index + 1}，缓存统计:`, stats);
         }
 
         // 预加载相邻幻灯片
@@ -790,8 +840,6 @@
                 return;
             }
 
-            console.log(`预加载幻灯片 ${index + 1}`);
-
             loadingSlides.add(index);
 
             const frameId = `slideFrame_${frameIdCounter++}`;
@@ -804,7 +852,6 @@
                 iframe.srcdoc = slidesData[index].html_content;
 
                 iframe.onload = function() {
-                    console.log(`预加载完成: 幻灯片 ${index + 1}`);
                     slideFrameCache.set(index, iframe);
                     loadingSlides.delete(index);
 
@@ -813,7 +860,6 @@
                 };
 
                 iframe.onerror = function() {
-                    console.error(`预加载失败: 幻灯片 ${index + 1}`);
                     loadingSlides.delete(index);
                 };
 
@@ -838,8 +884,6 @@
 
         // 清空所有缓存
         function clearAllCache() {
-            console.log('清空所有幻灯片缓存');
-
             // 移除所有缓存的iframe
             slideFrameCache.forEach((iframe, index) => {
                 if (iframe.parentNode) {
@@ -851,8 +895,6 @@
             slideFrameCache.clear();
             loadingSlides.clear();
             currentVisibleFrame = null;
-
-            console.log('缓存清空完成');
         }
 
         // 获取缓存统计信息
@@ -886,7 +928,6 @@
                             iframe.parentNode.removeChild(iframe);
                         }
                         slideFrameCache.delete(index);
-                        console.log(`移除缓存: 幻灯片 ${index + 1}`);
                     }
                 });
             }
@@ -962,11 +1003,14 @@
             }
         }
 
+        // 全屏模式控制相关
+        let isFullscreenMode = false;
+
         // 切换全屏
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
-                    console.log('无法进入全屏模式:', err);
+                    // 无法进入全屏模式
                 });
             } else {
                 if (document.exitFullscreen) {
@@ -1038,6 +1082,9 @@
             // 防止在切换过程中重复触发
             if (isTransitioning) return;
 
+            // 使用 keyCode 作为备选方案，确保兼容性
+            const key = e.key || String.fromCharCode(e.keyCode);
+
             switch(e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
@@ -1064,7 +1111,9 @@
                 case 't':
                 case 'T':
                     e.preventDefault();
-                    toggleThumbnails();
+                    if (!isFullscreenMode) {
+                        toggleThumbnails();
+                    }
                     break;
                 case 'h':
                 case 'H':
@@ -1097,24 +1146,35 @@
                     }
                     break;
             }
-        });
+        }, true); // 使用捕获阶段，确保事件优先处理
 
-        // 鼠标滚轮事件（防抖）
+        // 鼠标滚轮事件（防抖）- 优化灵敏度
         let wheelDebounce = false;
+        let wheelTimeout = null;
         document.addEventListener('wheel', function(e) {
+            // 检查是否在缩略图上滚动
+            const thumbnails = document.getElementById('slideThumbnails');
+            if (thumbnails && thumbnails.classList.contains('show') && e.target.closest('.slide-thumbnails')) {
+                // 允许缩略图区域正常滚动
+                return;
+            }
+
             if (isTransitioning || wheelDebounce) return;
 
             e.preventDefault();
+            e.stopPropagation();
             wheelDebounce = true;
 
+            // 向下滚动翻到下一页，向上滚动翻到上一页
             if (e.deltaY > 0) {
                 nextSlide();
-            } else {
+            } else if (e.deltaY < 0) {
                 previousSlide();
             }
 
-            setTimeout(() => wheelDebounce = false, 300);
-        });
+            // 使用较短的防抖时间，提升响应速度
+            setTimeout(() => wheelDebounce = false, 400);
+        }, { passive: false, capture: true });
 
         // 触摸事件支持（移动设备）
         let touchStartX = 0;
@@ -1155,17 +1215,41 @@
         document.addEventListener('fullscreenchange', function() {
             const fullscreenBtn = document.querySelector('[onclick="toggleFullscreen()"]');
             if (document.fullscreenElement) {
-                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-                fullscreenBtn.title = '退出全屏';
+                // 进入全屏模式
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                    fullscreenBtn.title = '退出全屏';
+                }
+                document.body.classList.add('fullscreen-mode');
+                isFullscreenMode = true;
             } else {
-                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-                fullscreenBtn.title = '全屏';
+                // 退出全屏模式
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                    fullscreenBtn.title = '全屏';
+                }
+                document.body.classList.remove('fullscreen-mode');
+                isFullscreenMode = false;
             }
         });
 
         // 防止右键菜单
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
+        }, true);
+
+        // 防止点击事件干扰键盘事件
+        document.addEventListener('click', function(e) {
+            // 确保焦点在文档上，以便键盘事件正常工作
+            if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+                document.body.focus();
+            }
+        }, true);
+
+        // 页面加载完成后立即获取焦点
+        window.addEventListener('load', function() {
+            document.body.setAttribute('tabindex', '-1');
+            document.body.focus();
         });
 
         // 页面可见性变化时暂停自动播放
