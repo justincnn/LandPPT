@@ -260,9 +260,9 @@
     </div>
 </div>
 
-<!-- 鐢熸垚鍙傛暟閰嶇疆鏍囩椤?-->
+<!-- 模型任务配置-->
 <div id="model-roles" class="tab-content">
-    <div style="max-width: 1100px; margin: 0 auto;">
+    <div style="margin: 0 auto;">
         <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div>
@@ -282,6 +282,7 @@
                     {'label': '创意指导', 'provider_field': 'creative_model_provider', 'model_field': 'creative_model_name'},
                     {'label': '配图与提示词', 'provider_field': 'image_prompt_model_provider', 'model_field': 'image_prompt_model_name'},
                     {'label': '幻灯片生成', 'provider_field': 'slide_generation_model_provider', 'model_field': 'slide_generation_model_name'},
+                    {'label': '演讲稿生成', 'provider_field': 'speech_script_model_provider', 'model_field': 'speech_script_model_name'},
                     {'label': 'AI编辑助手', 'provider_field': 'editor_assistant_model_provider', 'model_field': 'editor_assistant_model_name'},
                     {'label': 'AI模板生成', 'provider_field': 'template_generation_model_provider', 'model_field': 'template_generation_model_name'}
                 ] %}
@@ -3370,7 +3371,7 @@ async function saveModelRoleConfig() {
     });
 
     try {
-        showLoading('正在保存模型任务配置...');
+        // showLoading('正在保存模型任务配置...');
         const response = await fetch('/api/config/model_roles', {
             method: 'POST',
             headers: {

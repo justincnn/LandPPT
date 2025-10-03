@@ -350,11 +350,28 @@ class GoogleProvider(AIProvider):
                                     mime_type = header.split(":")[1].split(";")[0]  # Extract mime type like 'image/jpeg'
                                     image_data = base64.b64decode(base64_data)
 
-                                    # Create Gemini Part from bytes
-                                    image_part = types.Part.from_bytes(
-                                        data=image_data,
-                                        mime_type=mime_type
-                                    )
+                                    # Create Gemini-compatible part from base64 image data
+                                    image_part = None
+                                    if GENAI_TYPES_AVAILABLE:
+                                        if hasattr(types, 'Part') and hasattr(types.Part, 'from_bytes'):
+                                            image_part = types.Part.from_bytes(
+                                                data=image_data,
+                                                mime_type=mime_type
+                                            )
+                                        elif hasattr(types, 'to_part'):
+                                            image_part = types.to_part({
+                                                'inline_data': {
+                                                    'mime_type': mime_type,
+                                                    'data': image_data
+                                                }
+                                            })
+                                    if image_part is None:
+                                        image_part = {
+                                            'inline_data': {
+                                                'mime_type': mime_type,
+                                                'data': image_data
+                                            }
+                                        }
                                     content_parts.append(image_part)
                                     logger.info(f"Successfully processed image for Gemini: {mime_type}, {len(image_data)} bytes")
                                 except Exception as e:

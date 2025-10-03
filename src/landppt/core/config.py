@@ -95,6 +95,8 @@ class AIConfig(BaseSettings):
     editor_assistant_model_name: Optional[str] = Field(default=None, env="EDITOR_ASSISTANT_MODEL_NAME")
     template_generation_model_provider: Optional[str] = Field(default=None, env="TEMPLATE_GENERATION_MODEL_PROVIDER")
     template_generation_model_name: Optional[str] = Field(default=None, env="TEMPLATE_GENERATION_MODEL_NAME")
+    speech_script_model_provider: Optional[str] = Field(default=None, env="SPEECH_SCRIPT_MODEL_PROVIDER")
+    speech_script_model_name: Optional[str] = Field(default=None, env="SPEECH_SCRIPT_MODEL_NAME")
 
     # Generation Parameters
     max_tokens: int = Field(default=16384, env="MAX_TOKENS")
@@ -130,6 +132,7 @@ class AIConfig(BaseSettings):
         "slide_generation": ("slide_generation_model_provider", "slide_generation_model_name"),
         "editor": ("editor_assistant_model_provider", "editor_assistant_model_name"),
         "template": ("template_generation_model_provider", "template_generation_model_name"),
+        "speech_script": ("speech_script_model_provider", "speech_script_model_name"),
     }
 
     MODEL_ROLE_LABELS: ClassVar[dict[str, str]] = {
@@ -140,6 +143,7 @@ class AIConfig(BaseSettings):
         "slide_generation": "幻灯片生成模型",
         "editor": "AI编辑助手模型",
         "template": "AI模板生成模型",
+        "speech_script": "演讲稿生成模型",
     }
 
 
@@ -386,6 +390,13 @@ def reload_ai_config():
     template_model_env = os.environ.get('TEMPLATE_GENERATION_MODEL_NAME')
     ai_config.template_generation_model_name = (ai_config._normalize_optional_str(template_model_env)
                                                if template_model_env is not None else ai_config.template_generation_model_name)
+
+    speech_provider_env = os.environ.get('SPEECH_SCRIPT_MODEL_PROVIDER')
+    ai_config.speech_script_model_provider = (ai_config._normalize_optional_str(speech_provider_env)
+                                              if speech_provider_env is not None else ai_config.speech_script_model_provider)
+    speech_model_env = os.environ.get('SPEECH_SCRIPT_MODEL_NAME')
+    ai_config.speech_script_model_name = (ai_config._normalize_optional_str(speech_model_env)
+                                         if speech_model_env is not None else ai_config.speech_script_model_name)
 
     ai_config.max_tokens = int(os.environ.get('MAX_TOKENS', str(ai_config.max_tokens)))
     ai_config.temperature = float(os.environ.get('TEMPERATURE', str(ai_config.temperature)))

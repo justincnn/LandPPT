@@ -75,6 +75,8 @@ class ConfigService:
             "editor_assistant_model_name": {"type": "text", "category": "model_roles", "default": ""},
             "template_generation_model_provider": {"type": "select", "category": "model_roles", "default": ""},
             "template_generation_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "speech_script_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "speech_script_model_name": {"type": "text", "category": "model_roles", "default": ""},
             
             # Generation Parameters
             "max_tokens": {"type": "number", "category": "generation_params", "default": "16384"},

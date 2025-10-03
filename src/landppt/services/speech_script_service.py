@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from ..ai.base import AIMessage, MessageRole
-from ..ai.providers import get_ai_provider
+from ..ai.providers import get_ai_provider, get_role_provider
 from ..core.config import ai_config
 from ..api.models import PPTProject
 from .progress_tracker import progress_tracker
@@ -85,15 +85,27 @@ class SpeechScriptService:
     
     def __init__(self):
         self.ai_provider = None
+        self.provider_settings: Optional[Dict[str, Optional[str]]] = None
         self._initialize_ai_provider()
-    
+
     def _initialize_ai_provider(self):
         """Initialize AI provider"""
         try:
-            self.ai_provider = get_ai_provider()
+            provider, settings = get_role_provider("speech_script")
+            self.ai_provider = provider
+            self.provider_settings = settings
         except Exception as e:
-            logger.error(f"Failed to initialize AI provider: {e}")
-            self.ai_provider = None
+            logger.warning(f"Failed to load provider for speech script role, fallback to default provider: {e}")
+            try:
+                self.ai_provider = get_ai_provider()
+                self.provider_settings = {
+                    "provider": ai_config.default_ai_provider,
+                    "model": ai_config.get_provider_config().get("model")
+                }
+            except Exception as fallback_error:
+                logger.error(f"Failed to initialize AI provider: {fallback_error}")
+                self.ai_provider = None
+                self.provider_settings = None
     
     async def generate_single_slide_script(
         self,
@@ -519,8 +531,10 @@ class SpeechScriptService:
         # Generate using AI
         response = await self.ai_provider.text_completion(
             prompt=prompt,
-            max_tokens=ai_config.max_tokens,
-            temperature=0.7
+            **self._build_request_kwargs(
+                max_tokens=ai_config.max_tokens,
+                temperature=0.7
+            )
         )
         
         return response.content.strip()
@@ -729,8 +743,10 @@ class SpeechScriptService:
 
         response = await self.ai_provider.text_completion(
             prompt=prompt,
-            max_tokens=ai_config.max_tokens // 2,
-            temperature=0.7
+            **self._build_request_kwargs(
+                max_tokens=ai_config.max_tokens // 2,
+                temperature=0.7
+            )
         )
 
         return response.content.strip()
@@ -761,8 +777,16 @@ class SpeechScriptService:
 
         response = await self.ai_provider.text_completion(
             prompt=prompt,
-            max_tokens=ai_config.max_tokens // 2,
-            temperature=0.7
+            **self._build_request_kwargs(
+                max_tokens=ai_config.max_tokens // 2,
+                temperature=0.7
+            )
         )
+
+    def _build_request_kwargs(self, **kwargs) -> Dict[str, Any]:
+        """Merge base kwargs with role-specific model override if configured."""
+        if self.provider_settings and self.provider_settings.get("model"):
+            kwargs.setdefault("model", self.provider_settings["model"])
+        return kwargs
 
         return response.content.strip()
