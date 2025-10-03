@@ -4502,8 +4502,8 @@
                 <button class="btn btn-success" onclick="downloadHTML()" title="下载HTML文件">
                     <i class="fas fa-download"></i>
                 </button>
-                <button class="btn btn-info" onclick="sharePresentation()" title="分享演示文稿">
-                    <i class="fas fa-share"></i>
+                <button class="btn btn-info" onclick="showShareDialog()" title="生成分享链接">
+                    <i class="fas fa-share-alt"></i>
                 </button>
             </div>
         </div>
@@ -8837,76 +8837,138 @@
             }
         }
 
-        function sharePresentation() {
-            const shareUrl = `${window.location.origin}/projects/{{ project.project_id }}/fullscreen`;
+        async function showShareDialog() {
+            try {
+                // 显示加载提示
+                showNotification('正在生成分享链接...', 'info');
 
-            // 创建分享对话框
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-            `;
+                // 调用API生成分享链接
+                const response = await fetch(`/api/projects/{{ project.project_id }}/share/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            modal.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 30px;
-                    border-radius: 15px;
-                    max-width: 500px;
-                    width: 90%;
-                    text-align: center;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                ">
-                    <h4 style="margin-bottom: 20px; color: #2c3e50;">
-                        <i class="fas fa-share" style="color: #007bff;"></i> 分享演示
-                    </h4>
-                    <p style="margin-bottom: 20px; color: #666;">
-                        使用以下链接分享您的PPT演示，观众可以在任何设备上观看
-                    </p>
-                    <div style="
-                        background: #f8f9fa;
-                        padding: 15px;
-                        border-radius: 8px;
-                        margin-bottom: 20px;
-                        border: 1px solid #dee2e6;
-                        word-break: break-all;
-                        font-family: monospace;
-                        font-size: 14px;
-                    ">${shareUrl}</div>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button onclick="copyShareUrl('${shareUrl}')" class="btn btn-primary">
-                            <i class="fas fa-copy"></i> 复制链接
-                        </button>
-                        <button onclick="openShareUrl('${shareUrl}')" class="btn btn-success">
-                            <i class="fas fa-external-link-alt"></i> 打开演示
-                        </button>
-                        <button onclick="this.closest('.share-modal').remove()" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> 关闭
-                        </button>
-                    </div>
-                    <div style="margin-top: 15px; font-size: 12px; color: #999;">
-                        <i class="fas fa-info-circle"></i> 演示会自动使用数据库中最新的幻灯片内容
-                    </div>
-                </div>
-            `;
-
-            modal.className = 'share-modal';
-            document.body.appendChild(modal);
-
-            // 点击背景关闭
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
+                if (!response.ok) {
+                    throw new Error('生成分享链接失败');
                 }
-            });
+
+                const result = await response.json();
+                const shareUrl = `${window.location.origin}${result.share_url}`;
+
+                // 创建分享对话框
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                `;
+
+                modal.innerHTML = `
+                    <div style="
+                        background: white;
+                        padding: 30px;
+                        border-radius: 15px;
+                        max-width: 500px;
+                        width: 90%;
+                        text-align: center;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    ">
+                        <h4 style="margin-bottom: 20px; color: #2c3e50;">
+                            <i class="fas fa-share-alt" style="color: #17a2b8;"></i> 公开分享链接
+                        </h4>
+                        <div style="margin-bottom: 20px;">
+                            <div style="
+                                background: #e7f3ff;
+                                border-left: 4px solid #17a2b8;
+                                padding: 12px;
+                                border-radius: 4px;
+                                margin-bottom: 15px;
+                            ">
+                                <p style="margin: 0; color: #004085; font-size: 14px; text-align: left;">
+                                    <i class="fas fa-info-circle"></i>
+                                    此链接无需登录即可访问，任何人都可以查看演示
+                                </p>
+                            </div>
+                        </div>
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 15px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                            border: 1px solid #dee2e6;
+                            word-break: break-all;
+                            font-family: monospace;
+                            font-size: 13px;
+                            color: #495057;
+                        ">${shareUrl}</div>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button onclick="copyShareUrl('${shareUrl}')" class="btn btn-primary">
+                                <i class="fas fa-copy"></i> 复制链接
+                            </button>
+                            <button onclick="openShareUrl('${shareUrl}')" class="btn btn-success">
+                                <i class="fas fa-external-link-alt"></i> 打开演示
+                            </button>
+                            <button onclick="disableSharing()" class="btn btn-warning">
+                                <i class="fas fa-ban"></i> 禁用分享
+                            </button>
+                            <button onclick="this.closest('.share-modal').remove()" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> 关闭
+                            </button>
+                        </div>
+                        <div style="margin-top: 15px; font-size: 12px; color: #6c757d;">
+                            <i class="fas fa-shield-alt"></i> 分享链接已启用，可随时禁用
+                        </div>
+                    </div>
+                `;
+
+                modal.className = 'share-modal';
+                document.body.appendChild(modal);
+
+                // 点击背景关闭
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+
+                showNotification('分享链接已生成', 'success');
+
+            } catch (error) {
+                console.error('Error generating share link:', error);
+                showNotification('生成分享链接失败: ' + error.message, 'error');
+            }
+        }
+
+        async function disableSharing() {
+            try {
+                const response = await fetch(`/api/projects/{{ project.project_id }}/share/disable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('禁用分享失败');
+                }
+
+                // 关闭对话框
+                document.querySelector('.share-modal')?.remove();
+                showNotification('分享已禁用', 'success');
+
+            } catch (error) {
+                console.error('Error disabling share:', error);
+                showNotification('禁用分享失败: ' + error.message, 'error');
+            }
         }
 
         function copyShareUrl(url) {

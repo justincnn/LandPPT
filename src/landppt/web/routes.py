@@ -30,6 +30,8 @@ from ..core.config import ai_config
 from ..ai import get_ai_provider, get_role_provider, AIMessage, MessageRole
 from ..auth.middleware import get_current_user_required, get_current_user_optional
 from ..database.models import User
+from ..database.database import get_db
+from sqlalchemy.orm import Session
 from ..utils.thread_pool import run_blocking_io, to_thread
 import re
 from bs4 import BeautifulSoup
@@ -752,6 +754,106 @@ async def web_project_fullscreen(
             "error": f"加载演示时出错: {str(e)}"
         })
 
+@router.get("/share/{share_token}", response_class=HTMLResponse)
+async def web_shared_presentation(
+    request: Request,
+    share_token: str,
+    db: Session = Depends(get_db)
+):
+    """Public presentation view - no authentication required"""
+    try:
+        from ..services.share_service import ShareService
+        share_service = ShareService(db)
+
+        # Validate share token and get project
+        project_model = share_service.validate_share_token(share_token)
+
+        if not project_model:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error": "分享链接无效或已失效"
+            })
+
+        # Check if project has slides
+        if not project_model.slides_data or len(project_model.slides_data) == 0:
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "error": "演示文稿尚未生成"
+            })
+
+        # Convert to PPTProject for template compatibility
+        from ..api.models import PPTProject
+        project = PPTProject(
+            project_id=project_model.project_id,
+            title=project_model.title,
+            scenario=project_model.scenario,
+            topic=project_model.topic,
+            requirements=project_model.requirements,
+            status=project_model.status,
+            outline=project_model.outline,
+            slides_html=project_model.slides_html,
+            slides_data=project_model.slides_data,
+            confirmed_requirements=project_model.confirmed_requirements,
+            version=project_model.version,
+            created_at=project_model.created_at,
+            updated_at=project_model.updated_at
+        )
+
+        # Render presentation template
+        return templates.TemplateResponse("project_fullscreen_presentation.html", {
+            "request": request,
+            "project": project,
+            "slides_count": len(project.slides_data),
+            "is_shared": True  # Flag to indicate this is a shared view
+        })
+
+    except Exception as e:
+        logger.error(f"Error displaying shared presentation: {e}")
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": f"加载分享演示时出错: {str(e)}"
+        })
+
+
+@router.get("/api/share/{share_token}/slides-data")
+async def get_shared_slides_data(
+    share_token: str,
+    db: Session = Depends(get_db)
+):
+    """Get slides data for public shared presentation - no authentication required"""
+    try:
+        from ..services.share_service import ShareService
+        share_service = ShareService(db)
+
+        # Validate share token and get project
+        project = share_service.validate_share_token(share_token)
+
+        if not project:
+            raise HTTPException(status_code=404, detail="分享链接无效或已失效")
+
+        if not project.slides_data or len(project.slides_data) == 0:
+            return {
+                "status": "no_slides",
+                "message": "PPT尚未生成",
+                "slides_data": [],
+                "total_slides": 0
+            }
+
+        return {
+            "status": "success",
+            "slides_data": project.slides_data,
+            "total_slides": len(project.slides_data),
+            "project_title": project.title,
+            "updated_at": project.updated_at
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting shared slides data: {e}")
+        raise HTTPException(status_code=500, detail=f"获取幻灯片数据失败: {str(e)}")
+
+
 @router.get("/api/projects/{project_id}/slides-data")
 async def get_project_slides_data(
     project_id: str,
@@ -786,6 +888,120 @@ async def get_project_slides_data(
     except Exception as e:
         logger.error(f"Error getting slides data: {e}")
         raise HTTPException(status_code=500, detail=f"获取幻灯片数据失败: {str(e)}")
+
+
+@router.post("/api/projects/{project_id}/share/generate")
+async def generate_share_link(
+    project_id: str,
+    user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Generate a public share link for a project"""
+    try:
+        from ..services.share_service import ShareService
+        share_service = ShareService(db)
+
+        # Verify project exists and belongs to user
+        from ..services.db_project_manager import DatabaseProjectManager
+        db_manager = DatabaseProjectManager()
+        project = await db_manager.get_project(project_id)
+
+        if not project:
+            raise HTTPException(status_code=404, detail="项目未找到")
+
+        # Generate share token
+        share_token = share_service.generate_share_token(project_id)
+
+        if not share_token:
+            raise HTTPException(status_code=500, detail="生成分享链接失败")
+
+        # Construct full share URL
+        share_url = f"/share/{share_token}"
+
+        return {
+            "success": True,
+            "share_token": share_token,
+            "share_url": share_url,
+            "message": "分享链接已生成"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating share link: {e}")
+        raise HTTPException(status_code=500, detail=f"生成分享链接失败: {str(e)}")
+
+
+@router.post("/api/projects/{project_id}/share/disable")
+async def disable_share_link(
+    project_id: str,
+    user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Disable sharing for a project"""
+    try:
+        from ..services.share_service import ShareService
+        share_service = ShareService(db)
+
+        # Verify project exists
+        from ..services.db_project_manager import DatabaseProjectManager
+        db_manager = DatabaseProjectManager()
+        project = await db_manager.get_project(project_id)
+
+        if not project:
+            raise HTTPException(status_code=404, detail="项目未找到")
+
+        # Disable sharing
+        success = share_service.disable_sharing(project_id)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="禁用分享失败")
+
+        return {
+            "success": True,
+            "message": "分享已禁用"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error disabling share: {e}")
+        raise HTTPException(status_code=500, detail=f"禁用分享失败: {str(e)}")
+
+
+@router.get("/api/projects/{project_id}/share/info")
+async def get_share_info(
+    project_id: str,
+    user: User = Depends(get_current_user_required),
+    db: Session = Depends(get_db)
+):
+    """Get share information for a project"""
+    try:
+        from ..services.share_service import ShareService
+        share_service = ShareService(db)
+
+        # Verify project exists
+        from ..services.db_project_manager import DatabaseProjectManager
+        db_manager = DatabaseProjectManager()
+        project = await db_manager.get_project(project_id)
+
+        if not project:
+            raise HTTPException(status_code=404, detail="项目未找到")
+
+        # Get share info
+        share_info = share_service.get_share_info(project_id)
+
+        return {
+            "success": True,
+            **share_info
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting share info: {e}")
+        raise HTTPException(status_code=500, detail=f"获取分享信息失败: {str(e)}")
+
 
 @router.get("/test/slides-navigation", response_class=HTMLResponse)
 async def test_slides_navigation(

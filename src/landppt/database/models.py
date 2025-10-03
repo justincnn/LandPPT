@@ -87,6 +87,8 @@ class Project(Base):
     confirmed_requirements: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     project_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)  # 项目元数据，包括选择的模板ID等
     version: Mapped[int] = mapped_column(Integer, default=1)
+    share_token: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True, nullable=True)  # 分享token，用于公开访问
+    share_enabled: Mapped[bool] = mapped_column(Boolean, default=False)  # 是否启用分享
     created_at: Mapped[float] = mapped_column(Float, default=time.time)
     updated_at: Mapped[float] = mapped_column(Float, default=time.time, onupdate=time.time)
     

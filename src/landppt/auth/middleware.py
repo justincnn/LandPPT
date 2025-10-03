@@ -40,6 +40,8 @@ class AuthMiddleware:
             "/temp/",  # 添加temp目录用于图片缓存访问
             "/api/image/view/",  # 图床图片访问无需认证
             "/api/image/thumbnail/",  # 图片缩略图访问无需认证
+            "/share/",  # 公开分享链接无需认证
+            "/api/share/",  # 分享API无需认证
             "/docs",
             "/redoc",
             "/openapi.json"
