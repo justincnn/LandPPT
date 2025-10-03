@@ -3114,10 +3114,11 @@ async def ai_enhance_all_bullet_points(
 """
 
         # 调用AI生成增强内容
-        response = await ai_provider.text_completion(
+        response = await provider.text_completion(
             prompt=context,
             max_tokens=ai_config.max_tokens,  # 使用完整的token限制，因为要处理多个要点
-            temperature=0.7
+            temperature=0.7,
+            model=settings.get('model')
         )
 
         enhanced_content = response.content.strip()

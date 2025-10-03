@@ -330,6 +330,7 @@
 
         .slide-frame-wrapper {
             position: relative;
+            display: block;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -340,6 +341,59 @@
             max-height: calc(100vw * 9/16 - 40px); /* 基于宽度计算最大高度 */
         }
         
+        /* Preview navigation buttons */
+        .preview-nav-btn {
+            position: absolute !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 48px !important;
+            height: 96px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.55);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+            transition: opacity 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .slide-frame-wrapper:hover .preview-nav-btn {
+            opacity: 0.9;
+            pointer-events: auto;
+        }
+
+        .preview-nav-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .preview-nav-btn:active {
+            transform: translateY(-50%) scale(0.97);
+        }
+
+        .preview-nav-btn.left {
+            left: 12px !important;
+            right: auto !important;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .preview-nav-btn.right {
+            right: 12px !important;
+            left: auto !important;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .preview-nav-btn i {
+            font-size: 22px;
+        }
+
         .code-editor {
             width: 100%;
             height: 100%;
@@ -937,12 +991,14 @@
 
         .slideshow-controls {
             position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
-            gap: 20px;
             align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
             opacity: 0;
             transition: opacity 0.4s ease;
             pointer-events: none;
@@ -970,9 +1026,20 @@
         }
 
         .slideshow-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             color: white;
             font-size: 18px;
             font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .slideshow-info.visible {
+            opacity: 1;
         }
 
         .slideshow-exit {
@@ -1010,9 +1077,6 @@
                 transform: scale(0.156);
             }
 
-            .slide-frame-wrapper {
-                transform: scale(0.8);
-            }
         }
 
         @media (max-width: 992px) {
@@ -1033,9 +1097,6 @@
                 height: 20px;
             }
 
-            .slide-frame-wrapper {
-                transform: scale(0.7);
-            }
         }
 
         @media (max-width: 768px) {
@@ -1061,9 +1122,6 @@
                 padding: 3px;
             }
 
-            .slide-frame-wrapper {
-                transform: scale(0.6);
-            }
         }
 
         @media (max-width: 576px) {
@@ -1088,9 +1146,6 @@
                 height: 16px;
             }
 
-            .slide-frame-wrapper {
-                transform: scale(0.5);
-            }
 
             /* 小屏幕上的导出按钮优化 */
             .btn-group-custom {
@@ -4451,10 +4506,18 @@
                         {% if project.slides_data and project.slides_data|length > 0 %}
                             <div class="slide-frame-container">
                                 <div class="slide-frame-wrapper" id="slideFrameWrapper">
+                                    <button class="preview-nav-btn left" id="previewPrevBtn" onclick="navigatePreviewSlide(-1)" title="&#19978;&#19968;&#39029; (&#8592;)">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+
                                     <iframe class="slide-frame" id="slideFrame"
                                             srcdoc="{{ project.slides_data[0].html_content | e }}"
                                             title="Slide Preview"></iframe>
                                     <div class="quick-edit-overlay" id="quickEditOverlay"></div>
+
+                                    <button class="preview-nav-btn right" id="previewNextBtn" onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
                                 </div>
                             </div>
                         {% else %}
@@ -4523,11 +4586,12 @@
                 <button class="slideshow-btn" onclick="previousSlideshow()" title="上一页 (←)">
                     <i class="fas fa-chevron-left"></i> 上一页
                 </button>
-                <div class="slideshow-info" id="slideshowInfo">1 / 1</div>
                 <button class="slideshow-btn" onclick="nextSlideshow()" title="下一页 (→)">
                     下一页 <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
+
+            <div class="slideshow-info" id="slideshowInfo">1 / 1</div>
 
             <button class="slideshow-exit" onclick="exitSlideshow()" title="退出放映">
                 <i class="fas fa-times"></i>
@@ -5030,6 +5094,29 @@
             iframe.style.transform = `translate(-50%, -50%) scale(${scale})`;
         }
 
+        // Preview navigation
+        function navigatePreviewSlide(direction) {
+            if (!hasSlidesData) {
+                return;
+            }
+
+            const newIndex = currentSlideIndex + direction;
+            if (newIndex >= 0 && newIndex < slidesData.length) {
+                selectSlide(newIndex);
+                updatePreviewNavButtons();
+            }
+        }
+
+        function updatePreviewNavButtons() {
+            const prevBtn = document.getElementById('previewPrevBtn');
+            const nextBtn = document.getElementById('previewNextBtn');
+
+            if (prevBtn && nextBtn) {
+                prevBtn.disabled = currentSlideIndex <= 0;
+                nextBtn.disabled = currentSlideIndex >= slidesData.length - 1;
+            }
+        }
+
         // 初始化iframe样式
         function initializeMainFrame() {
             const iframe = document.getElementById('slideFrame');
@@ -5065,6 +5152,8 @@
             }
 
             currentSlideIndex = index;
+
+            updatePreviewNavButtons();
 
             // 更新AI编辑助手中的当前页数显示
             updateAICurrentSlideInfo();
@@ -10544,12 +10633,22 @@
                 previewPane.innerHTML = `
                     <div class="slide-frame-container">
                         <div class="slide-frame-wrapper" id="slideFrameWrapper">
+                            <button class="preview-nav-btn left" id="previewPrevBtn" onclick="navigatePreviewSlide(-1)" title="&#19978;&#19968;&#39029; (&#8592;)">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+
                             <iframe class="slide-frame" id="slideFrame"
                                     title="Slide Preview"></iframe>
                             <div class="quick-edit-overlay" id="quickEditOverlay"></div>
+
+                            <button class="preview-nav-btn right" id="previewNextBtn" onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
                 `;
+
+                updatePreviewNavButtons();
 
                 // 设置第一张幻灯片的内容
                 const slideFrame = document.getElementById('slideFrame');
@@ -10561,6 +10660,7 @@
                         initializeMainFrame();
                         applyMainFrameScale();
                         forceReinitializeIframeJS(slideFrame);
+                        updatePreviewNavButtons();
                     }, 100);
                 }
             } else {
@@ -13455,6 +13555,8 @@
         function showSlideshowControls() {
             if (slideshowControls) slideshowControls.classList.add('visible');
             if (slideshowExitBtn) slideshowExitBtn.classList.add('visible');
+            const slideshowInfo = document.getElementById('slideshowInfo');
+            if (slideshowInfo) slideshowInfo.classList.add('visible');
             isMouseIdle = false;
             // 显示鼠标光标
             if (slideshowOverlay) slideshowOverlay.style.cursor = 'default';
@@ -13463,6 +13565,8 @@
         function hideSlideshowControls() {
             if (slideshowControls) slideshowControls.classList.remove('visible');
             if (slideshowExitBtn) slideshowExitBtn.classList.remove('visible');
+            const slideshowInfo = document.getElementById('slideshowInfo');
+            if (slideshowInfo) slideshowInfo.classList.remove('visible');
             isMouseIdle = true;
             // 隐藏鼠标光标
             if (slideshowOverlay) slideshowOverlay.style.cursor = 'none';
