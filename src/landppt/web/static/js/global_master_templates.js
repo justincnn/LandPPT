@@ -3,6 +3,11 @@
 async function updateTagFilter() {
     const tagFilter = document.getElementById('tagFilter');
 
+    if (!tagFilter) {
+        console.warn('Tag filter element not found');
+        return;
+    }
+
     try {
         // Get all templates to extract tags (without pagination)
         const response = await fetch('/api/global-master-templates/?active_only=true&page_size=1000');
@@ -12,22 +17,43 @@ async function updateTagFilter() {
 
             const allTags = new Set();
             allTemplates.forEach(template => {
-                template.tags.forEach(tag => allTags.add(tag));
+                if (template.tags && Array.isArray(template.tags)) {
+                    template.tags.forEach(tag => {
+                        if (tag && tag.trim()) {
+                            allTags.add(tag.trim());
+                        }
+                    });
+                }
             });
+
+            // 保存当前选中的值
+            const currentValue = tagFilter.value;
 
             // Clear existing options except "所有标签"
             tagFilter.innerHTML = '<option value="">所有标签</option>';
 
             // Add tag options
-            Array.from(allTags).sort().forEach(tag => {
+            const sortedTags = Array.from(allTags).sort();
+            sortedTags.forEach(tag => {
                 const option = document.createElement('option');
                 option.value = tag;
                 option.textContent = tag;
                 tagFilter.appendChild(option);
             });
+
+            // 恢复之前选中的值(如果该标签仍然存在)
+            if (currentValue && sortedTags.includes(currentValue)) {
+                tagFilter.value = currentValue;
+            }
+
+            console.log(`Loaded ${sortedTags.length} tags for filter`);
+        } else {
+            console.warn('Failed to fetch templates for tag filter:', response.status);
         }
     } catch (error) {
-        console.warn('Failed to load tags for filter:', error);
+        console.error('Failed to load tags for filter:', error);
+        // 确保至少有默认选项
+        tagFilter.innerHTML = '<option value="">所有标签</option>';
     }
 }
 

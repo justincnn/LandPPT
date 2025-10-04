@@ -366,8 +366,9 @@ function renderImageGrid() {
                     <span>${formatFileSize(image.file_size)}</span>
                 </div>
                 <div class="image-actions">
-                    <button onclick="downloadSingleImage('${image.image_id}')" class="btn btn-sm btn-primary">下载</button>
-                    <button onclick="deleteSingleImage('${image.image_id}')" class="btn btn-sm btn-danger">删除</button>
+                    <button onclick="copySingleImageUrl('${image.image_id}')" class="btn btn-sm btn-info" title="复制链接">📋</button>
+                    <button onclick="downloadSingleImage('${image.image_id}')" class="btn btn-sm btn-primary" title="下载">⬇️</button>
+                    <button onclick="deleteSingleImage('${image.image_id}')" class="btn btn-sm btn-danger" title="删除">🗑️</button>
                 </div>
             </div>
         </div>
@@ -640,6 +641,24 @@ async function clearAllImages() {
 }
 
 // 单张图片操作
+async function copySingleImageUrl(imageId) {
+    const url = `${window.location.origin}/api/image/view/${imageId}`;
+
+    try {
+        await navigator.clipboard.writeText(url);
+        showSuccess('图片链接已复制到剪贴板');
+    } catch (error) {
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showSuccess('图片链接已复制到剪贴板');
+    }
+}
+
 async function downloadSingleImage(imageId) {
     try {
         const response = await fetch(`/api/image/download/${imageId}`);

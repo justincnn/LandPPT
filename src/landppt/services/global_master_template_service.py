@@ -432,6 +432,12 @@ class GlobalMasterTemplateService:
 """
 
             # 构建多模态消息
+            # 确保图片URL格式正确
+            image_data = reference_image['data']
+            if not image_data.startswith("data:"):
+                # 如果是纯base64数据,添加data URL前缀
+                image_data = f"data:{reference_image['type']};base64,{image_data}"
+
             messages = [
                 {
                     "role": "user",
@@ -440,7 +446,7 @@ class GlobalMasterTemplateService:
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:{reference_image['type']};base64,{reference_image['data']}"
+                                "url": image_data
                             }
                         }
                     ]
@@ -448,9 +454,10 @@ class GlobalMasterTemplateService:
             ]
 
         try:
-            # 调用AI服务
-            ai_provider = get_ai_provider()
-            if not ai_provider:
+            # 获取模板生成任务的配置
+            provider, template_settings = self._get_template_role_provider()
+
+            if not provider:
                 raise ValueError("AI服务未配置或不可用")
 
             # 转换消息格式
@@ -469,7 +476,7 @@ class GlobalMasterTemplateService:
                         if part["type"] == "text":
                             content_parts.append(TextContent(text=part["text"]))
                         elif part["type"] == "image_url":
-                            # 提取base64数据
+                            # 提取图片URL (已经是完整的data URL格式)
                             image_url = part["image_url"]["url"]
                             if image_url.startswith("data:"):
                                 content_parts.append(ImageContent(
@@ -489,7 +496,11 @@ class GlobalMasterTemplateService:
             for attempt in range(max_retries):
                 try:
                     logger.info(f"AI generation attempt {attempt + 1}/{max_retries}")
-                    ai_response = await ai_provider.chat_completion(ai_messages)
+                    # 使用配置的模型进行生成
+                    ai_response = await self._chat_completion(
+                        messages=ai_messages,
+                        model=template_settings.get('model')
+                    )
                     full_response = ai_response.content
 
                     logger.info(f"AI response length: {len(full_response)}")
@@ -673,21 +684,30 @@ class GlobalMasterTemplateService:
 """
 
         try:
-            template_settings = ai_config.get_model_config_for_role("template", provider_override=self.provider_name)
+            # 获取模板生成任务的配置
+            provider, template_settings = self._get_template_role_provider()
+
             # 构建AI消息
             if generation_mode != "text_only" and reference_image:
                 # 多模态消息
+                # 确保图片URL格式正确 (OpenAI需要完整的data URL格式)
+                image_url = reference_image["data"]
+                if not image_url.startswith("data:"):
+                    # 如果是纯base64数据,添加data URL前缀
+                    image_type = reference_image.get("type", "image/png")
+                    image_url = f"data:{image_type};base64,{image_url}"
+
                 content_parts = [
                     TextContent(text=ai_prompt),
-                    ImageContent(image_url={"url": reference_image["data"]})
+                    ImageContent(image_url={"url": image_url})
                 ]
                 messages = [AIMessage(role=MessageRole.USER, content=content_parts)]
 
                 # 检查AI提供商是否支持流式聊天
-                if hasattr(self.ai_provider, 'stream_chat_completion'):
+                if hasattr(provider, 'stream_chat_completion'):
                     # 使用流式聊天API
                     full_response = ""
-                    async for chunk in self.ai_provider.stream_chat_completion(
+                    async for chunk in provider.stream_chat_completion(
                         messages=messages,
                         max_tokens=ai_config.max_tokens,
                         temperature=0.7,
@@ -713,10 +733,10 @@ class GlobalMasterTemplateService:
                     yield {'type': 'thinking', 'content': full_response}
             else:
                 # 纯文本消息
-                if hasattr(self.ai_provider, 'stream_text_completion'):
+                if hasattr(provider, 'stream_text_completion'):
                     # 使用流式API
                     full_response = ""
-                    async for chunk in self.ai_provider.stream_text_completion(
+                    async for chunk in provider.stream_text_completion(
                         prompt=ai_prompt,
                         max_tokens=ai_config.max_tokens,
                         temperature=0.7,
@@ -729,7 +749,7 @@ class GlobalMasterTemplateService:
                         }
                 else:
                     # 使用标准文本完成API
-                    response = await self.ai_provider.text_completion(
+                    response = await provider.text_completion(
                         prompt=ai_prompt,
                         max_tokens=ai_config.max_tokens,
                         temperature=0.7,
@@ -799,11 +819,14 @@ class GlobalMasterTemplateService:
 """
 
         try:
+            # 获取模板生成任务的配置
+            provider, template_settings = self._get_template_role_provider()
+
             # 检查AI提供商是否支持流式响应
-            if hasattr(self.ai_provider, 'stream_text_completion'):
+            if hasattr(provider, 'stream_text_completion'):
                 # 使用流式API
                 full_response = ""
-                async for chunk in self.ai_provider.stream_text_completion(
+                async for chunk in provider.stream_text_completion(
                     prompt=ai_prompt,
                     max_tokens=ai_config.max_tokens,
                     temperature=0.7,
@@ -815,7 +838,7 @@ class GlobalMasterTemplateService:
                         'content': chunk
                     }
 
-                # 流式完成后，处理完整响应
+                # 流式完成后,处理完整响应
                 yield {'type': 'thinking', 'content': '\n\n✨ 完成模板调整...\n'}
                 await asyncio.sleep(0.5)
 
@@ -845,7 +868,7 @@ class GlobalMasterTemplateService:
                 await asyncio.sleep(1)
 
                 # 调用标准AI生成
-                response = await self.ai_provider.text_completion(
+                response = await provider.text_completion(
                     prompt=ai_prompt,
                     max_tokens=ai_config.max_tokens,
                     temperature=0.7,

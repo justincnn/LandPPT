@@ -155,7 +155,6 @@
                             <input type="text" name="anthropic_model"
                                    value="{{ current_config.get('anthropic_model', '') }}"
                                    placeholder="{{ current_config.get('anthropic_model', 'claude-3-5-sonnet-20241022') }}">
-                            <small style="color: #7f8c8d;">直接输入模型名称，如：claude-3-5-sonnet-20241022, claude-3-opus-20240229</small>
                         </div>
                     {% elif provider == "google" %}
                         <div class="form-group">
@@ -169,14 +168,12 @@
                             <input type="text" name="google_base_url"
                                    value="{{ current_config.get('google_base_url', '') }}"
                                    placeholder="{{ current_config.get('google_base_url', 'https://generativelanguage.googleapis.com') }}">
-                            <small style="color: #7f8c8d;">Gemini API的基础URL，默认为官方地址</small>
                         </div>
                         <div class="form-group">
                             <label>默认模型:</label>
                             <input type="text" name="google_model"
                                    value="{{ current_config.get('google_model', '') }}"
-                                   placeholder="{{ current_config.get('google_model', 'gemini-1.5-flash') }}">
-                            <small style="color: #7f8c8d;">直接输入模型名称，如：gemini-1.5-flash, gemini-1.5-pro, gemini-1.0-pro</small>
+                                   placeholder="{{ current_config.get('google_model', 'gemini-2.5-flash') }}">
                         </div>
                     {% elif provider == "azure_openai" %}
                         <div class="form-group">
@@ -258,10 +255,9 @@
             {% endfor %}
         </div>
     </div>
-</div>
 
-<!-- 模型任务配置-->
-<div id="model-roles" class="tab-content">
+    <!-- 模型任务配置-->
+    <div id="model-roles">
     <div style="margin: 0 auto;">
         <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -322,7 +318,10 @@
             </div>
         </div>
     </div>
-</div><div id="generation-params" class="tab-content" style="display: none;">
+    </div>
+</div>
+
+<div id="generation-params" class="tab-content" style="display: none;">
     <div class="card">
         <h3 style="color: #f39c12; margin-bottom: 30px; text-align: center;">🎛️ AI 生成参数配置</h3>
 
@@ -340,12 +339,12 @@
                             最大令牌数 (MAX_TOKENS)
                         </label>
                         <div class="input-with-range">
-                            <input type="number" name="max_tokens" min="100" max="32000"
+                            <input type="number" name="max_tokens" min="100" max="1000000"
                                    value="{{ current_config.get('max_tokens', '') }}"
-                                   placeholder="{{ current_config.get('max_tokens', '2000') }}"
+                                   placeholder="{{ current_config.get('max_tokens', '8192') }}"
                                    style="margin-bottom: 8px;">
-                            <input type="range" min="100" max="32000" step="100"
-                                   value="{{ current_config.get('max_tokens', '2000') }}"
+                            <input type="range" min="100" max="1000000" step="100"
+                                   value="{{ current_config.get('max_tokens', '8192') }}"
                                    oninput="this.previousElementSibling.value = this.value"
                                    style="width: 100%; accent-color: #f39c12;">
                         </div>
@@ -830,8 +829,8 @@
 
                         <div class="form-group">
                             <label style="font-weight: 500; color: #495057;">SearXNG Host:</label>
-                            <input type="url" name="searxng_host_image" placeholder="http://localhost:8888"
-                                   value="{{ current_config.get('searxng_host_image', '') }}"
+                            <input type="url" name="searxng_host" placeholder="http://localhost:8888"
+                                   value="{{ current_config.get('searxng_host', '') }}"
                                    style="font-family: monospace; font-size: 0.9em; margin-top: 5px;">
                             <small style="color: #6c757d; margin-top: 5px; display: block;">SearXNG实例的主机地址，用于开源搜索引擎图片搜索</small>
                         </div>
