@@ -36,19 +36,19 @@ class ConfigService:
             # AI Provider Configuration
             "openai_api_key": {"type": "password", "category": "ai_providers"},
             "openai_base_url": {"type": "url", "category": "ai_providers", "default": "https://api.openai.com/v1"},
-            "openai_model": {"type": "select", "category": "ai_providers", "default": "gpt-3.5-turbo"},
+            "openai_model": {"type": "select", "category": "ai_providers", "default": "gpt-4.1"},
             
             "anthropic_api_key": {"type": "password", "category": "ai_providers"},
-            "anthropic_model": {"type": "select", "category": "ai_providers", "default": "claude-3-haiku-20240307"},
+            "anthropic_model": {"type": "select", "category": "ai_providers", "default": "claude-3.5-haiku-20240307"},
 
             "google_api_key": {"type": "password", "category": "ai_providers"},
             "google_base_url": {"type": "url", "category": "ai_providers", "default": "https://generativelanguage.googleapis.com"},
-            "google_model": {"type": "text", "category": "ai_providers", "default": "gemini-1.5-flash"},
+            "google_model": {"type": "text", "category": "ai_providers", "default": "gemini-2.5-flash"},
             
             "azure_openai_api_key": {"type": "password", "category": "ai_providers"},
             "azure_openai_endpoint": {"type": "url", "category": "ai_providers"},
             "azure_openai_deployment_name": {"type": "text", "category": "ai_providers"},
-            "azure_openai_api_version": {"type": "text", "category": "ai_providers", "default": "2024-02-15-preview"},
+            "azure_openai_api_version": {"type": "text", "category": "ai_providers", "default": "gpt-4.1"},
             
             "ollama_base_url": {"type": "url", "category": "ai_providers", "default": "http://localhost:11434"},
             "ollama_model": {"type": "text", "category": "ai_providers", "default": "llama2"},

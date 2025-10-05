@@ -31,7 +31,7 @@
 LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿。
 
 
-![image](https://img.pub/p/17ebc2a837fc02827d4a.png)
+![image](https://img.pub/p/4b07dee6cf3cef023bd8.png)
 
 ![image](https://img.pub/p/1f9e79326ddeae3b8716.png)
 
@@ -381,7 +381,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/490e239a4dfd8d8a7781.png)
+![LandPPT](https://img.pub/p/1955b5e0f8d0d06328da.png)
 ---
 
 <div align="center">

@@ -31,7 +31,7 @@
 LandPPT is an intelligent presentation generation platform powered by Large Language Models (LLMs) that automatically converts document content into professional PPT presentations. The platform integrates multiple AI models, intelligent image processing, deep research capabilities, and rich template systems, enabling users to effortlessly create high-quality presentations.
 
 
-![image](https://img.pub/p/17ebc2a837fc02827d4a.png)
+![image](https://img.pub/p/4b07dee6cf3cef023bd8.png)
 
 ![image](https://img.pub/p/1f9e79326ddeae3b8716.png)
 
