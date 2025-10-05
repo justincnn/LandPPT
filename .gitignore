@@ -6,6 +6,8 @@ dist/
 lib/
 research_reports/
 wheels/
+.claude/
+docs/
 *.egg-info
 requires.md
 prompts.md
