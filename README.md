@@ -9,6 +9,17 @@
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg?style=flat-square)](https://hub.docker.com/r/bradleylzh/landppt)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sligter/LandPPT)
 
+---
+
+## 🎯 Open to Opportunities
+
+我目前正在寻找 **Agent 开发相关的工作机会**。如果你对我的项目感兴趣，或有合适的岗位/合作机会，欢迎联系我！
+
+[![Email](https://img.shields.io/badge/📧_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
+
+---
+
+
 [English](README_EN.md) | **中文**
 
 ---
@@ -382,7 +393,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/1955b5e0f8d0d06328da.png)
+![LandPPT](https://img.pub/p/6a145a06c896514b6df5.png)
 ---
 
 <div align="center">

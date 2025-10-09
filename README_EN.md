@@ -9,6 +9,17 @@
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg?style=flat-square)](https://hub.docker.com/r/bradleylzh/landppt)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sligter/LandPPT)
 
+---
+
+## 🎯 Open to Opportunities
+
+I'm currently seeking **Agent Development** related job opportunities. If you're interested in my projects or have suitable positions/collaboration opportunities, feel free to reach out!
+
+[![Email](https://img.shields.io/badge/📧_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
+
+---
+
+
 **English** | [中文](README.md)
 
 ---
