@@ -8,7 +8,8 @@ FROM python:3.11-slim AS builder
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv
 
 # Install build dependencies
 RUN apt-get update && \
@@ -24,10 +25,14 @@ RUN pip install --no-cache-dir uv
 # Set work directory and copy dependency files
 WORKDIR /app
 COPY pyproject.toml uv.lock* README.md ./
+COPY src/ ./src/
 
-# Install Python dependencies to a specific directory
-RUN uv pip install --target=/opt/venv apryse-sdk>=11.5.0 --extra-index-url=https://pypi.apryse.com && \
-    uv pip install --target=/opt/venv -r pyproject.toml && \
+# Install Python dependencies using uv
+# uv sync will create venv at UV_PROJECT_ENVIRONMENT and install all dependencies
+RUN uv sync && \
+    uv pip install apryse-sdk>=11.5.0 --extra-index-url=https://pypi.apryse.com && \
+    # Verify key packages are installed
+    /opt/venv/bin/python -c "import uvicorn; import playwright; import fastapi" && \
     # Clean up build artifacts
     find /opt/venv -name "*.pyc" -delete && \
     find /opt/venv -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -38,10 +43,11 @@ FROM python:3.11-slim AS production
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app/src:/opt/venv:/opt/venv/lib/python3.11/site-packages \
+    PYTHONPATH=/app/src:/opt/venv/lib/python3.11/site-packages \
     PATH=/opt/venv/bin:$PATH \
     PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright \
-    HOME=/root
+    HOME=/root \
+    VIRTUAL_ENV=/opt/venv
 
 # Install essential runtime dependencies and wkhtmltopdf
 RUN apt-get update && \
@@ -82,9 +88,8 @@ RUN groupadd -r landppt && \
 # Copy Python packages from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Install Playwright with minimal footprint
-RUN python -m pip install --no-cache-dir playwright==1.40.0 && \
-    python -m playwright install chromium && \
+# Install Playwright browsers (chromium) - package already installed in builder stage
+RUN python -m playwright install chromium && \
     chown -R landppt:landppt /home/landppt && \
     rm -rf /tmp/* /var/tmp/*
 
