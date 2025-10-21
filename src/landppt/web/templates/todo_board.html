@@ -2320,12 +2320,148 @@ async function startOutlineGenerationNew() {
     }
 }
 
+// 显示自定义需求输入弹窗
+function showCustomRequirementsModal() {
+    return new Promise((resolve) => {
+        // 创建遮罩层
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        // 创建弹窗
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+        
+        modal.innerHTML = `
+            <h4 style="margin-top: 0; margin-bottom: 16px; color: #333;">
+                <i class="fas fa-magic" style="color: #3498db; margin-right: 8px;"></i>
+                重新生成大纲
+            </h4>
+            <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+                您可以输入额外的自定义需求，或者直接点击“生成”使用原有设置。
+            </p>
+            <textarea 
+                id="custom-requirements-input" 
+                placeholder="例如：\n- 需要更多图表和数据展示\n- 增加案例分析部分\n- 突出创新点和亮点"
+                style="
+                    width: 100%;
+                    height: 120px;
+                    padding: 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    resize: vertical;
+                    font-family: inherit;
+                    box-sizing: border-box;
+                "
+            ></textarea>
+            <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button 
+                    id="modal-cancel-btn"
+                    style="
+                        padding: 10px 20px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        background: white;
+                        color: #666;
+                        cursor: pointer;
+                        font-size: 14px;
+                    "
+                >
+                    取消
+                </button>
+                <button 
+                    id="modal-confirm-btn"
+                    style="
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 4px;
+                        background: #3498db;
+                        color: white;
+                        cursor: pointer;
+                        font-size: 14px;
+                    "
+                >
+                    <i class="fas fa-sync" style="margin-right: 6px;"></i>
+                    生成
+                </button>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // 获取元素
+        const textarea = modal.querySelector('#custom-requirements-input');
+        const cancelBtn = modal.querySelector('#modal-cancel-btn');
+        const confirmBtn = modal.querySelector('#modal-confirm-btn');
+        
+        // 自动聚焦到输入框
+        setTimeout(() => textarea.focus(), 100);
+        
+        // 取消按钮
+        cancelBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            resolve(null);
+        };
+        
+        // 确认按钮
+        confirmBtn.onclick = () => {
+            const value = textarea.value.trim();
+            document.body.removeChild(overlay);
+            resolve(value);
+        };
+        
+        // 点击遮罩层关闭
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve(null);
+            }
+        };
+        
+        // 键盘事件
+        textarea.onkeydown = (e) => {
+            // Ctrl/Cmd + Enter 提交
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                confirmBtn.click();
+            }
+            // Escape 取消
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelBtn.click();
+            }
+        };
+    });
+}
+
 // 重新生成大纲函数
 async function regenerateOutlineNew() {
     console.log('Starting outline regeneration');
 
-    // 确认用户是否要重新生成
-    if (!confirm('确定要重新生成大纲吗？这将覆盖当前的大纲内容。')) {
+    // 使用自定义弹窗让用户输入额外需求
+    const customRequirements = await showCustomRequirementsModal();
+    
+    // 如果用户点击取消，返回 null
+    if (customRequirements === null) {
         return;
     }
 
@@ -2422,14 +2558,17 @@ async function regenerateOutlineNew() {
         console.warn('Failed to update stage status:', error);
     }
 
-    // 调用专门的重新生成大纲接口
+    // 调用专门的重新生成大纲接口，带上自定义需求
     try {
-        console.log('Calling regenerate outline API');
+        console.log('Calling regenerate outline API with custom requirements:', customRequirements);
         const response = await fetch(`/projects/${currentProjectId}/regenerate-outline`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                custom_requirements: customRequirements || ''
+            })
         });
 
         if (!response.ok) {

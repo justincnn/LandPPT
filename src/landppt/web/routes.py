@@ -1268,10 +1268,20 @@ async def generate_outline(
 @router.post("/projects/{project_id}/regenerate-outline")
 async def regenerate_outline(
     project_id: str,
+    request: Request,
     user: User = Depends(get_current_user_required)
 ):
-    """Regenerate outline for a project (overwrites existing outline)"""
+    """Regenerate outline for a project (overwrites existing outline) with optional custom requirements"""
     try:
+        # Get request body to extract custom requirements if provided
+        request_data = {}
+        try:
+            request_data = await request.json()
+        except:
+            pass  # If no body or invalid JSON, use empty dict
+        
+        custom_requirements = request_data.get('custom_requirements', '')
+        
         project = await ppt_service.project_manager.get_project(project_id)
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -1285,10 +1295,20 @@ async def regenerate_outline(
 
         # Create project request from confirmed requirements
         confirmed_requirements = project.confirmed_requirements
+        
+        # 如果提供了自定义需求，将其追加或覆盖原有需求
+        final_requirements = confirmed_requirements.get('requirements', project.requirements)
+        if custom_requirements:
+            # 将自定义需求追加到原有需求
+            if final_requirements:
+                final_requirements = f"{final_requirements}\n\n【本次重新生成的额外要求】\n{custom_requirements}"
+            else:
+                final_requirements = custom_requirements
+        
         project_request = PPTGenerationRequest(
             scenario=confirmed_requirements.get('scenario', 'general'),
             topic=confirmed_requirements.get('topic', project.topic),
-            requirements=confirmed_requirements.get('requirements', project.requirements),
+            requirements=final_requirements,
             language="zh",  # Default language
             network_mode=confirmed_requirements.get('network_mode', False),
             target_audience=confirmed_requirements.get('target_audience', '普通大众'),

@@ -393,7 +393,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/6a145a06c896514b6df5.png)
+![LandPPT](https://img.pub/p/9fec3f401f91ad3f5002.png)
 ---
 
 <div align="center">
