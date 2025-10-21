@@ -38,7 +38,6 @@ class WorkflowManager(LoggerMixin):
         graph.add_node("analyze_structure", self.nodes.analyze_structure)
         graph.add_node("generate_initial_outline", self.nodes.generate_initial_outline)
         graph.add_node("refine_outline", self.nodes.refine_outline)
-        graph.add_node("finalize_outline", self.nodes.finalize_outline)
         
         # 定义边
         graph.add_edge(START, "analyze_structure")
@@ -48,7 +47,7 @@ class WorkflowManager(LoggerMixin):
             self.nodes.should_continue_refining,
             {
                 "refine_outline": "refine_outline",
-                "finalize_outline": "finalize_outline"
+                "end": END
             }
         )
         graph.add_conditional_edges(
@@ -56,10 +55,9 @@ class WorkflowManager(LoggerMixin):
             self.nodes.should_continue_refining,
             {
                 "refine_outline": "refine_outline",
-                "finalize_outline": "finalize_outline"
+                "end": END
             }
         )
-        graph.add_edge("finalize_outline", END)
         
         # 编译图
         self.app = graph.compile()
@@ -103,8 +101,8 @@ class WorkflowManager(LoggerMixin):
             step_count = 0
             total_chunks = len(initial_state["document_chunks"])
             
-            # 估算总步数：结构分析(1) + 初始大纲(1) + 细化(chunks) + 最终优化(1)
-            estimated_steps = 3 + total_chunks
+            # 估算总步数：结构分析(1) + 初始大纲(1) + 细化(chunks)
+            estimated_steps = 2 + total_chunks
             
             # 创建运行配置
             run_config = {"recursion_limit": self.recursion_limit}
@@ -143,16 +141,13 @@ class WorkflowManager(LoggerMixin):
         elif "ppt_title" in state and "slides" in state:
             current_index = state.get("current_index", 0)
             total_chunks = len(state.get("document_chunks", []))
-            page_count_mode = state.get("page_count_mode", "")
             
-            if page_count_mode == "final":
-                return "最终优化大纲"
-            elif current_index == 1:
+            if current_index == 1:
                 return "生成初始框架"
             elif current_index <= total_chunks:
                 return f"细化内容 ({current_index}/{total_chunks})"
             else:
-                return "优化大纲结构"
+                return "处理中"
         else:
             return f"处理中 (步骤 {step_count})"
     
@@ -187,7 +182,7 @@ class WorkflowManager(LoggerMixin):
         
         return {
             "status": "已初始化",
-            "nodes": ["analyze_structure", "generate_initial_outline", "refine_outline", "finalize_outline"],
+            "nodes": ["analyze_structure", "generate_initial_outline", "refine_outline"],
             "description": "基于LangGraph的PPT大纲生成工作流"
         }
     

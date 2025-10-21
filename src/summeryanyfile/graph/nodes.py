@@ -285,142 +285,7 @@ class GraphNodes(LoggerMixin):
                 "current_index": current_index + 1
             }
     
-    async def finalize_outline(self, state: PPTState, config: RunnableConfig) -> Dict[str, Any]:
-        """
-        最终优化PPT大纲节点
-        
-        Args:
-            state: 当前状态
-            config: 运行配置
-            
-        Returns:
-            更新的状态字段
-        """
-        self.logger.info("开始最终优化PPT大纲...")
-        
-        try:
-            # 准备当前大纲
-            current_outline = {
-                "title": state["ppt_title"],
-                "total_pages": state["total_pages"],
-                "page_count_mode": state["page_count_mode"],
-                "slides": state["slides"]
-            }
-            outline_json = json.dumps(current_outline, ensure_ascii=False)
-            
-            # 准备输入参数，包含页数范围、目标语言和项目信息
-            chain_inputs = {
-                "outline": outline_json,
-                "project_topic": state.get("project_topic", ""),
-                "project_scenario": state.get("project_scenario", "general"),
-                "project_requirements": state.get("project_requirements", ""),
-                "target_audience": state.get("target_audience", "普通大众"),
-                "custom_audience": state.get("custom_audience", ""),
-                "ppt_style": state.get("ppt_style", "general"),
-                "custom_style_prompt": state.get("custom_style_prompt", "")
-            }
-
-            # 添加页数范围信息和目标语言
-            slides_range_text = self._get_slides_range_text(state)
-            chain_inputs["slides_range"] = slides_range_text
-            if self.config:
-                chain_inputs["target_language"] = self.config.target_language
-            else:
-                chain_inputs["target_language"] = "zh"  # 默认中文
-
-            # 调用最终优化链
-            final_response = await self.chain_executor.execute_with_retry(
-                "finalize_outline",
-                chain_inputs,
-                config
-            )
-            
-            # 解析JSON响应
-            final_outline = self.json_parser.extract_json_from_response(final_response)
-            
-            # 验证和修复结构
-            final_outline = self.json_parser.validate_ppt_structure(final_outline)
-            
-            # 确保幻灯片编号正确
-            slides = final_outline.get("slides", [])
-            for i, slide in enumerate(slides):
-                slide["page_number"] = i + 1
-
-            # 验证页数是否在范围内
-            total_pages = len(slides)
-            if self.config:
-                if total_pages < self.config.min_slides:
-                    self.logger.warning(f"生成的页数({total_pages})少于最小要求({self.config.min_slides})")
-                    # 自动扩展页数到最小要求
-                    needed_pages = self.config.min_slides - total_pages
-
-                    # 添加扩展页面
-                    for i in range(needed_pages):
-                        new_page_num = total_pages + i + 1
-                        if i < needed_pages // 2:
-                            # 前半部分添加详细内容页
-                            slides.append({
-                                "page_number": new_page_num,
-                                "title": f"详细分析 {i + 1}",
-                                "content_points": [
-                                    "深入分析相关概念和原理",
-                                    "提供具体案例和实践经验",
-                                    "探讨实施过程中的关键要点",
-                                    "分析可能遇到的挑战和解决方案"
-                                ],
-                                "slide_type": "content",
-                                "description": "扩展的详细分析内容页"
-                            })
-                        else:
-                            # 后半部分添加总结和展望页
-                            slides.append({
-                                "page_number": new_page_num,
-                                "title": f"总结与展望 {i - needed_pages // 2 + 1}",
-                                "content_points": [
-                                    "总结关键要点和核心价值",
-                                    "分析未来发展趋势和机遇",
-                                    "提出改进建议和优化方向",
-                                    "展望长期发展前景"
-                                ],
-                                "slide_type": "content",
-                                "description": "扩展的总结展望内容页"
-                            })
-
-                    total_pages = len(slides)
-
-                elif total_pages > self.config.max_slides:
-                    self.logger.warning(f"生成的页数({total_pages})超过最大限制({self.config.max_slides})")
-                    # 如果超过最大页数，截取到最大页数
-                    slides = slides[:self.config.max_slides]
-                    total_pages = len(slides)
-                    # 重新编号
-                    for i, slide in enumerate(slides):
-                        slide["page_number"] = i + 1
-
-            return {
-                **state,  # 保留所有原始状态
-                "ppt_title": final_outline.get("title", state["ppt_title"]),
-                "total_pages": total_pages,
-                "page_count_mode": "final",
-                "slides": slides
-            }
-            
-        except Exception as e:
-            self.logger.error(f"PPT大纲最终优化失败: {e}")
-            # 返回当前状态，但标记为最终状态
-            slides = state["slides"]
-            for i, slide in enumerate(slides):
-                slide["page_number"] = i + 1
-            
-            return {
-                **state,  # 保留所有原始状态
-                "ppt_title": state["ppt_title"],
-                "total_pages": len(slides),
-                "page_count_mode": "final",
-                "slides": slides
-            }
-    
-    def should_continue_refining(self, state: PPTState) -> Literal["refine_outline", "finalize_outline"]:
+    def should_continue_refining(self, state: PPTState) -> Literal["refine_outline", "end"]:
         """
         判断是否继续细化的条件函数
         
@@ -434,8 +299,8 @@ class GraphNodes(LoggerMixin):
         total_chunks = len(state["document_chunks"])
         
         if current_index >= total_chunks:
-            self.logger.info("所有文档块已处理，进入最终优化阶段")
-            return "finalize_outline"
+            self.logger.info("所有文档块已处理，完成大纲生成")
+            return "end"
         else:
             self.logger.debug(f"继续处理文档块 {current_index + 1}/{total_chunks}")
             return "refine_outline"

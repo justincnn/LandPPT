@@ -48,13 +48,6 @@ class ChainManager(LoggerMixin):
             | StrOutputParser()
         )
         
-        # 最终优化链
-        self._chains["finalize_outline"] = (
-            self.prompt_templates.get_finalize_outline_prompt()
-            | self.llm
-            | StrOutputParser()
-        )
-        
         # 错误恢复链
         self._chains["error_recovery"] = (
             self.prompt_templates.get_error_recovery_prompt()
