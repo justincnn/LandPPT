@@ -2553,6 +2553,211 @@ async def ai_slide_edit_stream(
             "response": "抱歉，AI编辑服务暂时不可用。请稍后重试。"
         }
 
+# 大纲AI优化请求数据模型
+class OutlineAIOptimizeRequest(BaseModel):
+    outline_content: str  # JSON格式的大纲内容
+    user_request: str  # 用户的优化需求
+    project_info: Dict[str, Any]  # 项目信息
+    optimization_type: str = "full"  # full=全大纲优化, single=单页优化
+    slide_index: Optional[int] = None  # 当optimization_type=single时使用
+
+@router.post("/api/ai/optimize-outline")
+async def ai_optimize_outline(
+    request: OutlineAIOptimizeRequest,
+    user: User = Depends(get_current_user_required)
+):
+    """AI优化大纲接口 - 支持全大纲优化和单页优化"""
+    try:
+        # 获取AI提供者
+        provider, settings = get_role_provider("editor")
+        
+        # 解析大纲JSON
+        try:
+            outline_data = json.loads(request.outline_content)
+        except json.JSONDecodeError as e:
+            return {
+                "success": False,
+                "error": f"大纲JSON格式错误: {str(e)}"
+            }
+        
+        # 根据优化类型构建不同的提示词
+        if request.optimization_type == "single" and request.slide_index is not None:
+            # 单页优化
+            if request.slide_index < 0 or request.slide_index >= len(outline_data.get('slides', [])):
+                return {
+                    "success": False,
+                    "error": "无效的幻灯片索引"
+                }
+            
+            slide = outline_data['slides'][request.slide_index]
+            
+            context = f"""
+你是一位专业的PPT大纲设计专家。用户想要优化PPT大纲中的第{request.slide_index + 1}页内容。
+
+项目信息：
+- 主题：{request.project_info.get('topic', '未知')}
+- 场景：{request.project_info.get('scenario', '通用')}
+- 目标受众：{request.project_info.get('target_audience', '普通大众')}
+
+当前页面信息：
+- 页码：第{slide.get('page_number', request.slide_index + 1)}页
+- 标题：{slide.get('title', '未命名')}
+- 类型：{slide.get('slide_type', 'content')}
+- 内容要点：{json.dumps(slide.get('content_points', []), ensure_ascii=False, indent=2)}
+
+用户的优化需求：
+{request.user_request}
+
+请根据用户需求优化这一页的内容。
+
+【重要】直接返回优化后的JSON数据，不要包含任何解释性文字或markdown标记。
+
+返回格式示例：
+{{
+  "page_number": {slide.get('page_number', request.slide_index + 1)},
+  "title": "优化后的标题",
+  "subtitle": "副标题（可选）",
+  "content_points": ["要点1", "要点2", "要点3"],
+  "slide_type": "content",
+  "description": "页面描述（可选）"
+}}
+
+优化要求：
+1. 保持与整体大纲的连贯性和逻辑性
+2. 确保内容要点清晰、具体、有价值
+3. 标题要简洁有力，能够准确概括页面内容
+4. 【关键】只返回纯JSON，不要添加任何其他文字
+"""
+        else:
+            # 全大纲优化
+            context = f"""
+你是一位专业的PPT大纲设计专家。用户想要优化整个PPT大纲。
+
+项目信息：
+- 主题：{request.project_info.get('topic', '未知')}
+- 场景：{request.project_info.get('scenario', '通用')}
+- 目标受众：{request.project_info.get('target_audience', '普通大众')}
+- 当前页数：{len(outline_data.get('slides', []))}页
+
+当前大纲：
+{json.dumps(outline_data, ensure_ascii=False, indent=2)}
+
+用户的优化需求：
+{request.user_request}
+
+请根据用户需求优化整个大纲。
+
+【重要】直接返回完整的优化后的JSON数据，不要包含任何解释性文字、markdown标记或注释。
+
+返回格式示例：
+{{
+  "title": "优化后的PPT标题",
+  "slides": [
+    {{
+      "page_number": 1,
+      "title": "页面标题",
+      "subtitle": "副标题（可选）",
+      "content_points": ["要点1", "要点2"],
+      "slide_type": "title",
+      "description": "页面描述（可选）"
+    }}
+  ],
+  "metadata": {{
+    "scenario": "{request.project_info.get('scenario', '通用')}",
+    "language": "zh",
+    "target_audience": "{request.project_info.get('target_audience', '普通大众')}",
+    "optimized": true
+  }}
+}}
+
+优化要求：
+1. 保持大纲的整体逻辑性和连贯性
+2. 确保每页内容要点清晰、具体、有价值
+3. 可以调整页面顺序、合并或拆分页面，但要保持总体结构合理
+4. 标题要简洁有力
+5. 【关键】只返回纯JSON格式，不要添加任何解释、注释或markdown标记
+"""
+        
+        # 构建AI消息
+        messages = [
+            AIMessage(role=MessageRole.SYSTEM, content="你是一位专业的PPT大纲设计专家，擅长优化和改进PPT大纲结构和内容。你的回复必须是纯JSON格式，不要包含任何解释性文字、markdown标记或注释。"),
+            AIMessage(role=MessageRole.USER, content=context)
+        ]
+        
+        # 调用AI生成回复
+        response = await provider.chat_completion(
+            messages=messages,
+            temperature=0.7,
+            model=settings.get('model')
+        )
+        
+        ai_response = response.content
+        
+        # 智能提取JSON内容
+        import re
+        
+        def extract_json_from_response(text: str) -> str:
+            """从AI响应中提取JSON内容，支持多种格式"""
+            
+            # 方法1: 提取markdown代码块中的JSON
+            json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
+            if json_match:
+                return json_match.group(1).strip()
+            
+            # 方法2: 查找第一个{到最后一个}之间的内容
+            first_brace = text.find('{')
+            last_brace = text.rfind('}')
+            if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
+                potential_json = text[first_brace:last_brace + 1]
+                # 移除可能的JavaScript/JSON注释
+                potential_json = re.sub(r'//[^\n]*', '', potential_json)  # 单行注释
+                potential_json = re.sub(r'/\*.*?\*/', '', potential_json, flags=re.DOTALL)  # 多行注释
+                return potential_json.strip()
+            
+            # 方法3: 直接返回清理后的文本
+            cleaned = text.strip()
+            # 移除可能的前缀文字（如"这是优化后的大纲："等）
+            if cleaned.startswith('{'):
+                return cleaned
+            
+            # 尝试找到JSON开始的位置
+            for line in cleaned.split('\n'):
+                line = line.strip()
+                if line.startswith('{'):
+                    # 从这一行开始到末尾
+                    start_idx = cleaned.find(line)
+                    return cleaned[start_idx:].strip()
+            
+            return cleaned
+        
+        optimized_json = extract_json_from_response(ai_response)
+        
+        # 验证JSON格式
+        try:
+            optimized_data = json.loads(optimized_json)
+        except json.JSONDecodeError as e:
+            # 提供更详细的错误信息，帮助调试
+            return {
+                "success": False,
+                "error": f"AI返回的内容不是有效的JSON格式: {str(e)}",
+                "raw_response": ai_response,
+                "extracted_json": optimized_json[:500] if len(optimized_json) > 500 else optimized_json
+            }
+        
+        return {
+            "success": True,
+            "optimized_content": json.dumps(optimized_data, ensure_ascii=False, indent=2),
+            "optimization_type": request.optimization_type,
+            "raw_response": ai_response
+        }
+        
+    except Exception as e:
+        logger.error(f"AI优化大纲请求失败: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @router.post("/api/ai/regenerate-image")
 async def ai_regenerate_image(
     request: AIImageRegenerateRequest,
