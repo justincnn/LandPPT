@@ -7488,13 +7488,18 @@
 
             // 添加按钮区域
             const buttonArea = `
-                <div style="text-align: right; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
-                    <button onclick="saveSlideOutline()" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin-right: 15px; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
-                        <i class="fas fa-save"></i> 保存大纲
+                <div style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
+                    <button onclick="aiOptimizeSingleSlideInSlidesEditor()" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
+                        <i class="fas fa-robot"></i> AI优化
                     </button>
-                    <button onclick="regenerateFromOutline()" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
-                        <i class="fas fa-sync"></i> 根据大纲重新生成
-                    </button>
+                    <div style="display: flex; gap: 15px;">
+                        <button onclick="saveSlideOutline()" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
+                            <i class="fas fa-save"></i> 保存大纲
+                        </button>
+                        <button onclick="regenerateFromOutline()" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
+                            <i class="fas fa-sync"></i> 根据大纲重新生成
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -13593,6 +13598,317 @@
             slideshowExitBtn = null;
             slideshowOverlay = null;
         }
+
+        // ========== AI优化大纲功能 ==========
+
+        // 创建美化的AI优化需求输入弹窗
+        function showAIOptimizeModal(config) {
+            return new Promise((resolve, reject) => {
+                // 创建模态框遮罩
+                const modal = document.createElement('div');
+                modal.className = 'ai-optimize-modal';
+                modal.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+                    z-index: 10002; display: flex; align-items: center; justify-content: center;
+                    padding: 20px; animation: fadeIn 0.3s ease;
+                `;
+
+                // 创建弹窗内容
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+                    border-radius: 20px; padding: 0; max-width: 600px; width: 100%;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                    animation: slideIn 0.3s ease; max-height: 90vh; overflow: hidden;
+                    display: flex; flex-direction: column;
+                `;
+
+                // 建议示例
+                const suggestions = config.suggestions || [
+                    '增加更多文字说明',
+                    '简化内容，突出核心要点',
+                    '添加数据支撑和案例分析',
+                    '优化逻辑结构，增强说服力',
+                    '增加视觉化描述建议'
+                ];
+
+                content.innerHTML = `
+                    <style>
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes slideIn {
+                            from { transform: translateY(-50px); opacity: 0; }
+                            to { transform: translateY(0); opacity: 1; }
+                        }
+                        .ai-optimize-modal .suggestion-tag {
+                            display: inline-block;
+                            padding: 6px 12px;
+                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            color: white;
+                            border-radius: 20px;
+                            font-size: 12px;
+                            margin: 4px;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            border: 2px solid transparent;
+                        }
+                        .ai-optimize-modal .suggestion-tag:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                            border-color: #667eea;
+                            background: linear-gradient(135deg, #764ba2, #667eea);
+                        }
+                        .ai-optimize-modal textarea:focus {
+                            outline: none;
+                            border-color: #667eea;
+                            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                        }
+                    </style>
+                    
+                    <!-- 头部 -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 20px 20px 0 0; position: relative;">
+                        <div style="position: relative; z-index: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="margin: 0 0 8px 0; font-size: 1.3em; font-weight: 700;">
+                                        <i class="fas fa-magic" style="margin-right: 10px;"></i>${config.title}
+                                    </h3>
+                                    <p style="margin: 0; opacity: 0.9; font-size: 0.9em;">${config.subtitle}</p>
+                                </div>
+                                <button onclick="this.closest('.ai-optimize-modal').remove()" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 内容区域 -->
+                    <div style="padding: 30px; flex: 1; overflow-y: auto;">
+                        <!-- 当前信息展示 -->
+                        <div style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="color: #2c3e50; font-size: 0.9em; line-height: 1.6;">
+                                <strong style="color: #3498db;"><i class="fas fa-info-circle"></i> 当前内容</strong><br>
+                                ${config.currentInfo}
+                            </div>
+                        </div>
+
+                        <!-- 输入框 -->
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 0.95em;">
+                                <i class="fas fa-edit"></i> 请描述您的优化需求
+                            </label>
+                            <textarea id="aiOptimizeInput" style="width: 100%; min-height: 120px; padding: 15px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 14px; resize: vertical; font-family: inherit; transition: all 0.3s ease;" placeholder="详细描述您希望如何优化此内容...
+
+例如：
+- 增加更多技术细节
+- 重新组织逻辑结构
+- 添加案例分析"></textarea>
+                        </div>
+
+                        <!-- 快捷建议 -->
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 0.85em;">
+                                <i class="fas fa-lightbulb"></i> 点击快捷建议快速填充
+                            </label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                ${suggestions.map(s => `<span class="suggestion-tag" onclick="document.getElementById('aiOptimizeInput').value = '${s}'">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部按钮 -->
+                    <div style="padding: 20px 30px; background: #f8f9fa; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e9ecef;">
+                        <div style="color: #7f8c8d; font-size: 0.85em;">
+                            <i class="fas fa-robot"></i> AI将根据您的需求智能优化内容
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="this.closest('.ai-optimize-modal').remove()" class="btn btn-sm" style="background: #95a5a6; color: white; padding: 10px 20px;">
+                                <i class="fas fa-times"></i> 取消
+                            </button>
+                            <button id="confirmOptimizeBtn" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px;">
+                                <i class="fas fa-magic"></i> 开始优化
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+
+                // 聚焦输入框
+                setTimeout(() => {
+                    const input = document.getElementById('aiOptimizeInput');
+                    if (input) input.focus();
+                }, 100);
+
+                // 点击背景关闭
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                        reject('用户取消');
+                    }
+                });
+
+                // 确认按钮
+                const confirmBtn = document.getElementById('confirmOptimizeBtn');
+                confirmBtn.onclick = () => {
+                    const input = document.getElementById('aiOptimizeInput');
+                    const value = input?.value.trim();
+                    if (!value) {
+                        // 输入框抖动动画
+                        input.style.animation = 'shake 0.5s';
+                        setTimeout(() => { input.style.animation = ''; }, 500);
+                        return;
+                    }
+                    modal.remove();
+                    resolve(value);
+                };
+
+                // 添加shake动画
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes shake {
+                        0%, 100% { transform: translateX(0); }
+                        25% { transform: translateX(-10px); }
+                        75% { transform: translateX(10px); }
+                    }
+                `;
+                document.head.appendChild(style);
+            });
+        }
+
+        // AI优化单页幻灯片大纲
+        async function aiOptimizeSingleSlideInSlidesEditor() {
+            // 从表单中获取当前数据
+            const title = document.getElementById('slideTitle')?.value.trim() || '';
+            const slideType = document.getElementById('slideType')?.value || 'content';
+            const description = document.getElementById('slideDescription')?.value.trim() || '';
+            
+            // 获取所有内容要点
+            let contentPoints = [];
+            const bulletPointsContainer = document.getElementById('bulletPointsContainer');
+            if (bulletPointsContainer) {
+                const bulletPointItems = bulletPointsContainer.querySelectorAll('.bullet-point-item');
+                contentPoints = Array.from(bulletPointItems).map(item => {
+                    const textElement = item.querySelector('.bullet-point-text');
+                    return textElement ? textElement.textContent.trim() : '';
+                }).filter(point => point);
+            }
+
+            if (!title) {
+                showNotification('请先输入页面标题', 'warning');
+                return;
+            }
+
+            // 显示美化的优化需求输入弹窗
+            let userRequest;
+            try {
+                userRequest = await showAIOptimizeModal({
+                    title: `AI优化 - 第${currentSlideIndex + 1}页`,
+                    subtitle: '让AI帮助您优化这一页的内容',
+                    currentInfo: `<strong>标题：</strong>${title}<br><strong>类型：</strong>${slideType}<br><strong>内容要点：</strong>${contentPoints.length}个`,
+                    suggestions: [
+                        '增加更多技术细节和实例',
+                        '简化内容，突出核心要点',
+                        '优化逻辑结构，使内容更连贯',
+                        '增强说服力，添加数据支撑',
+                        '丰富表达方式，提升专业度'
+                    ]
+                });
+            } catch (e) {
+                return; // 用户取消
+            }
+
+            if (!userRequest || !userRequest.trim()) {
+                return;
+            }
+
+            // 显示加载提示
+            showNotification('AI正在优化第' + (currentSlideIndex + 1) + '页...', 'info');
+
+            try {
+                // 使用项目大纲数据
+                if (!projectOutline || !projectOutline.slides) {
+                    throw new Error('大纲数据不存在');
+                }
+
+                const outlineContent = JSON.stringify(projectOutline);
+
+                // 调用AI优化接口
+                const response = await fetch('/api/ai/optimize-outline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        outline_content: outlineContent,
+                        user_request: userRequest.trim(),
+                        project_info: {
+                            topic: projectOutline.title || '未知',
+                            scenario: projectOutline.metadata?.scenario || '通用',
+                            target_audience: projectOutline.metadata?.target_audience || '普通大众'
+                        },
+                        optimization_type: 'single',
+                        slide_index: currentSlideIndex
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.optimized_content) {
+                    // 解析优化后的单页数据
+                    const optimizedSlide = JSON.parse(result.optimized_content);
+                    
+                    // 更新弹窗中的表单
+                    document.getElementById('slideTitle').value = optimizedSlide.title || '';
+                    document.getElementById('slideType').value = optimizedSlide.slide_type || 'content';
+                    document.getElementById('slideDescription').value = optimizedSlide.description || '';
+                    
+                    // 更新内容要点
+                    const container = document.getElementById('bulletPointsContainer');
+                    if (container && optimizedSlide.content_points && optimizedSlide.content_points.length > 0) {
+                        // 清空现有内容
+                        container.innerHTML = '';
+                        
+                        // 添加优化后的要点
+                        optimizedSlide.content_points.forEach((point, index) => {
+                            const pointDiv = document.createElement('div');
+                            pointDiv.className = 'bullet-point-item';
+                            pointDiv.setAttribute('data-index', index);
+                            pointDiv.style.cssText = 'display: flex; align-items: flex-start; margin-bottom: 8px; padding: 8px; border-radius: 4px; transition: all 0.2s ease; position: relative;';
+                            pointDiv.innerHTML = `
+                                <span style="color: #666; margin-right: 8px; font-weight: bold; min-width: 20px;">•</span>
+                                <div style="flex: 1; position: relative;">
+                                    <div class="bullet-point-text" contenteditable="true" style="outline: none; min-height: 20px; line-height: 1.4; word-wrap: break-word;">${point}</div>
+                                </div>
+                            `;
+                            container.appendChild(pointDiv);
+                        });
+                    }
+                    
+                    showNotification('✅ AI优化完成，请检查后保存', 'success');
+
+                } else {
+                    // 显示详细的错误信息
+                    let errorMsg = result.error || '未知错误';
+                    if (result.extracted_json) {
+                        console.error('提取的JSON:', result.extracted_json);
+                    }
+                    if (result.raw_response) {
+                        console.error('AI原始响应:', result.raw_response);
+                    }
+                    showNotification('AI优化失败: ' + errorMsg, 'error');
+                }
+
+            } catch (error) {
+                console.error('AI优化失败:', error);
+                showNotification('AI优化失败: ' + error.message, 'error');
+            }
+        }
+
     </script>
 </body>
 </html>

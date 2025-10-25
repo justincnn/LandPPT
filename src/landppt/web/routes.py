@@ -2792,6 +2792,8 @@ async def ai_regenerate_image(
             }
 
         provider, settings = get_role_provider("editor")
+        # Ensure we have a general AI provider instance as well (some image processors expect ai_provider)
+        ai_provider = get_ai_provider()
         if not ai_provider:
             return {
                 "success": False,
