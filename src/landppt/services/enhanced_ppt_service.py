@@ -3180,41 +3180,42 @@ class EnhancedPPTService(PPTService):
                 # 如果有需要生成的幻灯片
                 if slides_to_generate:
                     if parallel_enabled and len(slides_to_generate) > 1:
-                        # 并行生成
-                        logger.info(f"📦 并行生成 {len(slides_to_generate)} 页")
+                        # 流式并行生成
+                        logger.info(f"📦 流式并行生成 {len(slides_to_generate)} 页")
                         
-                        # 发送进度消息
+                        # 发送初始进度消息
                         for idx, slide in slides_to_generate:
                             progress_data = {
                                 'type': 'progress',
                                 'current': idx + 1,
                                 'total': len(slides),
-                                'message': f'正在生成第{idx+1}-{idx+1+len(slides_to_generate)}页...'
+                                'message': f'正在生成第{idx+1}页：{slide.get("title", "")}...'
                             }
                             yield f"data: {json.dumps(progress_data)}\n\n"
                         
-                        # 创建并行任务
-                        tasks = []
-                        for idx, slide in slides_to_generate:
-                            task = self._generate_single_slide_html_with_prompts(
-                                slide, confirmed_requirements, system_prompt,
-                                idx + 1, len(slides), slides, project.slides_data, project_id
-                            )
-                            tasks.append(task)
-                        
-                        # 并行执行
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        
-                        # 处理结果
-                        for (idx, slide), result in zip(slides_to_generate, results):
+                        # 创建包装协程，返回结果和元数据
+                        async def generate_with_metadata(idx, slide):
                             try:
-                                if isinstance(result, Exception):
-                                    raise result
-                                
-                                html_content = result
-                                logger.info(f"✅ 并行生成第{idx+1}页成功")
+                                html_content = await self._generate_single_slide_html_with_prompts(
+                                    slide, confirmed_requirements, system_prompt,
+                                    idx + 1, len(slides), slides, project.slides_data, project_id
+                                )
+                                return idx, slide, html_content, None
                             except Exception as e:
-                                logger.error(f"❌ 并行生成第{idx+1}页失败: {e}")
+                                return idx, slide, None, e
+                        
+                        # 创建所有并行任务
+                        tasks = [generate_with_metadata(idx, slide) for idx, slide in slides_to_generate]
+                        
+                        # 流式处理完成的任务 - 一旦某页生成完成，立即展示和添加
+                        for coro in asyncio.as_completed(tasks):
+                            idx, slide, html_content, error = await coro
+                            try:
+                                if error:
+                                    raise error
+                                logger.info(f"✅ 流式生成第{idx+1}页成功")
+                            except Exception as e:
+                                logger.error(f"❌ 流式生成第{idx+1}页失败: {e}")
                                 html_content = f"<div style='padding: 50px; text-align: center; color: red;'>生成失败：{str(e)}</div>"
                             
                             # 创建幻灯片数据
@@ -3240,7 +3241,7 @@ class EnhancedPPTService(PPTService):
                             except Exception as save_error:
                                 logger.error(f"保存第{idx+1}页失败: {save_error}")
                             
-                            # 发送幻灯片数据
+                            # 立即发送幻灯片数据到前端
                             slide_response = {'type': 'slide', 'slide_data': slide_data}
                             yield f"data: {json.dumps(slide_response)}\n\n"
                     else:

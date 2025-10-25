@@ -1643,7 +1643,20 @@
                 });
             }
 
-            slidesContainer.appendChild(slideCard);
+            // 按页码顺序插入幻灯片，而不是直接添加到末尾
+            const allSlides = Array.from(slidesContainer.children);
+            const insertIndex = allSlides.findIndex(slide => {
+                const existingPageNum = parseInt(slide.id.replace('slide-', ''));
+                return existingPageNum > slideData.page_number;
+            });
+            
+            if (insertIndex === -1) {
+                // 没有找到更大的页码，添加到末尾
+                slidesContainer.appendChild(slideCard);
+            } else {
+                // 插入到找到的位置之前
+                slidesContainer.insertBefore(slideCard, allSlides[insertIndex]);
+            }
 
             // Animate to completed state
             setTimeout(() => {
@@ -1651,14 +1664,19 @@
                 slideCard.classList.add('completed');
             }, 1000);
 
-            // Store slide data - 检查是否已存在相同页码的数据
+            // Store slide data - 按页码顺序存储
             const existingDataIndex = slidesData.findIndex(slide => slide.page_number === slideData.page_number);
             if (existingDataIndex >= 0) {
                 // 更新现有数据
                 slidesData[existingDataIndex] = slideData;
             } else {
-                // 添加新数据
-                slidesData.push(slideData);
+                // 按页码顺序插入新数据
+                const dataInsertIndex = slidesData.findIndex(slide => slide.page_number > slideData.page_number);
+                if (dataInsertIndex === -1) {
+                    slidesData.push(slideData);
+                } else {
+                    slidesData.splice(dataInsertIndex, 0, slideData);
+                }
             }
         }
 

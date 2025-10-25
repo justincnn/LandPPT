@@ -2610,7 +2610,7 @@ async def ai_optimize_outline(
 
 请根据用户需求优化这一页的内容。
 
-【重要】直接返回优化后的JSON数据，不要包含任何解释性文字或markdown标记。
+【重要】直接返回优化后的JSON数据，不要包含任何解释性文字或markdown标记（如```json）。
 
 返回格式示例：
 {{
@@ -2626,7 +2626,8 @@ async def ai_optimize_outline(
 1. 保持与整体大纲的连贯性和逻辑性
 2. 确保内容要点清晰、具体、有价值
 3. 标题要简洁有力，能够准确概括页面内容
-4. 【关键】只返回纯JSON，不要添加任何其他文字
+4. content_points数组中的字符串可以包含代码示例（用```标记），这是合法的JSON字符串内容
+5. 【关键】只返回纯JSON对象，不要用```json包裹整个JSON，不要添加任何其他解释文字
 """
         else:
             # 全大纲优化
@@ -2699,24 +2700,40 @@ async def ai_optimize_outline(
         def extract_json_from_response(text: str) -> str:
             """从AI响应中提取JSON内容，支持多种格式"""
             
-            # 方法1: 提取markdown代码块中的JSON
-            json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
-            if json_match:
-                return json_match.group(1).strip()
-            
-            # 方法2: 查找第一个{到最后一个}之间的内容
+            # 优先方法: 查找第一个{到最后一个}之间的内容
+            # 这样可以避免错误提取content_points字段内的代码块
             first_brace = text.find('{')
             last_brace = text.rfind('}')
             if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
                 potential_json = text[first_brace:last_brace + 1]
-                # 移除可能的JavaScript/JSON注释
-                potential_json = re.sub(r'//[^\n]*', '', potential_json)  # 单行注释
-                potential_json = re.sub(r'/\*.*?\*/', '', potential_json, flags=re.DOTALL)  # 多行注释
-                return potential_json.strip()
+                # 尝试解析，如果成功则返回
+                try:
+                    json.loads(potential_json)
+                    return potential_json.strip()
+                except json.JSONDecodeError:
+                    # 如果解析失败，尝试清理注释后再试
+                    cleaned_json = re.sub(r'//[^\n]*', '', potential_json)  # 单行注释
+                    cleaned_json = re.sub(r'/\*.*?\*/', '', cleaned_json, flags=re.DOTALL)  # 多行注释
+                    try:
+                        json.loads(cleaned_json)
+                        return cleaned_json.strip()
+                    except json.JSONDecodeError:
+                        pass  # 继续尝试其他方法
             
-            # 方法3: 直接返回清理后的文本
+            # 备用方法: 提取markdown代码块中的JSON（仅当标记为json时）
+            # 使用更严格的匹配，确保是JSON代码块而不是其他代码块
+            json_match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
+            if json_match:
+                extracted = json_match.group(1).strip()
+                # 验证提取的内容是否是有效JSON
+                try:
+                    json.loads(extracted)
+                    return extracted
+                except json.JSONDecodeError:
+                    pass  # 继续尝试其他方法
+            
+            # 最后尝试: 直接返回清理后的文本
             cleaned = text.strip()
-            # 移除可能的前缀文字（如"这是优化后的大纲："等）
             if cleaned.startswith('{'):
                 return cleaned
             
@@ -2724,7 +2741,6 @@ async def ai_optimize_outline(
             for line in cleaned.split('\n'):
                 line = line.strip()
                 if line.startswith('{'):
-                    # 从这一行开始到末尾
                     start_idx = cleaned.find(line)
                     return cleaned[start_idx:].strip()
             
