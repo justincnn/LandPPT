@@ -13601,6 +13601,19 @@
 
         // ========== AI优化大纲功能 ==========
 
+        // 辅助函数：获取正确的目标受众（处理自定义受众情况）
+        function getTargetAudience(outline) {
+            if (!outline || !outline.metadata) {
+                return '普通大众';
+            }
+            const audienceType = outline.metadata.target_audience;
+            // 如果选择的是"自定义"，则使用custom_audience字段的值
+            if (audienceType === '自定义' && outline.metadata.custom_audience) {
+                return outline.metadata.custom_audience;
+            }
+            return audienceType || '普通大众';
+        }
+
         // 创建美化的AI优化需求输入弹窗
         function showAIOptimizeModal(config) {
             return new Promise((resolve, reject) => {
@@ -13849,7 +13862,7 @@
                         project_info: {
                             topic: projectOutline.title || '未知',
                             scenario: projectOutline.metadata?.scenario || '通用',
-                            target_audience: projectOutline.metadata?.target_audience || '普通大众'
+                            target_audience: getTargetAudience(projectOutline)
                         },
                         optimization_type: 'single',
                         slide_index: currentSlideIndex

@@ -716,7 +716,7 @@
 
     <!-- Requirements Confirmation Section -->
     {% set requirements_stage = todo_board.stages | selectattr('id', 'equalto', 'requirements_confirmation') | first %}
-    {% if requirements_stage and requirements_stage.status == 'pending' %}
+    {% if not requirements_stage or requirements_stage.status == 'pending' %}
     <div id="requirements-section" style="max-width: 900px; margin: 15px auto; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid rgba(102, 126, 234, 0.15);">
         <div style="text-align: center; margin-bottom: 25px;">
             <div style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; border-radius: 40px; margin-bottom: 15px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);">
@@ -725,22 +725,8 @@
             <p style="color: #7f8c8d; margin-bottom: 0; font-size: 1em; line-height: 1.5;">请确认以下信息，AI将根据您的确认生成定制化的PPT内容</p>
         </div>
 
-        <!-- Loading indicator for requirements form -->
-        <div id="ai-loading" class="loading-container" style="display: block;">
-            <div class="loading-icon">
-                <i class="fas fa-cog"></i>
-            </div>
-            <div class="loading-title">正在准备需求表单</div>
-            <div class="progress-container">
-                <div class="progress-bar" style="animation-duration: 2s;"></div>
-            </div>
-            <div class="loading-tips">
-                <h5><i class="fas fa-info-circle"></i> 提示</h5>
-                <p>请稍候，系统正在为您准备项目需求确认表单...</p>
-            </div>
-        </div>
-
-        <form id="requirements-form" style="text-align: left; display: none;" enctype="multipart/form-data">
+        <!-- 直接显示需求表单，无需加载动画 -->
+        <form id="requirements-form" style="text-align: left; display: block;" enctype="multipart/form-data">
 
             <!-- Content Source Selection -->
             <div style="margin-bottom: 20px;">
@@ -1076,7 +1062,7 @@ function stopOutlineGenerationAnimations(reason = '') {
     outlineGenerationStarted = false;
 
     if (reason) {
-        console.log([OUTLINE] Animations stopped: );
+        console.log('[OUTLINE] Animations stopped:', reason);
     }
 }
  // 防止重复调用大纲生成
@@ -1185,50 +1171,20 @@ function initializeOutlineDisplay() {
         const outlineContentDisplay = document.getElementById('outline-content-display');
         
         if (placeholderDiv && outlineContentDisplay) {
-            // 检查是否有加载动画元素
-            const hasLoadingAnimation = placeholderDiv.querySelector('.loading-container, .brain-container, .loading-icon');
+            // 检查是否有实际的大纲内容（不是加载动画）
             const hasContent = outlineContentDisplay.querySelector('pre');
             
             console.log('[INIT] 状态检查:', {
-                hasLoadingAnimation: !!hasLoadingAnimation,
                 hasContent: !!hasContent,
                 placeholderDisplay: placeholderDiv.style.display
             });
             
-            // 如果placeholder显示且包含动画，说明正在生成
-            if (placeholderDiv.style.display === 'block' || hasLoadingAnimation) {
-                console.log('[INIT] 检测到正在生成大纲，显示动画');
-                
-                // 标记为正在生成
-                outlineGenerationStarted = true;
-                
-                // 显示大纲视图的动画
-                const outlineGeneratingDiv = document.getElementById('outline-generating-new');
-                if (outlineGeneratingDiv) {
-                    console.log('[INIT] 显示大纲视图动画');
-                    outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
-                    
-                    // 启动动画
-                    setTimeout(() => {
-                        startBrainAnimation('outline-view');
-                        console.log('[INIT] 大纲视图动画已启动');
-                    }, 100);
-                } else {
-                    console.error('[INIT] 未找到大纲视图动画容器');
-                }
-                
-                // 确保JSON视图的动画也设置好
-                if (!hasLoadingAnimation && placeholderDiv) {
-                    console.log('[INIT] 设置JSON视图动画');
-                    placeholderDiv.style.display = 'block';
-                    setTimeout(() => {
-                        startBrainAnimation('file');
-                    }, 100);
-                }
-            } else if (hasContent) {
-                console.log('[INIT] 大纲已生成完成');
+            if (hasContent) {
+                console.log('[INIT] 大纲已生成完成，停止所有动画');
+                // 确保停止所有动画
+                stopOutlineGenerationAnimations('outline already exists');
             } else {
-                console.log('[INIT] 大纲尚未开始生成');
+                console.log('[INIT] 大纲尚未生成，保持等待状态');
             }
         }
     }
@@ -1400,9 +1356,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if we should auto-start outline generation
     checkAutoStartOutline();
 
-    // 直接显示需求表单，不再加载AI建议
-    showRequirementsForm();
-
+    // 表单已经直接显示，不需要额外的显示逻辑
+    
     const requirementsForm = document.getElementById('requirements-form');
     if (requirementsForm) {
         requirementsForm.addEventListener('submit', async function(e) {
@@ -1416,6 +1371,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 requirementsSection.style.display = 'none';
             }
 
+            // 重置生成标志，确保后续调用不会被跳过
+            outlineGenerationStarted = false;
             
             showOutlineSection();
 
@@ -1429,6 +1386,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
 
                 if (response.ok && result.status === 'success') {
+                    // 再次确保标志被重置
+                    outlineGenerationStarted = false;
                     
                     setTimeout(() => {
                         const contentSource = document.querySelector('input[name="content_source"]:checked');
@@ -1439,7 +1398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             startOutlineGenerationNew();
                         }
-                    }, 1000); 
+                    }, 1000);
                 } else {
                     console.error('Requirements confirmation failed:', result.message);
                     
@@ -1729,88 +1688,36 @@ function showOutlineSection() {
 
     outlineSection.style.display = 'block';
 
-    // 启动等待动画
+    // 因为默认视图是大纲视图，需要在这里也显示大纲视图的加载动画
     setTimeout(() => {
+        // 显示大纲视图的AI动画
+        const outlineGeneratingDiv = document.getElementById('outline-generating-new');
+        if (outlineGeneratingDiv) {
+            console.log('[SHOW_OUTLINE] 显示大纲视图加载动画');
+            outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
+            
+            // 隐藏空状态
+            const outlineEmptyDiv = document.getElementById('outline-empty-new');
+            if (outlineEmptyDiv) {
+                outlineEmptyDiv.style.display = 'none';
+            }
+            
+            // 启动大纲视图动画
+            setTimeout(() => {
+                startBrainAnimation('outline-view');
+                console.log('[SHOW_OUTLINE] 大纲视图动画已启动');
+            }, 100);
+        }
+        
+        // 同时为JSON视图准备动画（切换时可见）
         startFunnelAnimation('dynamic');
     }, 100);
     
-    // === 初始化大纲生成动画（在section创建后） ===
-    console.log('[SHOW_OUTLINE] outline-section已创建，初始化动画');
-    setTimeout(() => {
-        // 检查是否正在生成大纲
-        const placeholderDiv = document.getElementById('outline-placeholder');
-        if (placeholderDiv) {
-            const hasLoadingAnimation = placeholderDiv.querySelector('.loading-container, .brain-container');
-            console.log('[SHOW_OUTLINE] 检查动画状态:', !!hasLoadingAnimation);
-            
-            if (hasLoadingAnimation) {
-                console.log('[SHOW_OUTLINE] 检测到正在生成，显示两个视图的动画');
-                
-                // 标记为正在生成
-                outlineGenerationStarted = true;
-                
-                // 显示大纲视图的动画
-                const outlineGeneratingDiv = document.getElementById('outline-generating-new');
-                if (outlineGeneratingDiv) {
-                    console.log('[SHOW_OUTLINE] 显示大纲视图动画');
-                    outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
-                    
-                    // 隐藏空状态
-                    const outlineEmptyDiv = document.getElementById('outline-empty-new');
-                    if (outlineEmptyDiv) {
-                        outlineEmptyDiv.style.display = 'none';
-                    }
-                    
-                    // 启动动画
-                    setTimeout(() => {
-                        startBrainAnimation('outline-view');
-                        console.log('[SHOW_OUTLINE] 大纲视图动画已启动');
-                    }, 100);
-                } else {
-                    console.error('[SHOW_OUTLINE] 未找到大纲视图动画容器');
-                }
-                
-                // 确保JSON视图的动画也显示
-                placeholderDiv.style.display = 'block';
-                setTimeout(() => {
-                    startBrainAnimation('file');
-                }, 100);
-            }
-        }
-    }, 200); // 延迟200ms确保DOM已完全渲染
+    console.log('[SHOW_OUTLINE] outline-section已创建，动画已初始化');
 }
 
 
-function showRequirementsForm() {
-    try {
-        // Hide loading indicator
-        const loadingElement = document.getElementById('ai-loading');
-        if (loadingElement) {
-            loadingElement.style.display = 'none';
-        }
-
-        // Show form
-        const formElement = document.getElementById('requirements-form');
-        if (formElement) {
-            formElement.style.display = 'block';
-        }
-
-
-    } catch (error) {
-        console.error('Error showing requirements form:', error);
-
-        // Hide loading and show form with default options
-        const loadingElement = document.getElementById('ai-loading');
-        if (loadingElement) {
-            loadingElement.style.display = 'none';
-        }
-
-        const formElement = document.getElementById('requirements-form');
-        if (formElement) {
-            formElement.style.display = 'block';
-        }
-    }
-}
+// showRequirementsForm 函数已移除，因为表单现在默认直接显示
 
 // Populate checkbox options
 function populateCheckboxOptions(containerId, options, name) {
@@ -1940,6 +1847,292 @@ function editOutline(stageId) {
         outlineEdit.style.display = 'block';
     }
 }
+
+// ** FIX START **
+// Moved startOutlineGenerationNew function to the global scope
+
+async function startOutlineGenerationNew() {
+    console.log('Starting new outline generation (non-streaming)');
+
+    // 防止重复调用
+    if (outlineGenerationStarted) {
+        console.log('Outline generation already started, skipping...');
+        return;
+    }
+
+    const contentDiv = document.getElementById('outline-content-display');
+    const cursorDiv = document.getElementById('outline-cursor');
+    const statusDiv = document.getElementById('outline-status');
+    const placeholderDiv = document.getElementById('outline-placeholder');
+
+    if (!contentDiv) {
+        console.error('Outline content div not found');
+        return;
+    }
+
+    // 标记为已开始
+    outlineGenerationStarted = true;
+
+    console.log('[MANUAL] 准备生成动画，当前视图:', currentViewNew);
+
+    // === 准备大纲视图的动画 ===
+    const outlineContentNewDiv = document.getElementById('outline-content-new');
+    if (outlineContentNewDiv) {
+        outlineContentNewDiv.innerHTML = '';
+        console.log('[MANUAL] 已清空大纲内容区域');
+    }
+
+    // 隐藏大纲视图的所有状态元素
+    const outlineEmptyDiv = document.getElementById('outline-empty-new');
+    if (outlineEmptyDiv) {
+        outlineEmptyDiv.style.display = 'none';
+    }
+    
+    const outlineLoadingDiv = document.getElementById('outline-loading-new');
+    if (outlineLoadingDiv) {
+        outlineLoadingDiv.style.display = 'none';
+    }
+    
+    const outlineErrorDiv = document.getElementById('outline-error-new');
+    if (outlineErrorDiv) {
+        outlineErrorDiv.style.display = 'none';
+    }
+
+    // 显示大纲视图中的AI动画
+    const outlineGeneratingDiv = document.getElementById('outline-generating-new');
+    if (outlineGeneratingDiv) {
+        console.log('[MANUAL] 显示大纲视图动画');
+        outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
+        
+        setTimeout(() => {
+            startBrainAnimation('outline-view');
+            console.log('[MANUAL] 大纲视图AI动画已启动');
+        }, 100);
+    }
+
+    // 显示增强的加载状态
+    if (placeholderDiv) {
+        console.log('Setting up placeholder div for outline generation');
+        placeholderDiv.innerHTML = `
+            <div class="loading-icon">
+                <i class="fas fa-brain"></i>
+            </div>
+            <div class="loading-title">AI正在生成PPT大纲</div>
+
+            <div class="brain-container">
+                <div class="ai-brain" id="loading-brain-stream">
+                    <div class="brain-core">
+                        <div class="brain-icon">🧠</div>
+                    </div>
+                    <svg class="progress-ring" width="140" height="140">
+                        <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
+                        <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
+                    </svg>
+                    <div class="neural-network">
+                        <div class="neural-line" style="--rotation: 45deg;"></div>
+                        <div class="neural-line" style="--rotation: -30deg;"></div>
+                        <div class="neural-line" style="--rotation: -45deg;"></div>
+                        <div class="neural-line" style="--rotation: 60deg;"></div>
+                    </div>
+                    <div class="thought-bubbles">
+                        <div class="thought-bubble"></div>
+                        <div class="thought-bubble"></div>
+                        <div class="thought-bubble"></div>
+                    </div>
+                    <div class="text-generation">
+                        <div class="generating-text">正在生成PPT大纲</div>
+                        <div class="generating-dots">• • •</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading-tips">
+                <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
+                <p>AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后将一次性显示完整大纲，您可以编辑和调整。</p>
+            </div>
+        `;
+        placeholderDiv.className = 'loading-container';
+        placeholderDiv.style.display = 'block';
+        console.log('Placeholder div set up, starting brain animation');
+
+        // 启动动画
+        startBrainAnimation('stream');
+        console.log('Brain animation started');
+    } else {
+        console.error('Placeholder div not found!');
+    }
+
+    // 隐藏光标元素（非流式生成不需要）
+    if (cursorDiv) {
+        cursorDiv.style.display = 'none';
+    }
+
+    // Hide status div during generation
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+    }
+
+    try {
+        // 调用非流式大纲生成接口
+        const response = await fetch(`/projects/${currentProjectId}/generate-outline`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.error || result.status === "error") {
+            // 停止加载动画
+            stopBookAnimation('stream');
+            stopOutlineGenerationAnimations('outline generation error');
+
+            // 显示错误信息和重新生成按钮，但保留placeholder div
+            // 先确保placeholder div存在
+            let errorPlaceholderDiv = document.getElementById('outline-placeholder');
+            if (!errorPlaceholderDiv) {
+                errorPlaceholderDiv = document.createElement('div');
+                errorPlaceholderDiv.id = 'outline-placeholder';
+                errorPlaceholderDiv.className = 'loading-container';
+                contentDiv.appendChild(errorPlaceholderDiv);
+            }
+
+            // 隐藏加载状态
+            errorPlaceholderDiv.style.display = 'none';
+
+            // 清除其他内容，只保留placeholder
+            const children = Array.from(contentDiv.children);
+            children.forEach(child => {
+                if (child.id !== 'outline-placeholder') {
+                    child.remove();
+                }
+            });
+
+            // 在placeholder前添加错误信息
+            const errorDiv = document.createElement('div');
+            errorDiv.innerHTML = `
+                <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                    <div style="margin-bottom: 15px;">大纲生成失败</div>
+                    <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">${result.error || result.message || '未知错误'}</div>
+                    <button onclick="location.reload()" class="btn btn-warning btn-sm">
+                        <i class="fas fa-sync"></i> 重新开始
+                    </button>
+                </div>
+            `;
+            contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
+            if (cursorDiv) cursorDiv.style.display = 'none';
+
+            // 重置标志，允许重试
+            outlineGenerationStarted = false;
+            return;
+        }
+
+        // 停止加载动画
+        stopBookAnimation('stream');
+        stopOutlineGenerationAnimations('outline generation completed');
+
+        // 隐藏加载状态
+        if (placeholderDiv) {
+            placeholderDiv.style.display = 'none';
+        }
+
+        // 一次性显示完整的大纲内容
+        let parsedOutline = null;
+        if (result.outline_content) {
+            // 格式化JSON内容
+            let formattedContent;
+            try {
+                parsedOutline = JSON.parse(result.outline_content);
+                formattedContent = JSON.stringify(parsedOutline, null, 2);
+            } catch (e) {
+                console.warn('[MANUAL] Outline JSON parse failed, using raw content', e);
+                formattedContent = result.outline_content;
+            }
+
+            // 显示格式化的内容
+            const preElement = document.createElement('pre');
+            preElement.style.cssText = 'margin: 0; font-family: "Consolas", "Monaco", "Courier New", monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word;';
+            preElement.textContent = formattedContent;
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(preElement);
+        }
+
+        if (parsedOutline && parsedOutline.slides) {
+            renderOutlinePreview(parsedOutline);
+            renderOutlineViewNewWithData(parsedOutline);
+        } else {
+            console.warn('[MANUAL] Outline content is empty or invalid, skipping preview render');
+        }
+
+        // 重置标志，允许下次生成
+        outlineGenerationStarted = false;
+
+        // Show action buttons
+        const actionsDiv = document.getElementById('outline-actions');
+        if (actionsDiv) {
+            actionsDiv.style.display = 'block';
+        }
+
+        // Show start PPT generation button
+        showStartPPTButton();
+    } catch (error) {
+        console.error('Error streaming outline generation:', error);
+
+        // 停止加载动画
+        stopFunnelAnimation('stream');
+        stopOutlineGenerationAnimations('outline generation error');
+
+        // 隐藏加载状态
+        if (placeholderDiv) {
+            placeholderDiv.style.display = 'none';
+        }
+
+        // 显示连接错误和重新生成按钮，但保留placeholder div
+        // 先确保placeholder div存在
+        let errorPlaceholderDiv = document.getElementById('outline-placeholder');
+        if (!errorPlaceholderDiv) {
+            errorPlaceholderDiv = document.createElement('div');
+            errorPlaceholderDiv.id = 'outline-placeholder';
+            errorPlaceholderDiv.className = 'loading-container';
+            contentDiv.appendChild(errorPlaceholderDiv);
+        }
+
+        // 清除其他内容，只保留placeholder
+        const children = Array.from(contentDiv.children);
+        children.forEach(child => {
+            if (child.id !== 'outline-placeholder') {
+                child.remove();
+            }
+        });
+
+        // 在placeholder前添加错误信息
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = `
+            <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                <div style="margin-bottom: 15px;">连接失败</div>
+                <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">连接错误: ${error.message}</div>
+                <button onclick="location.reload()" class="btn btn-warning btn-sm">
+                    <i class="fas fa-sync"></i> 重新开始
+                </button>
+            </div>
+        `;
+        contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
+        if (cursorDiv) cursorDiv.style.display = 'none';
+        // Keep status div hidden
+
+        // 重置标志，允许重试
+        outlineGenerationStarted = false;
+    }
+}
+
+// ** FIX END **
 
 function cancelEditOutline(stageId) {
     const outlineContent = document.getElementById(`outline-content-${stageId}`);
@@ -2185,16 +2378,16 @@ async function startFileOutlineGeneration() {
             });
 
             const errorDiv = document.createElement('div');
-            errorDiv.innerHTML = 
+            errorDiv.innerHTML = `
                 <div style="color: #e74c3c; text-align: center; padding: 20px;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <div style="margin-bottom: 15px;">??????</div>
-                    <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;"></div>
-                    <button onclick="retryOutlineGeneration()" class="btn btn-warning btn-sm">
-                        <i class="fas fa-sync"></i> ??????
+                    <div style="margin-bottom: 15px;">生成失败</div>
+                    <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">${result.error || result.message || '未知错误'}</div>
+                    <button onclick="retryFileOutlineGeneration()" class="btn btn-warning btn-sm">
+                        <i class="fas fa-sync"></i> 重新生成
                     </button>
                 </div>
-            ;
+            `;
             contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
             if (cursorDiv) cursorDiv.style.display = 'none';
 
@@ -2890,9 +3083,7 @@ function startPPTGenerationFromOutline() {
 function retryStreamingOutlineGeneration() {
     console.log('Retrying streaming outline generation');
 
-    // 重置状态 - 这里不需要重置outlineGenerationStarted，因为流式生成有自己的逻辑
-
-    // 清除错误内容
+    // 重置状态
     const stageId = 'outline_generation';
     const contentDiv = document.getElementById(`outline-content-${stageId}`);
     if (contentDiv) {
@@ -2902,7 +3093,7 @@ function retryStreamingOutlineGeneration() {
         console.error('Streaming outline content div not found!');
     }
 
-    // 调用生成函数
+    // 调用正确的生成函数
     startOutlineGeneration();
 }
 
@@ -4389,7 +4580,7 @@ function renderOutlineViewNewWithData(parsedOutline, retryCount = 0) {
 
     if (!outlineContainer) {
         if (retryCount < MAX_OUTLINE_RENDER_RETRIES) {
-            console.warn([OUTLINE] Outline container not ready, retrying render (/));
+            console.warn('[OUTLINE] Outline container not ready, retrying render (' + (retryCount + 1) + '/' + MAX_OUTLINE_RENDER_RETRIES + ')');
             setTimeout(() => renderOutlineViewNewWithData(parsedOutline, retryCount + 1), 200);
         } else {
             console.error('[OUTLINE] Outline container not found after retries');
@@ -4417,7 +4608,7 @@ function renderOutlineViewNewWithData(parsedOutline, retryCount = 0) {
             errorDiv.style.display = 'block';
             const errorP = errorDiv.querySelector('p');
             if (errorP) {
-                errorP.textContent = '???????' + error.message;
+                errorP.textContent = '渲染失败: ' + error.message;
             }
         }
     }

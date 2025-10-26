@@ -1212,6 +1212,19 @@ function showAIOptimizeModal(config) {
     });
 }
 
+// 辅助函数：获取正确的目标受众（处理自定义受众情况）
+function getTargetAudience(outline) {
+    if (!outline || !outline.metadata) {
+        return '普通大众';
+    }
+    const audienceType = outline.metadata.target_audience;
+    // 如果选择的是"自定义"，则使用custom_audience字段的值
+    if (audienceType === '自定义' && outline.metadata.custom_audience) {
+        return outline.metadata.custom_audience;
+    }
+    return audienceType || '普通大众';
+}
+
 // AI优化整个大纲
 async function aiOptimizeFullOutlineInProjectDetail() {
     const editor = document.getElementById('outlineEditor');
@@ -1277,7 +1290,7 @@ async function aiOptimizeFullOutlineInProjectDetail() {
                 project_info: {
                     topic: parsedOutline.title || '未知',
                     scenario: parsedOutline.metadata?.scenario || '通用',
-                    target_audience: parsedOutline.metadata?.target_audience || '普通大众'
+                    target_audience: getTargetAudience(parsedOutline)
                 },
                 optimization_type: 'full'
             })
@@ -1399,7 +1412,7 @@ async function aiOptimizeSingleSlideInProjectDetail(slideIndex) {
                 project_info: {
                     topic: projectOutline.title || '未知',
                     scenario: projectOutline.metadata?.scenario || '通用',
-                    target_audience: projectOutline.metadata?.target_audience || '普通大众'
+                    target_audience: getTargetAudience(projectOutline)
                 },
                 optimization_type: 'single',
                 slide_index: slideIndex
