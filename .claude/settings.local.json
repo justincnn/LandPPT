@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)",
-      "Bash(uv run:*)"
+      "Bash(python3 d:/file/learn/AIGC/temp_filter_update.py)",
+      "Bash(python3 -c \"\nfrom pathlib import Path\nimport sys\n\n# 检查文件\nfile1 = Path(''d:/file/learn/AIGC/LandPPT/src/landppt/ai/providers.py'')\nfile2 = Path(''d:/file/learn/AIGC/LandPPT/src/landppt/api/landppt_api.py'')\n\nprint(''检查文件是否存在:'')\nprint(f''  providers.py: {file1.exists()}'')\nprint(f''  landppt_api.py: {file2.exists()}'')\n\nprint(''\\n检查关键函数是否存在:'')\nwith open(file2, ''r'', encoding=''utf-8'') as f:\n    content = f.read()\n    has_filter = ''def filter_think_tags'' in content\n    has_test_filter = ''filtered_content = filter_think_tags'' in content\n    print(f''  filter_think_tags函数: {has_filter}'')\n    print(f''  测试中应用过滤: {has_test_filter}'')\n\nprint(''\\n检查providers.py中的流式过滤:'')\nwith open(file1, ''r'', encoding=''utf-8'') as f:\n    content = f.read()\n    has_stream_filter = ''async def stream_chat_completion'' in content\n    print(f''  流式过滤方法: {has_stream_filter}'')\n\")"
     ],
     "deny": [],
     "ask": []

@@ -5,12 +5,51 @@ AI provider implementations
 import asyncio
 import json
 import logging
+import re
 from typing import List, Dict, Any, Optional, AsyncGenerator, Union, Tuple
 
 from .base import AIProvider, AIMessage, AIResponse, MessageRole, TextContent, ImageContent, MessageContentType
 from ..core.config import ai_config
 
 logger = logging.getLogger(__name__)
+
+
+def filter_think_tags(content: str) -> str:
+    """
+    Standalone function to filter think tags from any content
+    Supports multiple formats: <think>, <THINK>, ＜think＞, 【think】, etc.
+    This is a utility function that can be used across the application
+    """
+    if not content:
+        return content
+
+    # Pattern to match different forms of think tags (opening and closing)
+    # Matches: <think>...</think>, <think>...</think>, ＜think＞...＜/think＞, 【think】...【/think】
+    patterns = [
+        r'<think[\s\S]*?></think>',           # <think>...</think>
+        r'<think[\s\S]*?/>',                  # <think.../>
+        r'<think>[\s\S]*?</think>',            # <think>...</think>
+        r'＜think[\s\S]*?＞＜/think＞',        # ＜think＞＜/think＄
+        r'【think[\s\S]*?】【/think】',        # 【think】【/think】
+        r'\[think\][\s\S]*?\[/think\]',       # [think]...[/think]
+    ]
+
+    # Apply all patterns
+    filtered_content = content
+    for pattern in patterns:
+        filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
+
+    # Clean up any extra whitespace that might be left behind
+    # Remove multiple consecutive empty lines
+    filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '\n\n', filtered_content)
+
+    # Remove empty lines at the beginning and end
+    filtered_content = filtered_content.strip()
+
+    # Clean up extra spaces within lines
+    filtered_content = re.sub(r' +', ' ', filtered_content)
+
+    return filtered_content
 
 class OpenAIProvider(AIProvider):
     """OpenAI API provider"""
@@ -57,6 +96,43 @@ class OpenAIProvider(AIProvider):
             openai_message["name"] = message.name
 
         return openai_message
+
+    def _filter_think_content(self, content: str) -> str:
+        """
+        Filter out content within think tags in all forms
+        Supports: <think>, <think>, ＜think＞, 【think】 and their closing tags
+        This prevents internal reasoning from being exposed in the output
+        """
+        if not content:
+            return content
+
+        import re
+
+        # Pattern to match different forms of think tags (opening and closing)
+        # Matches: <think>...</think>, <think>...</think>, ＜think＞...＜/think＞, 【think】...【/think】
+        # Also handles self-closing and nested tags
+        patterns = [
+            r'<think[\s\S]*?></think>',           # <think>...</think>
+            r'<think[\s\S]*?/>',                  # <think.../>
+            r'<think>[\s\S]*?</think>',            # <think>...</think>
+        ]
+
+        # Apply all patterns
+        filtered_content = content
+        for pattern in patterns:
+            filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
+
+        # Clean up any extra whitespace that might be left behind
+        # Remove multiple consecutive empty lines
+        filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '', filtered_content)
+
+        # Remove empty lines at the beginning and end
+        filtered_content = filtered_content.strip()
+
+        # Clean up extra spaces within lines
+        filtered_content = re.sub(r' +', ' ', filtered_content)
+
+        return filtered_content
     
     async def chat_completion(self, messages: List[AIMessage], **kwargs) -> AIResponse:
         """Generate chat completion using OpenAI"""
@@ -81,9 +157,11 @@ class OpenAIProvider(AIProvider):
             )
             
             choice = response.choices[0]
-            
+            # Filter out think content from the response
+            filtered_content = self._filter_think_content(choice.message.content)
+
             return AIResponse(
-                content=choice.message.content,
+                content=filtered_content,
                 model=response.model,
                 usage={
                     "prompt_tokens": response.usage.prompt_tokens,
@@ -113,7 +191,7 @@ class OpenAIProvider(AIProvider):
         return await self.chat_completion(messages, **kwargs)
 
     async def stream_chat_completion(self, messages: List[AIMessage], **kwargs) -> AsyncGenerator[str, None]:
-        """Stream chat completion using OpenAI"""
+        """Stream chat completion using OpenAI with think tag filtering"""
         if not self.client:
             raise RuntimeError("OpenAI client not available")
 
@@ -135,9 +213,71 @@ class OpenAIProvider(AIProvider):
                 stream=True
             )
 
+            buffer = ""
+            in_think_tag = False
+
             async for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                    chunk_content = chunk.choices[0].delta.content
+                    buffer += chunk_content
+
+                    # Process the buffer to handle think tags
+                    processed_content = ""
+                    remaining_buffer = buffer
+
+                    while remaining_buffer:
+                        if not in_think_tag:
+                            # Look for opening think tag
+                            think_start = None
+                            # Check for different forms of think tags (case-insensitive)
+                            for tag in ['<think', '<think>', '＜think', '【think']:
+                                pos = remaining_buffer.lower().find(tag.lower())
+                                if pos != -1:
+                                    think_start = pos
+                                    break
+
+                            if think_start is not None:
+                                # Found opening tag, add content before it
+                                processed_content += remaining_buffer[:think_start]
+                                in_think_tag = True
+                                # Remove everything up to and including the opening tag
+                                remaining_buffer = remaining_buffer[think_start:]
+                                # Find the end of the opening tag
+                                tag_end = remaining_buffer.lower().find('>')
+                                if tag_end != -1:
+                                    remaining_buffer = remaining_buffer[tag_end + 1:]
+                                else:
+                                    remaining_buffer = ""
+                                    break
+                            else:
+                                # No think tag found, add everything to processed content
+                                processed_content += remaining_buffer
+                                remaining_buffer = ""
+                                break
+                        else:
+                            # We're inside a think tag, look for closing tag
+                            think_end = None
+                            # Check for different forms of closing tags (case-insensitive)
+                            for tag in ['</think>', '</think>', '＜/think＞', '【/think】']:
+                                pos = remaining_buffer.lower().find(tag.lower())
+                                if pos != -1:
+                                    think_end = pos
+                                    break
+
+                            if think_end is not None:
+                                # Found closing tag, skip to after it
+                                in_think_tag = False
+                                remaining_buffer = remaining_buffer[think_end + len('</think>'):]
+                            else:
+                                # Haven't found closing tag yet, skip this chunk
+                                remaining_buffer = ""
+
+                    # Update buffer with remaining content
+                    buffer = remaining_buffer
+
+                    # Yield processed content if not in think tag
+                    if not in_think_tag and processed_content:
+                        yield processed_content
 
         except Exception as e:
             logger.error(f"OpenAI streaming error: {e}")

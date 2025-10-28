@@ -7,6 +7,7 @@ from typing import List, Optional
 import uuid
 import json
 import logging
+import re
 
 from .models import (
     PPTScenario, PPTGenerationRequest, PPTGenerationResponse,
@@ -19,6 +20,46 @@ from ..services.file_processor import FileProcessor
 from ..services.deep_research_service import DEEPResearchService
 from ..services.research_report_generator import ResearchReportGenerator
 from ..core.config import ai_config
+
+
+def filter_think_tags(content: str) -> str:
+    """
+    Filter out think tags from content - supports multiple formats
+    """
+    if not content:
+        return content
+
+    # Patterns for different think tag formats
+    # Note: We add capturing groups to preserve surrounding whitespace
+    patterns = [
+        r'(\s*)<think[\s\S]*?></think>(\s*)',           # <think>...</think> with whitespace
+        r'(\s*)<think[\s\S]*?/>(\s*)',                  # <think.../> with whitespace
+        r'(\s*)<think>[\s\S]*?</think>(\s*)',            # <tool_call>...</think> with whitespace
+    ]
+
+    filtered_content = content
+    # Keep applying patterns until no more matches (handles nested or multiple tags)
+    max_iterations = 10
+    for _ in range(max_iterations):
+        new_content = filtered_content
+        for pattern in patterns:
+            new_content = re.sub(pattern, r'\1\2', new_content, flags=re.IGNORECASE)
+        if new_content == filtered_content:
+            break
+        filtered_content = new_content
+
+    # Clean up whitespace
+    # Remove multiple consecutive empty lines (more than 2)
+    filtered_content = re.sub(r'\n\s*\n\s*\n+', '\n\n', filtered_content)
+
+    # Remove empty lines at the beginning and end
+    filtered_content = filtered_content.strip()
+
+    # Clean up extra spaces within lines (but preserve single spaces)
+    filtered_content = re.sub(r' {2,}', ' ', filtered_content)
+
+    return filtered_content
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -171,18 +212,20 @@ async def test_ai_provider(provider_name: str, request: Request):
                                 "content": "Say 'Hello, I am working!' in exactly 5 words."
                             }
                         ],
-                        "max_tokens": 20,
                         "temperature": 0
                     }
                     
                     async with session.post(chat_url, headers=headers, json=payload, timeout=30) as response:
                         if response.status == 200:
                             data = await response.json()
+                            # Apply think tag filtering to the response
+                            raw_content = data['choices'][0]['message']['content']
+                            filtered_content = filter_think_tags(raw_content)
                             return {
                                 "provider": provider_name,
                                 "status": "success",
                                 "model": model,
-                                "response_preview": data['choices'][0]['message']['content'],
+                                "response_preview": filtered_content,
                                 "usage": data.get('usage', {})
                             }
                         else:
@@ -206,11 +249,14 @@ async def test_ai_provider(provider_name: str, request: Request):
 
         response = await provider.chat_completion([test_message])
 
+        # Apply think tag filtering to the response content
+        filtered_content = filter_think_tags(response.content)
+
         return {
             "provider": provider_name,
             "status": "success",
             "model": response.model,
-            "response_preview": response.content[:100] + "..." if len(response.content) > 100 else response.content,
+            "response_preview": filtered_content[:100] + "..." if len(filtered_content) > 100 else filtered_content,
             "usage": response.usage
         }
 
