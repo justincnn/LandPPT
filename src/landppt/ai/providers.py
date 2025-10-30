@@ -14,43 +14,6 @@ from ..core.config import ai_config
 logger = logging.getLogger(__name__)
 
 
-def filter_think_tags(content: str) -> str:
-    """
-    Standalone function to filter think tags from any content
-    Supports multiple formats: <think>, <THINK>, ＜think＞, 【think】, etc.
-    This is a utility function that can be used across the application
-    """
-    if not content:
-        return content
-
-    # Pattern to match different forms of think tags (opening and closing)
-    # Matches: <think>...</think>, <think>...</think>, ＜think＞...＜/think＞, 【think】...【/think】
-    patterns = [
-        r'<think[\s\S]*?></think>',           # <think>...</think>
-        r'<think[\s\S]*?/>',                  # <think.../>
-        r'<think>[\s\S]*?</think>',            # <think>...</think>
-        r'＜think[\s\S]*?＞＜/think＞',        # ＜think＞＜/think＄
-        r'【think[\s\S]*?】【/think】',        # 【think】【/think】
-        r'\[think\][\s\S]*?\[/think\]',       # [think]...[/think]
-    ]
-
-    # Apply all patterns
-    filtered_content = content
-    for pattern in patterns:
-        filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
-
-    # Clean up any extra whitespace that might be left behind
-    # Remove multiple consecutive empty lines
-    filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '\n\n', filtered_content)
-
-    # Remove empty lines at the beginning and end
-    filtered_content = filtered_content.strip()
-
-    # Clean up extra spaces within lines
-    filtered_content = re.sub(r' +', ' ', filtered_content)
-
-    return filtered_content
-
 class OpenAIProvider(AIProvider):
     """OpenAI API provider"""
 
@@ -113,8 +76,6 @@ class OpenAIProvider(AIProvider):
         # Also handles self-closing and nested tags
         patterns = [
             r'<think[\s\S]*?></think>',           # <think>...</think>
-            r'<think[\s\S]*?/>',                  # <think.../>
-            r'<think>[\s\S]*?</think>',            # <think>...</think>
         ]
 
         # Apply all patterns
@@ -122,15 +83,15 @@ class OpenAIProvider(AIProvider):
         for pattern in patterns:
             filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
 
-        # Clean up any extra whitespace that might be left behind
-        # Remove multiple consecutive empty lines
-        filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '', filtered_content)
+        # # Clean up any extra whitespace that might be left behind
+        # # Remove multiple consecutive empty lines
+        # filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '', filtered_content)
 
-        # Remove empty lines at the beginning and end
-        filtered_content = filtered_content.strip()
+        # # Remove empty lines at the beginning and end
+        # filtered_content = filtered_content.strip()
 
-        # Clean up extra spaces within lines
-        filtered_content = re.sub(r' +', ' ', filtered_content)
+        # # Clean up extra spaces within lines
+        # filtered_content = re.sub(r' +', ' ', filtered_content)
 
         return filtered_content
     

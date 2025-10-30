@@ -382,7 +382,6 @@ async def test_openai_provider_proxy(
                         "content": "Say 'Hello, I am working!' in exactly 5 words."
                     }
                 ],
-                "max_tokens": 20,
                 "temperature": 0
             }
             

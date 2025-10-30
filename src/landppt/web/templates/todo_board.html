@@ -706,8 +706,8 @@
 
 {% block content %}
 <!-- 页面头部美化 -->
+
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 0; margin: -20px -20px 30px -20px; text-align: center; position: relative; overflow: hidden;">
-    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><pattern id=\"dots\" width=\"20\" height=\"20\" patternUnits=\"userSpaceOnUse\"><circle cx=\"10\" cy=\"10\" r=\"1\" fill=\"white\" opacity=\"0.1\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23dots)\"/></svg></div>
     <div style="position: relative; z-index: 1;">
         <h2 style="font-size: 2em; font-weight: 700; margin-bottom: 12px; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">📋 {{ todo_board.title }}</h2>
         <p style="opacity: 0.9; font-size: 1em;">项目ID: <code style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9em;">{{ todo_board.task_id }}</code></p>
@@ -1059,10 +1059,72 @@ function stopOutlineGenerationAnimations(reason = '') {
         outlineViewWrapper.style.display = 'block';
     }
 
+    toggleOutlineViewDuringRegeneration(false);
+
     outlineGenerationStarted = false;
 
     if (reason) {
         console.log('[OUTLINE] Animations stopped:', reason);
+    }
+}
+
+function toggleOutlineViewDuringRegeneration(isRegenerating) {
+    const outlineToolbar = document.getElementById('outline-toolbar-new');
+    const outlineContent = document.getElementById('outline-content-new');
+    const outlineContainer = document.getElementById('outline-container-new');
+
+    if (outlineToolbar) {
+        if (isRegenerating) {
+            if (!outlineToolbar.hasAttribute('data-prev-display')) {
+                outlineToolbar.dataset.prevDisplay = outlineToolbar.style.display || '';
+            }
+            outlineToolbar.style.display = 'none';
+        } else if (outlineToolbar.hasAttribute('data-prev-display')) {
+            outlineToolbar.style.display = outlineToolbar.dataset.prevDisplay;
+            outlineToolbar.removeAttribute('data-prev-display');
+        }
+    }
+
+    if (outlineContent) {
+        if (isRegenerating) {
+            if (!outlineContent.hasAttribute('data-prev-visibility')) {
+                outlineContent.dataset.prevVisibility = outlineContent.style.visibility || '';
+            }
+            if (!outlineContent.hasAttribute('data-prev-opacity')) {
+                outlineContent.dataset.prevOpacity = outlineContent.style.opacity || '';
+            }
+            if (!outlineContent.hasAttribute('data-prev-display')) {
+                outlineContent.dataset.prevDisplay = outlineContent.style.display || '';
+            }
+            outlineContent.style.visibility = 'hidden';
+            outlineContent.style.opacity = '0';
+            outlineContent.style.display = 'none';
+        } else {
+            if (outlineContent.hasAttribute('data-prev-visibility')) {
+                outlineContent.style.visibility = outlineContent.dataset.prevVisibility;
+                outlineContent.removeAttribute('data-prev-visibility');
+            }
+            if (outlineContent.hasAttribute('data-prev-opacity')) {
+                outlineContent.style.opacity = outlineContent.dataset.prevOpacity;
+                outlineContent.removeAttribute('data-prev-opacity');
+            }
+            if (outlineContent.hasAttribute('data-prev-display')) {
+                outlineContent.style.display = outlineContent.dataset.prevDisplay;
+                outlineContent.removeAttribute('data-prev-display');
+            }
+        }
+    }
+
+    if (outlineContainer) {
+        if (isRegenerating) {
+            if (!outlineContainer.hasAttribute('data-prev-pointer-events')) {
+                outlineContainer.dataset.prevPointerEvents = outlineContainer.style.pointerEvents || '';
+            }
+            outlineContainer.style.pointerEvents = 'none';
+        } else if (outlineContainer.hasAttribute('data-prev-pointer-events')) {
+            outlineContainer.style.pointerEvents = outlineContainer.dataset.prevPointerEvents;
+            outlineContainer.removeAttribute('data-prev-pointer-events');
+        }
     }
 }
  // 防止重复调用大纲生成
@@ -1875,6 +1937,10 @@ async function startOutlineGenerationNew() {
 
     console.log('[MANUAL] 准备生成动画，当前视图:', currentViewNew);
 
+    if (currentViewNew === 'outline') {
+        toggleOutlineViewDuringRegeneration(true);
+    }
+
     // === 准备大纲视图的动画 ===
     const outlineContentNewDiv = document.getElementById('outline-content-new');
     if (outlineContentNewDiv) {
@@ -2232,6 +2298,10 @@ async function startFileOutlineGeneration() {
     // === 准备大纲视图的动画 ===
     console.log('[FILE] 开始设置大纲视图动画');
     
+    if (currentViewNew === 'outline') {
+        toggleOutlineViewDuringRegeneration(true);
+    }
+
     // 清空大纲视图的内容，确保动画可见
     const outlineContentNewDiv = document.getElementById('outline-content-new');
     if (outlineContentNewDiv) {
@@ -2632,6 +2702,7 @@ async function regenerateOutlineNew() {
     if (currentViewNew === 'outline') {
         const outlineGeneratingDiv = document.getElementById('outline-generating-new');
         const outlineContentDiv = document.getElementById('outline-content-new');
+        toggleOutlineViewDuringRegeneration(true);
         if (outlineGeneratingDiv) {
             outlineGeneratingDiv.style.display = 'block';
             setTimeout(() => {
@@ -2768,6 +2839,7 @@ async function regenerateOutlineNew() {
 
             // 重置标志，允许重试
             outlineGenerationStarted = false;
+            toggleOutlineViewDuringRegeneration(false);
             return;
         }
 
@@ -2786,11 +2858,25 @@ async function regenerateOutlineNew() {
             outlineGeneratingDiv.style.cssText = 'display: none !important;';
         }
 
+        toggleOutlineViewDuringRegeneration(false);
+
+        let parsedOutline = null;
+
         // 显示生成的大纲内容
         if (contentDiv && result.outline_content) {
             const preElement = document.createElement('pre');
             preElement.style.cssText = 'white-space: pre-wrap; word-wrap: break-word; font-family: "Courier New", monospace; font-size: 12px; line-height: 1.4; margin: 0; padding: 0; background: transparent; border: none;';
-            preElement.textContent = result.outline_content;
+
+            try {
+                parsedOutline = JSON.parse(result.outline_content);
+                preElement.textContent = JSON.stringify(parsedOutline, null, 2);
+            } catch (parseError) {
+                console.warn('[REGENERATE] Outline JSON parse failed, using raw content', parseError);
+                preElement.textContent = result.outline_content;
+            }
+
+            // 清理旧内容（包括占位符），插入最新JSON
+            contentDiv.innerHTML = '';
             contentDiv.appendChild(preElement);
         }
 
@@ -2802,11 +2888,11 @@ async function regenerateOutlineNew() {
             actionsDiv.style.display = 'block';
         }
 
-        // Generate outline view if currently in outline view
-        if (currentViewNew === 'outline') {
-            setTimeout(() => {
-                renderOutlineViewNew();
-            }, 500);
+        if (parsedOutline && parsedOutline.slides) {
+            renderOutlinePreview(parsedOutline);
+            renderOutlineViewNewWithData(parsedOutline);
+        } else if (currentViewNew === 'outline') {
+            renderOutlineViewNew();
         }
 
         // Show start PPT generation button
@@ -2834,6 +2920,8 @@ async function regenerateOutlineNew() {
             // 使用cssText强制覆盖之前的!important样式
             outlineGeneratingDiv.style.cssText = 'display: none !important;';
         }
+
+        toggleOutlineViewDuringRegeneration(false);
 
         // 重新显示操作按钮
         if (actionsDiv) {
@@ -4459,6 +4547,8 @@ function switchOutlineViewNew(view) {
         jsonView.style.display = 'block';
         outlineView.style.display = 'none';
 
+        toggleOutlineViewDuringRegeneration(false);
+
         // Show action buttons in JSON view
         if (actionsDiv) {
             actionsDiv.style.display = 'block';
@@ -4473,6 +4563,10 @@ function switchOutlineViewNew(view) {
         // Show outline view
         jsonView.style.display = 'none';
         outlineView.style.display = 'block';
+
+        const outlineGeneratingDiv = document.getElementById('outline-generating-new');
+        const isGenerating = outlineGenerationStarted || (outlineGeneratingDiv && outlineGeneratingDiv.style.display === 'block');
+        toggleOutlineViewDuringRegeneration(isGenerating);
 
         // Hide action buttons in outline view
         if (actionsDiv) {
@@ -5375,9 +5469,14 @@ function getOutlineContentNew() {
     if (!contentDiv) return null;
 
     // 检查是否包含加载动画元素
-    const loadingElements = contentDiv.querySelector('.loading-container, .brain-container, .loading-icon');
-    if (loadingElements) {
-        console.log('[GET_OUTLINE] 检测到加载动画，返回null');
+    const loadingElements = contentDiv.querySelectorAll('.loading-container, .brain-container, .loading-icon');
+    const hasVisibleLoading = Array.from(loadingElements).some(el => {
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && parseFloat(style.opacity || '1') > 0;
+    });
+
+    if (hasVisibleLoading) {
+        console.log('[GET_OUTLINE] 检测到可见加载动画，返回null');
         return null;
     }
 
@@ -5386,20 +5485,19 @@ function getOutlineContentNew() {
     if (preElement) {
         let content = preElement.textContent || preElement.innerText || '';
 
-        // Remove placeholder text
-        if (content.includes('正在生成大纲') || content.includes('等待大纲生成') || 
+        if (content.includes('正在生成大纲') || content.includes('等待大纲生成') ||
             content.includes('AI正在生成') || content.includes('正在解析') ||
-            content.includes('正在从文件生成')) {
-            console.log('[GET_OUTLINE] 检测到占位文本，返回null');
+            content.includes('正在从文件生成') || content.includes('小贴士') ||
+            content.length < 50) { // 太短的内容可能是占位符
+            console.log('[GET_OUTLINE] 占位或内容过短，返回null');
             return null;
         }
 
-        return content.trim();
+        return content;
     }
 
     // 如果没有pre元素，尝试从整个div获取内容
     let content = contentDiv.textContent || contentDiv.innerText || '';
-
     // 处理HTML实体和格式问题
     content = content.replace(/&nbsp;/g, ' ')
                     .replace(/&lt;/g, '<')
@@ -5416,7 +5514,7 @@ function getOutlineContentNew() {
         content.includes('AI正在生成') || content.includes('正在解析') ||
         content.includes('正在从文件生成') || content.includes('小贴士') ||
         content.length < 50) { // 太短的内容可能是占位符
-        console.log('[GET_OUTLINE] 检测到占位文本或内容过短，返回null');
+        console.log('[GET_OUTLINE] 占位或内容过短，返回null');
         return null;
     }
 
