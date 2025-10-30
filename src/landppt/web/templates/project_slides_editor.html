@@ -4759,6 +4759,9 @@
                     <button class="ai-outline-btn" onclick="showSlideOutline()" title="查看当前页大纲">
                         <i class="fas fa-list"></i>
                     </button>
+                    <button class="ai-outline-btn" onclick="autoRepairSlideLayout()" title="一键修复排版">
+                        <i class="fas fa-border-all"></i>
+                    </button>
                     <button class="ai-outline-btn" onclick="autoGenerateSlideImages()" title="一键配图">
                         <i class="fas fa-magic"></i>
                     </button>
@@ -4841,13 +4844,26 @@
         </div>
     </div>
 
+    <script id="projectDataScript" type="application/json">{{ {'projectId': project.project_id}|tojson|safe }}</script>
+    <script id="projectSlidesScript" type="application/json">{{ {'slides': project.slides_data or []}|tojson|safe }}</script>
+    <script id="projectMetaScript" type="application/json">{{ {'status': project.status, 'outline': project.outline}|tojson|safe }}</script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentSlideIndex = 0;
         let currentMode = 'preview';
-        let slidesData = {{ project.slides_data | tojson if project.slides_data and project.slides_data|length > 0 else '[]' }};
+        const projectId = JSON.parse(document.getElementById('projectDataScript').textContent).projectId;
+        window.projectId = projectId;
+
+        let slidesData = JSON.parse(document.getElementById('projectSlidesScript').textContent).slides;
+        window.slidesData = slidesData;
         let slideshowIndex = 0;
         let isSlideshow = false;
+
+        const projectMeta = JSON.parse(document.getElementById('projectMetaScript').textContent);
+        let projectStatus = projectMeta.status || '';
+        let projectOutline = projectMeta.outline || null;
+        window.projectOutline = projectOutline;
 
         // AI编辑相关变量
         let aiChatHistory = {}; // 改为对象，按幻灯片索引存储对话历史
@@ -4857,7 +4873,8 @@
         let sidebarStartX = 0;
 
         // 图片上传相关变量
-        let uploadedImages = []; // 存储已上传的图片信息
+        let uploadedImages = window.uploadedImages || [];
+        window.uploadedImages = uploadedImages;
         let isImageUploadExpanded = false;
         let isUploading = false;
         let currentPreviewImage = null; // 当前预览的图片信息
@@ -4888,7 +4905,25 @@
         }
 
         // 优化的iframe内容设置函数，减少卡顿
-        function setSafeIframeContent(iframe, html) {
+        function prepareHtmlForPreview(html) {
+            if (typeof html !== 'string') {
+                return html;
+            }
+
+            let prepared = html.replace(/integrity="[^"]*"/gi, '')
+                               .replace(/crossorigin="[^"]*"/gi, '');
+
+            prepared = prepared.replace(
+                /<script\s+src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/d3\/[\d\.]+\/d3\.min\.js"[^>]*><\/script>/gi,
+                '<' + 'script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></' + 'script>'
+            );
+
+            return prepared;
+        }
+
+        function setSafeIframeContent(iframe, html, options = {}) {
+            const { force = false } = options || {};
+
             if (!iframe) {
                 return;
             }
@@ -4897,8 +4932,9 @@
                 return;
             }
 
-            // 检查内容是否相同，避免不必要的更新
-            if (iframe.getAttribute('data-current-content') === html) {
+            const preparedHtml = prepareHtmlForPreview(html);
+
+            if (!force && iframe.getAttribute('data-current-content') === preparedHtml) {
                 return;
             }
 
@@ -4909,8 +4945,8 @@
             requestAnimationFrame(() => {
                 try {
                     // 直接设置srcdoc，减少延迟
-                    iframe.srcdoc = html;
-                    iframe.setAttribute('data-current-content', html);
+                    iframe.srcdoc = preparedHtml;
+                    iframe.setAttribute('data-current-content', preparedHtml);
 
                     // 简化的加载完成处理
                     iframe.onload = function() {
@@ -4935,6 +4971,58 @@
                     // 设置iframe内容失败
                 }
             });
+        }
+
+        function refreshSlidePreview(index, options = {}) {
+            const { force = false } = options || {};
+            const targetIndex = typeof index === 'number' ? index : currentSlideIndex;
+
+            if (!slidesData || targetIndex < 0 || targetIndex >= slidesData.length) {
+                return;
+            }
+
+            const slideContent = slidesData[targetIndex]?.html_content;
+            if (!slideContent) {
+                return;
+            }
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && targetIndex === currentSlideIndex) {
+                setSafeIframeContent(slideFrame, slideContent, { force });
+                setTimeout(() => {
+                    try {
+                        forceReinitializeIframeJS(slideFrame);
+                    } catch (e) {
+                        // 忽略重新初始化错误
+                    }
+                }, 300);
+            }
+
+            const thumbnailIframes = document.querySelectorAll('.slide-thumbnail .slide-preview iframe');
+            const thumbnailIframe = thumbnailIframes[targetIndex];
+            if (thumbnailIframe) {
+                setSafeIframeContent(thumbnailIframe, slideContent, { force });
+            }
+        }
+
+        function updateCodeEditorContent(newContent) {
+            if (typeof newContent !== 'string') {
+                newContent = newContent ?? '';
+            }
+
+            if (codeMirrorEditor && isCodeMirrorInitialized) {
+                try {
+                    codeMirrorEditor.setValue(newContent);
+                    return;
+                } catch (e) {
+                    // 如果CodeMirror更新失败，回退到textarea
+                }
+            }
+
+            const codeEditor = document.getElementById('codeEditor');
+            if (codeEditor) {
+                codeEditor.value = newContent;
+            }
         }
 
         // 清理iframe中的Chart实例，防止重复渲染
@@ -4990,12 +5078,6 @@
 
         // 检查是否有幻灯片数据
         let hasSlidesData = slidesData && slidesData.length > 0;
-
-        // 项目状态和生成完成状态
-        let projectStatus = '{{ project.status }}';
-        let projectOutline = {{ project.outline | tojson if project.outline else 'null' }};
-
-
 
         // 检查PPT是否生成完成 - 简化逻辑
         function isPPTGenerationCompleted() {
@@ -6075,6 +6157,80 @@
 
             } catch (error) {
                 showNotification('替换图像失败，请重试', 'error');
+            }
+        }
+
+        // 一键修复排版
+        async function autoRepairSlideLayout() {
+            closeAIEditSidebar();
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            const slideInfo = slidesData[currentSlideIndex];
+            if (!slideInfo || !slideInfo.html_content) {
+                showNotification('当前幻灯片没有可修复的内容', 'warning');
+                return;
+            }
+
+            const progressToast = showProgressToast('正在准备布局修复...', 5);
+
+            try {
+                updateProgressToast(progressToast, '正在生成幻灯片截图...', 20);
+
+                const targetProjectId = projectId || slideInfo.project_id;
+                updateProgressToast(progressToast, '正在调用智能排版诊断...', 40);
+                const response = await fetch(`/api/projects/${targetProjectId}/slides/${currentSlideIndex + 1}/auto-repair-layout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        html_content: slideInfo.html_content,
+                        slide_data: slideInfo
+                    })
+                });
+
+                updateProgressToast(progressToast, '正在解析修复结果...', 60);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    closeProgressToast(progressToast);
+                    console.error('Auto layout repair failed:', result);
+                    showNotification(result.message || '排版修复失败，请重试', 'error');
+                    return;
+                }
+
+                updateProgressToast(progressToast, '正在应用修复后的排版...', 80);
+
+                if (result && result.repaired_html) {
+                    slidesData[currentSlideIndex].html_content = result.repaired_html;
+                    slidesData[currentSlideIndex].is_user_edited = true;
+
+                    await refreshSlidePreview(currentSlideIndex, { force: true });
+                    updateThumbnailDisplay(currentSlideIndex, slidesData[currentSlideIndex]);
+                    updateCodeEditorContent(result.repaired_html);
+
+                    updateProgressToast(progressToast, '正在保存最新内容...', 90);
+                    if (typeof saveToServer === 'function') {
+                        await saveToServer();
+                    }
+
+                    closeAIEditSidebar();
+                    showNotification('排版修复完成！', 'success');
+                    updateProgressToast(progressToast, '排版修复完成！', 100);
+                } else {
+                    updateProgressToast(progressToast, '未检测到新的排版内容', 100);
+                    showNotification('排版修复未返回新内容', 'warning');
+                }
+
+                closeProgressToast(progressToast);
+
+            } catch (error) {
+                console.error('Auto layout repair error:', error);
+                closeProgressToast(progressToast);
+                showNotification('排版修复失败，请检查网络连接后重试', 'error');
             }
         }
 

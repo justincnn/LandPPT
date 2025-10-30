@@ -97,6 +97,8 @@ class AIConfig(BaseSettings):
     template_generation_model_name: Optional[str] = Field(default=None, env="TEMPLATE_GENERATION_MODEL_NAME")
     speech_script_model_provider: Optional[str] = Field(default=None, env="SPEECH_SCRIPT_MODEL_PROVIDER")
     speech_script_model_name: Optional[str] = Field(default=None, env="SPEECH_SCRIPT_MODEL_NAME")
+    vision_analysis_model_provider: Optional[str] = Field(default=None, env="VISION_ANALYSIS_MODEL_PROVIDER")
+    vision_analysis_model_name: Optional[str] = Field(default=None, env="VISION_ANALYSIS_MODEL_NAME")
 
     # Generation Parameters
     max_tokens: int = Field(default=16384, env="MAX_TOKENS")
@@ -111,6 +113,7 @@ class AIConfig(BaseSettings):
     enable_network_mode: bool = Field(default=True, env="ENABLE_NETWORK_MODE")
     enable_local_models: bool = Field(default=False, env="ENABLE_LOCAL_MODELS")
     enable_streaming: bool = Field(default=True, env="ENABLE_STREAMING")
+    enable_auto_layout_repair: bool = Field(default=False, env="ENABLE_AUTO_LAYOUT_REPAIR")
     
     # Logging
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
@@ -133,6 +136,7 @@ class AIConfig(BaseSettings):
         "editor": ("editor_assistant_model_provider", "editor_assistant_model_name"),
         "template": ("template_generation_model_provider", "template_generation_model_name"),
         "speech_script": ("speech_script_model_provider", "speech_script_model_name"),
+        "vision_analysis": ("vision_analysis_model_provider", "vision_analysis_model_name"),
     }
 
     MODEL_ROLE_LABELS: ClassVar[dict[str, str]] = {
@@ -144,6 +148,7 @@ class AIConfig(BaseSettings):
         "editor": "AI编辑助手模型",
         "template": "AI模板生成模型",
         "speech_script": "演讲稿生成模型",
+        "vision_analysis": "多模态视觉分析模型",
     }
 
 
@@ -398,6 +403,13 @@ def reload_ai_config():
     ai_config.speech_script_model_name = (ai_config._normalize_optional_str(speech_model_env)
                                          if speech_model_env is not None else ai_config.speech_script_model_name)
 
+    vision_provider_env = os.environ.get('VISION_ANALYSIS_MODEL_PROVIDER')
+    ai_config.vision_analysis_model_provider = (ai_config._normalize_optional_str(vision_provider_env)
+                                               if vision_provider_env is not None else ai_config.vision_analysis_model_provider)
+    vision_model_env = os.environ.get('VISION_ANALYSIS_MODEL_NAME')
+    ai_config.vision_analysis_model_name = (ai_config._normalize_optional_str(vision_model_env)
+                                            if vision_model_env is not None else ai_config.vision_analysis_model_name)
+
     ai_config.max_tokens = int(os.environ.get('MAX_TOKENS', str(ai_config.max_tokens)))
     ai_config.temperature = float(os.environ.get('TEMPERATURE', str(ai_config.temperature)))
     ai_config.top_p = float(os.environ.get('TOP_P', str(ai_config.top_p)))
@@ -405,6 +417,7 @@ def reload_ai_config():
     # Update parallel generation configuration
     ai_config.enable_parallel_generation = os.environ.get('ENABLE_PARALLEL_GENERATION', str(ai_config.enable_parallel_generation)).lower() == 'true'
     ai_config.parallel_slides_count = int(os.environ.get('PARALLEL_SLIDES_COUNT', str(ai_config.parallel_slides_count)))
+    ai_config.enable_auto_layout_repair = os.environ.get('ENABLE_AUTO_LAYOUT_REPAIR', str(ai_config.enable_auto_layout_repair)).lower() == 'true'
 
     # Update Tavily configuration
     ai_config.tavily_api_key = os.environ.get('TAVILY_API_KEY', ai_config.tavily_api_key)

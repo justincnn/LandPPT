@@ -108,7 +108,12 @@ class AIAutoImageGenerateRequest(BaseModel):
     project_topic: str
     project_scenario: str
 
-# 演讲稿生成请求数据模型
+
+class AutoLayoutRepairRequest(BaseModel):
+    html_content: str
+    slide_data: Dict[str, Any]
+
+
 class SpeechScriptGenerationRequest(BaseModel):
     generation_type: str  # "single", "multi", "full"
     slide_indices: Optional[List[int]] = None  # For single and multi generation
@@ -2272,6 +2277,107 @@ async def regenerate_slide(project_id: str, slide_number: int):
 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@router.post("/api/projects/{project_id}/slides/{slide_index}/auto-repair-layout")
+async def auto_repair_layout(
+    project_id: str,
+    slide_index: int,
+    request: AutoLayoutRepairRequest,
+    user: User = Depends(get_current_user_required)
+):
+    """Run multimodal layout inspection and repair workflow for a single slide."""
+    try:
+        if slide_index < 1:
+            raise HTTPException(status_code=400, detail="Slide index must be >= 1")
+
+        html_content = (request.html_content or "").strip()
+        if not html_content:
+            raise HTTPException(status_code=400, detail="HTML content is required")
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        slides_data = project.slides_data or []
+        total_pages = len(slides_data)
+        if total_pages == 0:
+            total_pages = request.slide_data.get("total_pages") or request.slide_data.get("totalSlides") or slide_index
+
+        slide_payload = dict(request.slide_data or {})
+        slide_payload.setdefault("page_number", slide_index)
+        slide_payload.setdefault("title", slide_payload.get("title", f"第{slide_index}页"))
+
+        repaired_html = await ppt_service._apply_auto_layout_repair(
+            html_content,
+            slide_payload,
+            slide_index,
+            total_pages or slide_index
+        )
+
+        changed = repaired_html.strip() != html_content
+
+        if project.slides_data is None:
+            project.slides_data = []
+
+        while len(project.slides_data) < slide_index:
+            page_number = len(project.slides_data) + 1
+            project.slides_data.append({
+                "page_number": page_number,
+                "title": f"第{page_number}页",
+                "html_content": "",
+                "slide_type": "content",
+                "content_points": [],
+                "is_user_edited": False
+            })
+
+        existing_slide = project.slides_data[slide_index - 1]
+        updated_slide = {
+            **existing_slide,
+            "page_number": slide_index,
+            "title": slide_payload.get("title", existing_slide.get("title", f"第{slide_index}页")),
+            "html_content": repaired_html,
+        }
+
+        project.slides_data[slide_index - 1] = updated_slide
+
+        if changed:
+            outline_title = project.title
+            if isinstance(project.outline, dict):
+                outline_title = project.outline.get('title', project.title)
+            elif hasattr(project.outline, 'title'):
+                outline_title = project.outline.title
+
+            project.slides_html = ppt_service._combine_slides_to_full_html(
+                project.slides_data,
+                outline_title
+            )
+            project.updated_at = time.time()
+
+        try:
+            from ..services.db_project_manager import DatabaseProjectManager
+            db_manager = DatabaseProjectManager()
+            await db_manager.save_single_slide(project_id, slide_index - 1, updated_slide)
+
+            if changed:
+                await db_manager.update_project_data(project_id, {
+                    "slides_html": project.slides_html,
+                    "updated_at": project.updated_at
+                })
+
+        except Exception as save_error:
+            logger.error(f"Failed to persist auto layout repair result: {save_error}")
+
+        return {
+            "success": True,
+            "repaired_html": repaired_html,
+            "changed": changed
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Auto layout repair failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/ai/slide-edit")
 async def ai_slide_edit(

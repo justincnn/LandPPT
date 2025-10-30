@@ -509,6 +509,7 @@ class DesignPrompts:
 
 **严格的页面尺寸和高度控制**：
 - **页面尺寸**：html {{ height: 100%; display: flex; align-items: center; justify-content: center; }} body {{ width: 100%; height: 100%; position: relative; overflow: hidden; }}
+- **滚动条禁止**：严禁页面、body或任何容器出现纵向或横向滚动条，必须通过调整布局和内容使其在可视区域内完整呈现
 - **内容高度分配**：
   * **页眉区域**：标题的HTML结构、CSS样式、字体族、字体大小、字体颜色、字体粗细、位置、对齐方式等必须与参考模板完全一致，不允许任何修改
   * **页脚区域**：页码的HTML结构、CSS样式、字体族、字体大小、字体颜色、字体粗细、位置、对齐方式等必须与参考模板完全一致，不允许任何修改

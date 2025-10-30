@@ -12,6 +12,7 @@ import signal
 import asyncio
 
 from ..services.config_service import get_config_service, ConfigService
+from ..core.config import reload_ai_config
 from ..auth.middleware import get_current_admin_user
 from ..database.models import User
 
@@ -88,6 +89,7 @@ async def update_all_config(
         success = config_service.update_config(request.config)
         
         if success:
+            reload_ai_config()
             return {
                 "success": True,
                 "message": "Configuration updated successfully"
@@ -249,6 +251,7 @@ async def update_config_by_category(
         success = config_service.update_config_by_category(category, request.config)
 
         if success:
+            reload_ai_config()
             return {
                 "success": True,
                 "message": f"Configuration for {category} updated successfully"

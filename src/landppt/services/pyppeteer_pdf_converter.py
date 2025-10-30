@@ -2115,8 +2115,16 @@ class PlaywrightPDFConverter:
                 self.playwright = None
                 logger.debug("🔒 Shared browser and Playwright closed.")
 
-    async def screenshot_html(self, html_file_path: str, screenshot_path: str,
-                            width: int = 1280, height: int = 720) -> bool:
+    async def screenshot_html(
+        self,
+        html_file_path: str,
+        screenshot_path: str,
+        width: int = 1280,
+        height: int = 720,
+        wait_for_stable: bool = True,
+        stability_checks: int = 3,
+        stability_interval: float = 0.75,
+    ) -> bool:
         """
         Take a high-quality screenshot of an HTML file using Playwright
 
@@ -2151,7 +2159,7 @@ class PlaywrightPDFConverter:
                           timeout=60000)
 
             # Wait for content to be ready (similar to PDF generation)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.75)
 
             # Wait for fonts and resources
             await self._wait_for_fonts_and_resources(page, max_wait_time=30000)
@@ -2161,6 +2169,24 @@ class PlaywrightPDFConverter:
 
             # Wait for charts and dynamic content
             await self._wait_for_charts_and_dynamic_content(page, max_wait_time=60000)
+
+            if wait_for_stable:
+                last_snapshot = None
+                stable_count = 0
+
+                while stable_count < stability_checks:
+                    layout_snapshot = await page.evaluate(
+                        "document.body ? document.body.innerHTML : ''"
+                    )
+
+                    if last_snapshot is not None and layout_snapshot == last_snapshot:
+                        stable_count += 1
+                    else:
+                        stable_count = 1
+                        last_snapshot = layout_snapshot
+
+                    if stable_count < stability_checks:
+                        await asyncio.sleep(stability_interval)
 
             # Take screenshot
             await page.screenshot(
@@ -2180,7 +2206,10 @@ class PlaywrightPDFConverter:
             return False
         finally:
             if page:
-                await page.close()
+                try:
+                    await page.close()
+                except Exception:  # noqa: BLE001
+                    logger.debug("Page already closed or closing failed, ignoring.")
 
 
 # Global converter instance

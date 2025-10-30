@@ -10,6 +10,9 @@ import asyncio
 import time
 import os
 import tempfile
+import base64
+import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -18,14 +21,16 @@ from ..api.models import (
     SlideContent, PPTProject, TodoBoard
 )
 from ..ai import get_ai_provider, get_role_provider, AIMessage, MessageRole
+from ..ai.base import TextContent, ImageContent
 from ..core.config import ai_config
 from .ppt_service import PPTService
 from .db_project_manager import DatabaseProjectManager
 from .global_master_template_service import GlobalMasterTemplateService
+from .prompts import prompts_manager
 
 from .research.enhanced_research_service import EnhancedResearchService
 from .research.enhanced_report_generator import EnhancedReportGenerator
-from .prompts import prompts_manager
+from .pyppeteer_pdf_converter import get_pdf_converter
 from .image.image_service import ImageService
 from .image.adapters.ppt_prompt_adapter import PPTSlideContext
 from ..utils.thread_pool import run_blocking_io, to_thread
@@ -90,6 +95,13 @@ class EnhancedPPTService(PPTService):
         # 初始化图片服务
         self.image_service = None
         self._initialize_image_service()
+
+    def _get_auto_layout_debug_dir(self) -> Path:
+        """Directory to persist auto layout repair debug artifacts (HTML & screenshots)."""
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        debug_dir = project_root / "temp" / "auto_layout_debug"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        return debug_dir
 
     @property
     def ai_provider(self):
@@ -3444,7 +3456,8 @@ class EnhancedPPTService(PPTService):
         except Exception as e:
             logger.error(f"Error generating single slide HTML with prompts: {e}")
             # Return a fallback HTML
-            return self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+            fallback_html = self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+        return await self._apply_auto_layout_repair(fallback_html, slide_data, page_number, total_pages)
 
     async def _process_slide_image(self, slide_data: Dict[str, Any], confirmed_requirements: Dict[str, Any],
                                  page_number: int, total_pages: int, template_html: str = ""):
@@ -4292,7 +4305,7 @@ class EnhancedPPTService(PPTService):
                     if validation_result['missing_elements']:
                         logger.warning(f"Missing elements (warnings only): {', '.join(validation_result['missing_elements'])}")
                     logger.info(f"Successfully generated complete HTML for slide {page_number} on attempt {attempt + 1}")
-                    return html_content
+                    return await self._apply_auto_layout_repair(html_content, slide_data, page_number, total_pages)
                 else:
                     # Log validation issues
                     if validation_result['missing_elements']:
@@ -4309,7 +4322,7 @@ class EnhancedPPTService(PPTService):
                         # If parser actually changed something, return the fixed HTML directly
                         if parser_fixed_html != html_content:  # Only if parser actually changed something
                             logger.info(f"✅ Successfully fixed HTML with parser for slide {page_number}, returning fixed result")
-                            return parser_fixed_html
+                            return await self._apply_auto_layout_repair(parser_fixed_html, slide_data, page_number, total_pages)
                         else:
                             logger.info(f"🔧 Parser did not change HTML for slide {page_number}")
 
@@ -4320,11 +4333,12 @@ class EnhancedPPTService(PPTService):
                         else:
                             # Last attempt failed, use fallback
                             logger.warning(f"❌ All generation and parser fix attempts failed, using fallback for slide {page_number}")
-                            return self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+                            fallback_html = self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+                            return await self._apply_auto_layout_repair(fallback_html, slide_data, page_number, total_pages)
                     else:
                         # No actual errors, just missing elements (warnings), so don't try to fix
                         logger.info(f"✅ HTML is valid with only missing element warnings for slide {page_number}")
-                        return html_content
+                        return await self._apply_auto_layout_repair(html_content, slide_data, page_number, total_pages)
 
             except Exception as e:
                 error_msg = str(e)
@@ -4342,11 +4356,13 @@ class EnhancedPPTService(PPTService):
                 if attempt == max_retries - 1:
                     # Last attempt failed with exception
                     logger.error(f"All attempts failed with errors, using fallback for slide {page_number}")
-                    return self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+                    fallback_html = self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+                    return await self._apply_auto_layout_repair(fallback_html, slide_data, page_number, total_pages)
                 continue
 
         # This should not be reached, but just in case
-        return self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+        fallback_html = self._generate_fallback_slide_html(slide_data, page_number, total_pages)
+        return await self._apply_auto_layout_repair(fallback_html, slide_data, page_number, total_pages)
 
     def _fix_incomplete_html(self, html_content: str, slide_data: Dict[str, Any],
                            page_number: int, total_pages: int) -> str:
@@ -4419,9 +4435,76 @@ class EnhancedPPTService(PPTService):
 
 
 
+    @staticmethod
+    def _strip_think_tags(raw_content: Optional[str]) -> str:
+        """Remove <think>...</think> sections that some providers prepend."""
+        if not raw_content:
+            return ""
+
+        import re
+
+        cleaned = re.sub(
+            r"<\s*think[^>]*>.*?<\s*/\s*think\s*>",
+            "",
+            raw_content,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        return cleaned.strip()
+
+    @staticmethod
+    def _should_skip_layout_repair(inspection_report: str) -> bool:
+        """Determine whether layout repair can be skipped based on severity assessment."""
+        if not inspection_report:
+            return False
+
+        import re
+
+        lowered = inspection_report.lower()
+
+        # Quick allow-list: if report mentions medium/high anywhere, perform repair
+        if any(level in lowered for level in ("medium", "high")):
+            return False
+
+        # Look for structured severity section, ensure all entries are low
+        inline_severity = re.findall(
+            r"-\s*severity\s*:\s*([^\n\r]+)",
+            inspection_report,
+            flags=re.IGNORECASE,
+        )
+
+        if inline_severity:
+            for entry in inline_severity:
+                levels = re.findall(r"(high|medium|low)", entry, flags=re.IGNORECASE)
+                if not levels:
+                    return False
+                if any(level.lower() != "low" for level in levels):
+                    return False
+            return True
+
+        severity_sections = re.findall(
+            r"-\s*severity\s*:\s*((?:\n\s*-\s*[a-zA-Z]+)+)",
+            inspection_report,
+            flags=re.IGNORECASE,
+        )
+
+        if severity_sections:
+            for section in severity_sections:
+                levels = re.findall(r"-\s*([a-zA-Z]+)", section, flags=re.IGNORECASE)
+                normalized = {level.lower() for level in levels}
+                if not normalized:
+                    return False
+                if normalized - {"low"}:
+                    return False
+            return True
+
+        # No recognizable severity info -> fall back to repairing
+        return False
+
     def _clean_html_response(self, raw_content: str) -> str:
         """Clean and extract HTML content from AI response with robust markdown handling"""
         import re
+
+        raw_content = self._strip_think_tags(raw_content)
 
         if not raw_content:
             logger.warning("Received empty response from AI")
@@ -4534,12 +4617,239 @@ class EnhancedPPTService(PPTService):
         if '<' in content and '>' in content:
             logger.warning("Could not extract HTML using any method, but content contains HTML tags, returning cleaned content")
             return content
-        else:
-            logger.error("Content does not appear to contain HTML, returning empty string")
-            return ""
+
+        logger.error("Failed to extract HTML from AI response")
+        return ""
+
+    async def _apply_auto_layout_repair(
+        self,
+        html_content: str,
+        slide_data: Dict[str, Any],
+        page_number: int,
+        total_pages: int
+    ) -> str:
+        """Invoke multimodal vision model to inspect and repair layout when feature flag is enabled."""
+        if not html_content or not ai_config.enable_auto_layout_repair:
+            return html_content
+
+        try:
+            vision_provider, vision_settings = self._get_role_provider("vision_analysis")
+        except ValueError:
+            logger.debug("Vision analysis role not configured, skipping auto layout repair")
+            return html_content
+
+        try:
+            pdf_converter = get_pdf_converter()
+            if not pdf_converter.is_available():
+                logger.debug("PDF converter unavailable, skipping auto layout repair")
+                return html_content
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_path = Path(tmp_dir)
+                html_path = tmp_path / "slide.html"
+                screenshot_path = tmp_path / "slide.png"
+
+                html_path.write_text(html_content, encoding="utf-8")
+
+                screenshot_ok = await pdf_converter.screenshot_html(
+                    str(html_path),
+                    str(screenshot_path),
+                    width=1280,
+                    height=720
+                )
+
+                if not screenshot_ok or not screenshot_path.exists():
+                    logger.warning("Auto layout repair skipped: screenshot capture failed")
+                    return html_content
+
+                try:
+                    # 调试
+                    # debug_dir = self._get_auto_layout_debug_dir()
+                    # timestamp_label = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                    # debug_html_path = debug_dir / f"{timestamp_label}_slide{page_number}.html"
+                    # debug_png_path = debug_dir / f"{timestamp_label}_slide{page_number}.png"
+
+                    # shutil.copy2(html_path, debug_html_path)
+                    # shutil.copy2(screenshot_path, debug_png_path)
+
+                    logger.debug(
+                        "Persisted auto layout debug assets for slide %s: html=%s screenshot=%s",
+                        page_number,
+                        # debug_html_path,
+                        # debug_png_path
+                    )
+                except Exception as debug_copy_error:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to persist auto layout debug assets for slide %s: %s",
+                        page_number,
+                        debug_copy_error,
+                        exc_info=True
+                    )
+
+                screenshot_b64 = base64.b64encode(screenshot_path.read_bytes()).decode("utf-8")
+
+            inspection_prompt = self._build_layout_inspection_prompt(slide_data, page_number, total_pages)
+
+            messages = [
+                AIMessage(
+                    role=MessageRole.SYSTEM,
+                    content="You are an expert presentation designer. Inspect slides for layout issues and respond with actionable insights."
+                ),
+                AIMessage(
+                    role=MessageRole.USER,
+                    content=[
+                        TextContent(text=inspection_prompt),
+                        ImageContent(image_url={"url": f"data:image/png;base64,{screenshot_b64}"})
+                    ]
+                )
+            ]
+
+            model_name = vision_settings.get("model") or vision_settings.get("default_model")
+            inspection_response = None
+            for attempt in range(3):
+                try:
+                    inspection_response = await vision_provider.chat_completion(messages=messages, model=model_name)
+                    if inspection_response and getattr(inspection_response, "content", None):
+                        break
+                    raise ValueError("Vision provider returned empty response")
+                except Exception as vision_error:
+                    logger.warning(
+                        "Vision inspection attempt %s failed for slide %s: %s",
+                        attempt + 1,
+                        page_number,
+                        vision_error,
+                        exc_info=True
+                    )
+                    inspection_response = None
+                    if attempt < 2:
+                        await asyncio.sleep(0.5 * (attempt + 1))
+
+            if not inspection_response or not getattr(inspection_response, "content", None):
+                logger.error(
+                    "Vision inspection could not be completed after retries for slide %s, skipping repair",
+                    page_number
+                )
+                return html_content
+
+            inspection_report = self._strip_think_tags(inspection_response.content)
+            logger.info(
+                "Vision inspection response for slide %s: %s",
+                page_number,
+                inspection_report[:1000]
+            )
+
+            if not inspection_report:
+                logger.debug("Vision analysis returned empty report, keeping original HTML")
+                return html_content
+
+            if self._should_skip_layout_repair(inspection_report):
+                logger.info(
+                    "Skipping auto layout repair for slide %s due to low-severity findings",
+                    page_number
+                )
+                return html_content
+
+            repair_prompt = self._build_layout_repair_prompt(html_content, inspection_report)
+            repair_response = None
+            for attempt in range(3):
+                try:
+                    repair_response = await self._text_completion_for_role(
+                        "slide_generation",
+                        prompt=repair_prompt,
+                        max_tokens=min(ai_config.max_tokens, 4000),
+                        temperature=min(0.5, max(0.1, ai_config.temperature * 0.5))
+                    )
+                    if repair_response and getattr(repair_response, "content", None):
+                        break
+                    raise ValueError("Layout repair model returned empty response")
+                except Exception as repair_error:
+                    logger.warning(
+                        "Layout repair attempt %s failed for slide %s: %s",
+                        attempt + 1,
+                        page_number,
+                        repair_error,
+                        exc_info=True
+                    )
+                    repair_response = None
+                    if attempt < 2:
+                        await asyncio.sleep(0.5 * (attempt + 1))
+
+            if not repair_response or not getattr(repair_response, "content", None):
+                logger.error(
+                    "Layout repair could not be completed after retries for slide %s, returning original HTML",
+                    page_number
+                )
+                return html_content
+
+            repair_content = self._strip_think_tags(repair_response.content)
+            logger.debug(
+                "Layout repair response for slide %s: %s",
+                page_number,
+                repair_content[:1000]
+            )
+
+            repaired_html = self._clean_html_response(repair_content)
+            if repaired_html and repaired_html.strip() and repaired_html.strip() != html_content.strip():
+                logger.info(f"Auto layout repair applied for slide {page_number}")
+                return repaired_html
+
+            logger.debug("Auto layout repair produced no improvements, keeping original HTML")
+
+        except Exception as e:
+            logger.error(f"Auto layout repair failed for slide {page_number}: {e}", exc_info=True)
+
+        return html_content
+
+    def _build_layout_inspection_prompt(
+        self,
+        slide_data: Dict[str, Any],
+        page_number: int,
+        total_pages: int
+    ) -> str:
+        """Build prompt for multimodal layout inspection."""
+        title = slide_data.get("title", "")
+        subtitle = slide_data.get("subtitle", "")
+        body = slide_data.get("content", "") or slide_data.get("description", "")
+        bullet_points = slide_data.get("bullet_points") or slide_data.get("content_points") or []
+        bullet_text = "\n".join(f"- {point}" for point in bullet_points)
+
+        return (
+            f"幻灯片编号：第{page_number}页 / 共{total_pages}页\n"
+            f"标题：{title}\n"
+            f"正文摘要：{body}\n"
+            f"要点：\n{bullet_text}\n\n"
+            "请结合截图检查以下项目：\n"
+            "1. 文本是否被遮挡、超出或断裂\n"
+            "2. 元素是否重叠、错位或超出画布\n"
+            "3. 布局和留白是否平衡，避免大片空白\n"
+            "4. 颜色对比与字号是否影响可读性\n\n"
+            "5. 卡片或图片布局是否超出画布或显示不全\n"
+            "6. 内容是否完整，是否出现了滚动条(严禁出现滚动条)\n"
+            "请输出结构化结果：\n"
+            "- issues: 每个问题的描述与定位\n"
+            "- recommendations: 对应的修复建议(不应推荐修改标题、页码、背景的样式)\n"
+            "- severity: high/medium/low\n"
+        )
+
+    def _build_layout_repair_prompt(self, original_html: str, inspection_report: str) -> str:
+        """Prompt LLM to repair HTML based on inspection findings."""
+        return (
+            "你是资深前端工程师，请严格按照视觉检测报告中的每条建议对下方幻灯片 HTML 进行修改，"
+            "确保 1280x720 画布内无遮挡、错位或溢出，并保持主题配色与结构一致。\n\n"
+            "【视觉检测报告】\n"
+            f"{inspection_report}\n\n"
+            "【原始HTML】\n"
+            "```html\n"
+            f"{original_html}\n"
+            "```\n\n"
+            "输出要求（务必遵守）：\n"
+            "- 直接返回一个 ```html ...``` 代码块，内容为完整、修复后的 HTML。\n"
+            "- 除该代码块外禁止输出任何其他文字、说明、think 内容或总结。\n"
+            "- 严禁出现滚动条，确保内容完整。\n"
+            "- 仅针对检测报告指出的问题调整内容区布局/文案，避免无关元素的增删或样式重写。\n"
+        )
 
 
-    
     def _generate_fallback_slide_html(self, slide_data: Dict[str, Any], page_number: int, total_pages: int) -> str:
         """Generate fallback HTML for a slide with improved content visibility and special designs for title/thankyou slides"""
         title = slide_data.get('title', f'第{page_number}页')

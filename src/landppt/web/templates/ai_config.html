@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}系统配置管理 - LandPPT{% endblock %}
 
@@ -280,7 +280,8 @@
                     {'label': '幻灯片生成', 'provider_field': 'slide_generation_model_provider', 'model_field': 'slide_generation_model_name'},
                     {'label': '演讲稿生成', 'provider_field': 'speech_script_model_provider', 'model_field': 'speech_script_model_name'},
                     {'label': 'AI编辑助手', 'provider_field': 'editor_assistant_model_provider', 'model_field': 'editor_assistant_model_name'},
-                    {'label': 'AI模板生成', 'provider_field': 'template_generation_model_provider', 'model_field': 'template_generation_model_name'}
+                    {'label': 'AI模板生成', 'provider_field': 'template_generation_model_provider', 'model_field': 'template_generation_model_name'},
+                    {'label': '多模态视觉分析', 'provider_field': 'vision_analysis_model_provider', 'model_field': 'vision_analysis_model_name'}
                 ] %}
                 {% for role in model_roles %}
                 <div class="card" data-role-model-field="{{ role.model_field }}">
@@ -409,6 +410,19 @@
                         <div>
                             <div style="font-weight: 600; color: #495057; margin-bottom: 4px;">启用批量生成</div>
                             <small style="color: #6c757d; font-weight: 400;">启用后可以同时生成多个幻灯片，显著提高生成速度</small>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="toggle-label" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 12px;">
+                        <div class="toggle-switch">
+                            <input type="checkbox" name="enable_auto_layout_repair" id="enable_auto_layout_repair">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: #495057;">开启自动修复排版</div>
+                            <div style="font-size: 0.85em; color: #6c757d;">使用专用多模态模型检查页面视觉效果，识别遮挡/错位并输出修复后的 HTML</div>
                         </div>
                     </label>
                 </div>

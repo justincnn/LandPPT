@@ -77,6 +77,8 @@ class ConfigService:
             "template_generation_model_name": {"type": "text", "category": "model_roles", "default": ""},
             "speech_script_model_provider": {"type": "select", "category": "model_roles", "default": ""},
             "speech_script_model_name": {"type": "text", "category": "model_roles", "default": ""},
+            "vision_analysis_model_provider": {"type": "select", "category": "model_roles", "default": ""},
+            "vision_analysis_model_name": {"type": "text", "category": "model_roles", "default": ""},
             
             # Generation Parameters
             "max_tokens": {"type": "number", "category": "generation_params", "default": "16384"},
@@ -109,6 +111,7 @@ class ConfigService:
             "enable_network_mode": {"type": "boolean", "category": "feature_flags", "default": "true"},
             "enable_local_models": {"type": "boolean", "category": "feature_flags", "default": "false"},
             "enable_streaming": {"type": "boolean", "category": "feature_flags", "default": "true"},
+            "enable_auto_layout_repair": {"type": "boolean", "category": "generation_params", "default": "false"},
             "log_level": {"type": "select", "category": "feature_flags", "default": "INFO"},
             "log_ai_requests": {"type": "boolean", "category": "feature_flags", "default": "false"},
             "debug": {"type": "boolean", "category": "feature_flags", "default": "true"},

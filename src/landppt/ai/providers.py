@@ -709,7 +709,7 @@ class AIProviderFactory:
         "google": GoogleProvider,
         "gemini": GoogleProvider,  # Alias for google
         "ollama": OllamaProvider,
-        "302ai": OpenAIProvider  # 302.AI uses OpenAI-compatible API
+        "302ai": OpenAIProvider,  # 302.AI uses OpenAI-compatible API
     }
 
     @classmethod
