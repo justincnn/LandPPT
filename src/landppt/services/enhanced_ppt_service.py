@@ -4827,7 +4827,7 @@ class EnhancedPPTService(PPTService):
             "6. 内容是否完整，是否出现了滚动条(严禁出现滚动条)\n"
             "请输出结构化结果：\n"
             "- issues: 每个问题的描述与定位\n"
-            "- recommendations: 对应的修复建议(不应推荐修改标题、页码、背景的样式)\n"
+            "- recommendations: 对应的修复建议(不要推荐修改标题、页码、背景的样式)\n"
             "- severity: high/medium/low\n"
         )
 
@@ -6360,6 +6360,7 @@ class EnhancedPPTService(PPTService):
 
                 # 从文件生成大纲
                 logger.info(f"正在使用summeryanyfile处理文件: {request.file_path}")
+                shutil.copy(request.file_path, r"D:\file\learn\AIGC\LandPPT\temp\summeryanyfile_cache")
                 outline = await generator.generate_from_file(
                     request.file_path,
                     project_topic=request.topic or "",

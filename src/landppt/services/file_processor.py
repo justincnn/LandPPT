@@ -346,7 +346,7 @@ class FileProcessor:
         return {
             'topic': suggested_topic,
             'scenario': primary_scenario,
-            'requirements': f"基于上传文档内容生成PPT，包含以下要点：\n{content[:500]}...",
+            'requirements': f"基于上传文档内容生成PPT，包含以下要点：\n{content}",
             'uploaded_content': content,
             'suggested_sections': sections,
             'language': 'zh'
