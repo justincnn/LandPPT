@@ -6066,6 +6066,7 @@ async def _process_uploaded_files_for_outline(
 
                 # 读取文件内容并保存到项目文件目录
                 content = await file_upload.read()
+                # logger.info(f"文件内容: {content}")
                 project_file_path = await run_blocking_io(
                     _save_project_file_sync, content, file_upload.filename
                 )
@@ -6077,7 +6078,7 @@ async def _process_uploaded_files_for_outline(
                     "filename": file_upload.filename,
                     "content": file_result.processed_content
                 })
-
+                logger.info(f"文件处理内容: {file_result.processed_content}")
             if not all_processed_content:
                 logger.error("No files were successfully processed")
                 return None

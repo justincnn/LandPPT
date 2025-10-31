@@ -202,14 +202,6 @@ class FileProcessor:
             """同步处理Markdown文件（在线程池中运行）"""
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
-
-            # Remove markdown syntax for cleaner content
-            content = re.sub(r'#{1,6}\s+', '', content)  # Remove headers
-            content = re.sub(r'\*\*(.*?)\*\*', r'\1', content)  # Remove bold
-            content = re.sub(r'\*(.*?)\*', r'\1', content)  # Remove italic
-            content = re.sub(r'`(.*?)`', r'\1', content)  # Remove code
-            content = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', content)  # Remove links
-
             return content.strip()
 
         try:

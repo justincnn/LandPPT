@@ -165,7 +165,6 @@ class DocumentProcessor:
 
         # 提取文本内容
         content, detected_encoding = self._extract_text(file_path, file_type, encoding)
-
         # 保存到缓存
         if self.enable_cache and self._cache_manager and content.strip():
             try:

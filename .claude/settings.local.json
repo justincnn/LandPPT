@@ -1,10 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c \"from src.summeryanyfile.core.models import SlideInfo; s = SlideInfo(page_number=1, title=''test'', content_points=[''test''], slide_type=''content'', description=''test''); print(''SlideInfo创建成功'')\")",
-      "Bash(python -c \"from src.summeryanyfile.core.models import SlideInfo; data = {''page_number'': 1, ''title'': ''test'', ''content_points'': [''test''], ''slide_type'': ''content'', ''description'': ''test''}; s = SlideInfo.from_dict(data); print(''SlideInfo.from_dict调用成功'')\")",
-      "Bash(python -m py_compile src/summeryanyfile/core/models.py)",
-      "Bash(python -m py_compile src/summeryanyfile/config/prompts.py)"
+      "Bash(find . -name \"*.md\" -type f -exec grep -l \"^!image$\" {} ;)"
     ],
     "deny": [],
     "ask": []
