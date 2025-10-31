@@ -1,12 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m py_compile src/landppt/services/prompts/design_prompts.py)",
-      "Bash(awk 'NR>=249 && /^    @staticmethod/ {print NR\"\": \"\"$0; exit}' src/landppt/services/prompts/design_prompts.py)",
-      "Bash(awk 'NR>=881 && /^    def |^    @staticmethod/ {if(NR>881) {print prevNR\"\": Previous function ends\"\"; exit}} {prevNR=NR}' src/landppt/services/prompts/design_prompts.py)",
-      "Bash(awk 'NR==881,NR==1171 {print NR\"\"\"\": \"\"\"\"$0}' src/landppt/services/prompts/design_prompts.py)",
-      "Bash(awk 'NR>=461 && /^**设计平衡要求/ {print \"\"Found at line \"\"NR-1; exit}' src/landppt/services/prompts/design_prompts.py)",
-      "Bash(cat -A)"
+      "Bash(python -c \"from src.summeryanyfile.core.models import SlideInfo; s = SlideInfo(page_number=1, title=''test'', content_points=[''test''], slide_type=''content'', description=''test''); print(''SlideInfo创建成功'')\")",
+      "Bash(python -c \"from src.summeryanyfile.core.models import SlideInfo; data = {''page_number'': 1, ''title'': ''test'', ''content_points'': [''test''], ''slide_type'': ''content'', ''description'': ''test''}; s = SlideInfo.from_dict(data); print(''SlideInfo.from_dict调用成功'')\")",
+      "Bash(python -m py_compile src/summeryanyfile/core/models.py)",
+      "Bash(python -m py_compile src/summeryanyfile/config/prompts.py)"
     ],
     "deny": [],
     "ask": []

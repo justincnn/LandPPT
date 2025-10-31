@@ -42,21 +42,25 @@
 
 LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿。
 
-
+### 主界面
 ![image](https://img.pub/p/4b07dee6cf3cef023bd8.png)
 
+### 生成效果
 ![image](https://img.pub/p/1f9e79326ddeae3b8716.png)
 
-![image](https://img.pub/p/02bac27fe8097c012d9e.png)
-
 ![image](https://img.pub/p/9a38b57c6f5f470ad59b.png)
+
+### 在线编辑
+![image](https://img.pub/p/02bac27fe8097c012d9e.png)
 
 ![image](https://img.pub/p/47090624aec2d337f0df.png)
 
 ![image](https://img.pub/p/bebe9fe671d0125ceac6.png)
 
+### 讲稿生成
 ![image](https://img.pub/p/b1655542c516845fd924.png)
 
+### 模板生成
 ![image](https://img.pub/p/0d2ffc650792c4a133a4.png)
 
 ## 🌟 功能亮点
@@ -112,7 +116,6 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 ### 📊 完整的项目管理
 - **三阶段工作流**：需求确认 → 大纲生成 → PPT生成
 - **可视化编辑**：直观的大纲编辑器和实时预览
-- **版本管理**：项目历史记录和版本回溯功能
 - **批量操作**：支持批量生成和处理多个项目
 
 ### 🌐 现代化Web界面
@@ -316,16 +319,15 @@ TEMPERATURE=0.7
 ### 研究功能
 - **Tavily**: 专业搜索引擎API
 - **SearXNG**: 开源元搜索引擎
-- **HTTPX**: 异步HTTP客户端
 - **Playwright**: 网页内容提取
 
 ### 导出功能
 - **Playwright**: HTML转PDF高质量导出
-- **Apryse SDK**: 专业PPTX生成和转换
+- **Apryse SDK**: 专业PPT生成和转换
 
 ## 🤝 贡献指南
 
-我们欢迎所有形式的贡献！
+欢迎所有形式的贡献！
 
 ### 如何贡献
 1. Fork 本仓库

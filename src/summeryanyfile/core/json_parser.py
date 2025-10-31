@@ -75,7 +75,7 @@ class JSONParser:
             except json.JSONDecodeError:
                 logger.debug("清理后的响应解析失败")
         
-        logger.warning(f"所有JSON解析方法都失败，响应内容: {response[:200]}...")
+        logger.warning(f"所有JSON解析方法都失败，响应内容: {response}...")
         return JSONParser._get_default_structure()
     
     @staticmethod

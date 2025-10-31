@@ -75,7 +75,7 @@ class LLMManager:
         model: str = "gpt-4o-mini",
         provider: str = "openai",
         temperature: float = 0.7,
-        max_tokens: int = 4000,
+        max_tokens: int = 8192,
         **kwargs
     ) -> BaseChatModel:
         """
