@@ -77,6 +77,17 @@ def reload_services():
     _original_reload_services()
     logger.info("Original service reload completed")
 
+    # Refresh existing PPT service instance so existing imports pick up new config
+    global _ppt_service
+    if _ppt_service is not None:
+        try:
+            _ppt_service.update_ai_config()
+            logger.info("Existing PPT service configuration refreshed")
+        except Exception as refresh_error:  # noqa: BLE001
+            logger.warning("Failed to refresh PPT service configuration: %s", refresh_error, exc_info=True)
+    else:
+        logger.info("No existing PPT service instance, will initialize on next access")
+
     # Update module variables after services are reloaded
     _update_module_vars()
     logger.info("Module variables updated with new service instances")

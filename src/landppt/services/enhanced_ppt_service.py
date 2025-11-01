@@ -4629,14 +4629,54 @@ class EnhancedPPTService(PPTService):
         total_pages: int
     ) -> str:
         """Invoke multimodal vision model to inspect and repair layout when feature flag is enabled."""
-        if not html_content or not ai_config.enable_auto_layout_repair:
+        feature_flag_enabled = getattr(ai_config, "enable_auto_layout_repair", False)
+        env_override = os.getenv("ENABLE_AUTO_LAYOUT_REPAIR")
+        if env_override is not None:
+            feature_flag_enabled = str(env_override).lower() in {"true", "1", "yes", "on"}
+        logger.info("Auto layout repair feature flag enabled: %s", feature_flag_enabled)
+        if not html_content or not feature_flag_enabled:
             return html_content
 
         try:
             vision_provider, vision_settings = self._get_role_provider("vision_analysis")
-        except ValueError:
-            logger.debug("Vision analysis role not configured, skipping auto layout repair")
-            return html_content
+        except ValueError as role_error:
+            provider_name = getattr(ai_config, "vision_analysis_model_provider", None)
+            model_name = getattr(ai_config, "vision_analysis_model_name", None)
+
+            if not provider_name:
+                provider_name = os.getenv("VISION_ANALYSIS_MODEL_PROVIDER")
+            if not model_name:
+                model_name = os.getenv("VISION_ANALYSIS_MODEL_NAME")
+
+            if provider_name:
+                try:
+                    provider_name = provider_name.lower()
+                    vision_provider = get_ai_provider(provider_name)
+                    vision_settings = {
+                        "provider": provider_name,
+                        "model": model_name,
+                        "default_model": getattr(vision_provider, "model", None),
+                    }
+                    logger.info(
+                        "Vision analysis role fallback in use: provider=%s model=%s",
+                        provider_name,
+                        model_name,
+                    )
+                except Exception as provider_error:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to initialize vision analysis provider (%s): %s",
+                        provider_name,
+                        provider_error,
+                        exc_info=True,
+                    )
+                    logger.info("Skipping auto layout repair due to provider initialization failure")
+                    return html_content
+            else:
+                logger.info(
+                    "Vision analysis role not configured (missing provider). Original error: %s",
+                    role_error,
+                )
+                return html_content
 
         try:
             pdf_converter = get_pdf_converter()
@@ -4814,7 +4854,7 @@ class EnhancedPPTService(PPTService):
         bullet_text = "\n".join(f"- {point}" for point in bullet_points)
 
         return (
-            f"幻灯片编号：第{page_number}页 / 共{total_pages}页\n"
+            f"幻灯片编号：第{page_number}页\n"
             f"标题：{title}\n"
             f"正文摘要：{body}\n"
             f"要点：\n{bullet_text}\n\n"

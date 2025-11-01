@@ -82,6 +82,11 @@ class DesignPrompts:
 - 突出关键的视觉特征"""
 
     @staticmethod
+    def get_style_genes_extraction_prompt(template_code: str) -> str:
+        """向后兼容的设计基因提取提示词（别名）"""
+        return DesignPrompts.get_style_gene_extraction_prompt(template_code)
+
+    @staticmethod
     def get_unified_design_guide_prompt(slide_data: Dict[str, Any], page_number: int, total_pages: int) -> str:
         """获取统一设计指导提示词"""
 

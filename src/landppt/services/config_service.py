@@ -252,8 +252,15 @@ class ConfigService:
                 logger.warning(f"Error reloading .env file {self.env_file}: {e}")
 
             # Reload AI configuration if any AI-related config was updated
-            ai_related_keys = [k for k in config.keys() if k in self.config_schema and
-                             self.config_schema[k]["category"] in ["ai_providers", "generation_params", "model_roles"]]
+            ai_related_keys = [
+                k for k in config.keys()
+                if k in self.config_schema and self.config_schema[k]["category"] in {
+                    "ai_providers",
+                    "generation_params",
+                    "model_roles",
+                    "feature_flags",
+                }
+            ]
             if ai_related_keys:
                 self._reload_ai_config()
 
