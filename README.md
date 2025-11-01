@@ -224,7 +224,7 @@ docker logs -f landppt
 
 ### 2. 配置AI提供商
 在设置页面配置你的AI API密钥：
-- OpenAI API Key
+- OpenAI API Key(支持openai 兼容model api，例如deepseek、moonshot、qwen等等)
 - Anthropic API Key
 - Google API Key
 - 302.AI API Key
@@ -300,8 +300,8 @@ TEMPERATURE=0.7
 
 ### AI集成
 - **OpenAI**: GPT-4o、GPT-4o-mini 等最新模型
-- **Anthropic**: Claude-3.5 系列模型
-- **Google AI**: Gemini-1.5 系列模型
+- **Anthropic**: Claude-4.5 系列模型
+- **Google AI**: Gemini-2.5 系列模型
 - **LangChain**: AI应用开发框架和工具链
 - **Ollama**: 本地模型部署和管理
 
@@ -395,7 +395,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/9fec3f401f91ad3f5002.png)
+![LandPPT](https://img.pub/p/55c251976b65e245fa39.png)
 ---
 
 <div align="center">

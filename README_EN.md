@@ -301,8 +301,8 @@ After starting the service, visit:
 
 ### AI Integration
 - **OpenAI**: GPT-4o, GPT-4o-mini and other latest models
-- **Anthropic**: Claude-3.5 series models
-- **Google AI**: Gemini-1.5 series models
+- **Anthropic**: Claude-4.5 series models
+- **Google AI**: Gemini-2.5 series models
 - **LangChain**: AI application development framework and toolchain
 - **Ollama**: Local model deployment and management
 
