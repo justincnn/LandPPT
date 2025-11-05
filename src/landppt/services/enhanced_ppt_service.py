@@ -1709,7 +1709,7 @@ class EnhancedPPTService(PPTService):
             response = await self._text_completion_for_role("outline",
                 prompt=repair_prompt,
                 max_tokens=ai_config.max_tokens,
-                temperature=0.3  # 使用较低的温度以确保更准确的修复
+                temperature=0.7  
             )
 
             # 解析AI返回的修复结果
@@ -6392,6 +6392,7 @@ class EnhancedPPTService(PPTService):
                 from pathlib import Path
                 project_root = Path(__file__).parent.parent.parent.parent
                 cache_dir = project_root / "temp" / "summeryanyfile_cache"
+                cache_dir.mkdir(parents=True, exist_ok=True)
 
                 generator = PPTOutlineGenerator(config, use_magic_pdf=use_magic_pdf, cache_dir=str(cache_dir))
 
@@ -6400,7 +6401,7 @@ class EnhancedPPTService(PPTService):
 
                 # 从文件生成大纲
                 logger.info(f"正在使用summeryanyfile处理文件: {request.file_path}")
-                shutil.copy(request.file_path, r"D:\file\learn\AIGC\LandPPT\temp\summeryanyfile_cache")
+                shutil.copy(request.file_path, cache_dir)
                 outline = await generator.generate_from_file(
                     request.file_path,
                     project_topic=request.topic or "",

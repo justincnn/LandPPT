@@ -6078,7 +6078,7 @@ async def _process_uploaded_files_for_outline(
                     "filename": file_upload.filename,
                     "content": file_result.processed_content
                 })
-                logger.info(f"文件处理内容: {file_result.processed_content}")
+                logger.debug(f"文件处理内容: {file_result.processed_content}")
             if not all_processed_content:
                 logger.error("No files were successfully processed")
                 return None

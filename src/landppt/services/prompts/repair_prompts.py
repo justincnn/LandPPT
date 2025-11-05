@@ -26,7 +26,7 @@ class RepairPrompts:
             fixed_pages = page_count_settings.get('fixed_pages', 10)
             page_count_instruction = f"- 页数要求：必须生成恰好{fixed_pages}页的PPT"
         else:
-            page_count_instruction = "- 页数要求：根据内容复杂度自主决定合适的页数（建议8-15页）"
+            page_count_instruction = "- 页数要求：保持现有页数和内容，仅修复错误"
 
         errors_text = '\n'.join(["- " + str(error) for error in validation_errors])
 
@@ -51,7 +51,7 @@ class RepairPrompts:
 修复要求：
 1. 修复所有发现的错误
 2. 确保JSON格式正确且完整
-3. 保持原有内容的核心意图
+3. 保持原有内容
 4. 严格遵守页数要求
 5. 确保所有必需字段都存在且格式正确
 
