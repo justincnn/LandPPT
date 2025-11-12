@@ -34,7 +34,6 @@
 - [配置说明](#-配置说明)
 - [API文档](#-api文档)
 - [技术栈](#️-技术栈)
-- [贡献指南](#-贡献指南)
 - [常见问题](#-常见问题)
 - [许可证](#-许可证)
 
@@ -395,7 +394,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/55c251976b65e245fa39.png)
+![LandPPT](https://img.pub/p/2f626f1436ff2128ef7b.png)
 ---
 
 <div align="center">

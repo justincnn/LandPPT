@@ -34,7 +34,6 @@ I'm currently seeking **Agent Development** related job opportunities. If you're
 - [Configuration](#-configuration)
 - [API Documentation](#-api-documentation)
 - [Tech Stack](#️-tech-stack)
-- [Contributing](#-contributing)
 - [FAQ](#-faq)
 - [License](#-license)
 
