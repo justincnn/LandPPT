@@ -3,6 +3,7 @@
 {% block title %}系统配置管理 - LandPPT{% endblock %}
 
 {% block content %}
+<div class="ai-config-page">
 <div class="page-hero">
     <h2 class="page-title">系统配置管理</h2>
     <p class="page-subtitle">
@@ -74,7 +75,7 @@
             {% for provider in ["openai", "anthropic", "google", "azure_openai", "ollama", "302ai"] %}
             <div class="card provider-config-card" data-provider="{{ provider }}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h4 style="color: #2c3e50; margin: 0;">
+                    <h4 style="color: #111111; margin: 0;">
                         {% if provider == "openai" %}
                             OpenAI
                         {% elif provider == "anthropic" %}
@@ -92,11 +93,11 @@
 
                     <div style="display: flex; gap: 10px; align-items: center;">
                         {% if provider_status[provider] %}
-                            <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
+                            <span style="background: #0f0f0f; color: #f8f8f8; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid #1f1f1f;">
                                 可用
                             </span>
                         {% else %}
-                            <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
+                            <span style="background: #e0e0e0; color: #111111; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; border: 1px solid #c2c2c2;">
                                 不可用
                             </span>
                         {% endif %}
@@ -219,7 +220,7 @@
                             <input type="password" name="302ai_api_key" placeholder="sk-..."
                                    value="{{ current_config.get('302ai_api_key', '') }}"
                                    style="font-family: monospace; font-size: 0.9em;">
-                            <small style="color: #007bff;"><a href="https://share.302.ai/5ml9vD" target="_blank" style="color: #007bff; text-decoration: underline;">点击获取</a></small>
+                            <small style="color: #2b2b2b;"><a href="https://share.302.ai/5ml9vD" target="_blank" style="color: #2b2b2b; text-decoration: underline;">点击获取</a></small>
                         </div>
                         <input type="hidden" name="302ai_base_url" value="https://api.302.ai/v1">
                         <div class="form-group">
@@ -285,10 +286,10 @@
                 ] %}
                 {% for role in model_roles %}
                 <div class="card" data-role-model-field="{{ role.model_field }}">
-                    <h4 style="color: #2c3e50; margin-bottom: 15px;">{{ role.label }}</h4>
+                    <h4 style="color: #111111; margin-bottom: 15px;">{{ role.label }}</h4>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label>首选提供者</label>
-                        <select name="{{ role.provider_field }}" class="model-role-provider" data-model-field="{{ role.model_field }}" style="width: 100%; padding: 10px; border: 1px solid #dcdfe6; border-radius: 6px;">
+                        <select name="{{ role.provider_field }}" class="model-role-provider" data-model-field="{{ role.model_field }}" style="width: 100%; padding: 10px; border: 1px solid #dcdcdc; border-radius: 6px;">
                             <option value="">使用默认提供者</option>
                             {% for provider in available_providers %}
                             <option value="{{ provider }}" {% if current_config.get(role.provider_field) == provider %}selected{% endif %}>{{ provider }}</option>
@@ -331,7 +332,7 @@
 
             <!-- AI 生成参数 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #f39c12; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <h4 style="color: #111111; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                     AI 生成参数
                 </h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
@@ -347,7 +348,7 @@
                             <input type="range" min="100" max="1000000" step="100"
                                    value="{{ current_config.get('max_tokens', '8192') }}"
                                    oninput="this.previousElementSibling.value = this.value"
-                                   style="width: 100%; accent-color: #f39c12;">
+                                   style="width: 100%; accent-color: #0f0f0f;">
                         </div>
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
                             控制生成内容的最大长度。较大的值允许生成更长的内容，但会消耗更多资源。
@@ -366,7 +367,7 @@
                             <input type="range" min="0" max="2" step="0.1"
                                    value="{{ current_config.get('temperature', '0.7') }}"
                                    oninput="this.previousElementSibling.value = this.value"
-                                   style="width: 100%; accent-color: #f39c12;">
+                                   style="width: 100%; accent-color: #0f0f0f;">
                         </div>
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
                             控制生成内容的创造性。0 = 确定性输出，1 = 平衡，2 = 高创造性。
@@ -385,7 +386,7 @@
                             <input type="range" min="0" max="1" step="0.1"
                                    value="{{ current_config.get('top_p', '1.0') }}"
                                    oninput="this.previousElementSibling.value = this.value"
-                                   style="width: 100%; accent-color: #f39c12;">
+                                   style="width: 100%; accent-color: #0f0f0f;">
                         </div>
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
                             核采样参数，控制词汇选择范围。较低的值使输出更集中，较高的值增加多样性。
@@ -396,7 +397,7 @@
 
             <!-- 批量生成PPT配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <h4 style="color: #111111; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                     批量生成PPT
                 </h4>
                 
@@ -427,7 +428,7 @@
                     </label>
                 </div>
 
-                <div id="parallel-generation-options" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                <div id="parallel-generation-options" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #111111;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="parallel_slides_count" style="font-weight: 600; color: #495057; display: block; margin-bottom: 12px;">
                             批量生成页数
@@ -439,27 +440,27 @@
                                    value="{{ current_config.get('parallel_slides_count', '3') }}"
                                    min="1"
                                    max="10"
-                                   style="flex: 0 0 100px; padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1em;"
+                                   style="flex: 0 0 100px; padding: 10px 12px; border: 2px solid #dcdcdc; border-radius: 8px; font-size: 1em;"
                                    oninput="updateParallelSlidesDisplay(this.value); document.getElementById('parallel_slides_range').value = this.value;">
                             <input type="range"
                                    id="parallel_slides_range"
                                    min="1"
                                    max="10"
                                    value="{{ current_config.get('parallel_slides_count', '3') }}"
-                                   style="flex: 1; accent-color: #667eea;"
+                                   style="flex: 1; accent-color: #0f0f0f;"
                                    oninput="document.getElementById('parallel_slides_count').value = this.value; updateParallelSlidesDisplay(this.value);">
-                            <span id="parallel_slides_display" style="flex: 0 0 80px; text-align: center; font-weight: 600; color: #667eea; font-size: 1.1em; padding: 8px 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <span id="parallel_slides_display" style="flex: 0 0 80px; text-align: center; font-weight: 600; color: #111111; font-size: 1.1em; padding: 8px 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                 {{ current_config.get('parallel_slides_count', '3') }} 页
                             </span>
                         </div>
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
                             <strong>提示：</strong>数值越大，生成速度越快，但对AI服务的并发请求压力也越大。<br>
-                            推荐值：<span style="color: #667eea; font-weight: 500;">3-5页</span>（平衡速度与稳定性）
+                            推荐值：<span style="color: #111111; font-weight: 500;">3-5页</span>（平衡速度与稳定性）
                         </small>
                     </div>
                 </div>
 
-                <div style="margin-top: 15px; padding: 12px 16px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 4px solid #667eea;">
+                <div style="margin-top: 15px; padding: 12px 16px; background: rgba(0, 0, 0, 0.06); border-radius: 8px; border-left: 4px solid #111111;">
                     <p style="margin: 0; font-size: 0.9em; color: #495057; line-height: 1.6;">
                         <strong>注意事项：</strong><br>
                         • 启用批量生成可能会增加AI API的调用频率和费用<br>
@@ -502,7 +503,7 @@
                                value="{{ current_config.get('tavily_api_key', '') }}"
                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
-                            用于深度研究功能的API密钥，可在 <a href="https://tavily.com" target="_blank" style="color: #e74c3c;">Tavily官网</a> 获取
+                            用于深度研究功能的API密钥，可在 <a href="https://tavily.com" target="_blank" style="color: #111111; text-decoration: underline;">Tavily官网</a> 获取
                         </small>
                     </div>
 
@@ -520,8 +521,8 @@
                 </div>
 
                 <!-- 高级选项 -->
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
-                    <h5 style="color: #e74c3c; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #111111;">
+                    <h5 style="color: #111111; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                         高级选项
                     </h5>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
@@ -550,7 +551,7 @@
                                 <input type="range" min="1000" max="20000" step="500"
                                        value="{{ current_config.get('research_max_content_length', '5000') }}"
                                        oninput="this.previousElementSibling.value = this.value"
-                                       style="width: 100%; accent-color: #e74c3c;">
+                                       style="width: 100%; accent-color: #0f0f0f;">
                             </div>
                             <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
                                 每个页面提取的最大字符数，较大的值提供更多信息但消耗更多资源
@@ -573,7 +574,7 @@
                            value="{{ current_config.get('apryse_license_key', '') }}"
                            style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
                     <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
-                        用于PPTX导出功能的Apryse SDK许可证密钥，可在 <a href="https://www.pdftron.com/" target="_blank" style="color: #9b59b6;">Apryse官网</a> 获取
+                        用于PPTX导出功能的Apryse SDK许可证密钥，可在 <a href="https://www.pdftron.com/" target="_blank" style="color: #111111; text-decoration: underline;">Apryse官网</a> 获取
                     </small>
                 </div>
             </div>
@@ -693,7 +694,7 @@
         <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #dee2e6;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                 <h4 class="subheading" style="margin: 0; font-size: 1.1em;">服务状态</h4>
-                <span id="image-service-status" style="background: #95a5a6; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 500;">
+                <span id="image-service-status" style="background: #0f0f0f; color: #f8f8f8; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 500; border: 1px solid #1f1f1f;">
                     检查中...
                 </span>
             </div>
@@ -727,7 +728,7 @@
                 </div>
 
                 <div id="image-service-options" style="display: none;">
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <div style="background: #f8f8f8; padding: 20px; border-radius: 8px; border-left: 4px solid #111111;">
                         <h5 style="color: #495057; margin-bottom: 15px; font-weight: 600;">图片获取方式 (可多选)</h5>
                         <div style="display: grid; gap: 12px;">
                             <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="toggleImageSourceConfig()">
@@ -752,7 +753,7 @@
                                 </div>
                             </label>
                         </div>
-                        <div style="margin-top: 15px; padding: 12px; background: #e7f3ff; border-radius: 6px; border-left: 3px solid #007bff;">
+                        <div style="margin-top: 15px; padding: 12px; background: #f1f1f1; border-radius: 6px; border-left: 3px solid #111111;">
                             <small style="color: #4b5563; font-weight: 500;">提示：可以同时启用多种方式，AI会根据页面内容智能选择最合适的图片来源</small>
                         </div>
                     </div>
@@ -811,11 +812,11 @@
                             <small style="color: #6c757d; margin-top: 5px; display: block;">推荐人标识符，用于认证和统计（可选）</small>
                         </div>
                     </div>
-                    <div style="margin-top: 15px; padding: 12px 16px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; border-left: 4px solid #28a745;">
-                        <div style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 500;">
+                    <div style="margin-top: 15px; padding: 12px 16px; background: #f1f1f1; border: 1px solid #dcdcdc; border-radius: 8px; border-left: 4px solid #111111;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #111111; font-weight: 500;">
                             基础功能免费
                         </div>
-                        <small style="color: #155724; margin-top: 5px; display: block;">Pollinations提供免费的AI图片生成服务，Token可选用于高级功能</small>
+                        <small style="color: #4a4a4a; margin-top: 5px; display: block;">Pollinations提供免费的AI图片生成服务，Token可选用于高级功能</small>
                     </div>
                 </div>
 
@@ -854,14 +855,14 @@
 
             <!-- 详细配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #6f42c1; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <h4 style="color: #111111; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                     <span>⚙️</span> 详细配置
                 </h4>
 
                 <!-- 配置选项容器 -->
                 <div style="display: flex; flex-direction: column; gap: 20px;">
                     <!-- 本地图床配置 -->
-                    <div id="local-images-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                    <div id="local-images-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #111111;">
                         <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                             本地图床配置
                         </h5>
@@ -887,7 +888,7 @@
                     </div>
 
                     <!-- 网络搜索配置 -->
-                    <div id="network-search-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                    <div id="network-search-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #111111;">
                         <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                             网络搜索配置
                         </h5>
@@ -910,7 +911,7 @@
                     </div>
 
                     <!-- AI生成配置 -->
-                    <div id="ai-generation-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                    <div id="ai-generation-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #111111;">
                         <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                             AI生成配置
                         </h5>
@@ -940,7 +941,7 @@
                         </div>
 
                         <!-- Pollinations特定配置 -->
-                        <div id="pollinations-specific-config" style="display: none; padding: 20px; background: #f3f4f6; border-radius: 8px; border-left: 4px solid #1f2933;">
+                        <div id="pollinations-specific-config" style="display: none; padding: 20px; background: #f3f4f6; border-radius: 8px; border-left: 4px solid #111111;">
                             <h6 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                                 Pollinations 配置
                             </h6>
@@ -952,7 +953,7 @@
                                         <option value="turbo">Turbo (快速生成)</option>
                                         <option value="gptimage">GPT Image (支持透明背景)</option>
                                     </select>
-                                    <small style="color: #155724; margin-top: 5px; display: block;">选择Pollinations的图片生成模型</small>
+                                    <small style="color: #4a4a4a; margin-top: 5px; display: block;">选择Pollinations的图片生成模型</small>
                                 </div>
                             </div>
                             <div class="pollinations-options-grid">
@@ -1006,7 +1007,7 @@
                     </div>
 
                     <!-- 全局图片配置 -->
-                    <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #111111;">
                         <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                             全局图片配置
                         </h5>
@@ -1048,7 +1049,7 @@
 <!-- Test Results Modal -->
 <div id="testModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
-        <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">
+        <h3 style="color: #111111; margin-bottom: 20px; text-align: center;">
             AI 提供者测试结果
         </h3>
         
@@ -1057,25 +1058,66 @@
         </div>
         
         <div style="text-align: center;">
-            <button onclick="closeTestModal()" class="btn" style="background: #95a5a6;">关闭</button>
+            <button onclick="closeTestModal()" class="btn btn-secondary">关闭</button>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+/* 黑白主题基调 */
+.ai-config-page {
+    --ai-surface: rgba(255, 255, 255, 0.94);
+    --ai-surface-strong: rgba(255, 255, 255, 0.88);
+    --ai-border: rgba(17, 17, 17, 0.12);
+    --ai-contrast: #0f0f0f;
+    --ai-muted: #5a5a5a;
+    --ai-soft: #f6f6f6;
+}
+
+.ai-config-page .page-hero {
+    background: var(--ai-surface);
+    border: 1px solid var(--ai-border);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+.ai-config-page .page-title {
+    color: var(--ai-contrast);
+}
+
+.ai-config-page .page-subtitle {
+    color: var(--ai-muted);
+}
+
+.ai-config-page .card {
+    background: var(--ai-surface);
+    border: 1px solid var(--ai-border);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.ai-config-page .section-heading,
+.ai-config-page .subheading {
+    color: var(--ai-contrast);
+}
+
+.ai-config-page small {
+    color: var(--ai-muted);
+}
+
 /* 配置标签页样式 */
 .config-tabs {
-    border-bottom: 2px solid var(--glass-border);
+    border-bottom: 2px solid var(--ai-border);
     margin-bottom: 30px;
 }
 
 .tab-btn {
-    background: var(--glass-bg);
+    background: var(--ai-surface-strong);
     backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
+    border: 1px solid var(--ai-border);
+    color: var(--ai-contrast);
     padding: 12px 24px;
     border-radius: 12px 12px 0 0;
     cursor: pointer;
@@ -1087,16 +1129,16 @@
 }
 
 .tab-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
+    background: rgba(17, 17, 17, 0.06);
     transform: translateY(-2px);
 }
 
 .tab-btn.active {
-    background: var(--primary-gradient);
-    color: white;
+    background: #0f0f0f;
+    color: #f8f8f8;
     border-bottom: 2px solid transparent;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
 .tab-content {
@@ -1119,7 +1161,7 @@
 
 .provider-config-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(31, 38, 135, 0.4);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.16);
 }
 
 .provider-config-card,
@@ -1193,13 +1235,27 @@
 }
 
 .status-available {
-    background: #27ae60;
-    color: white;
+    background: linear-gradient(135deg, #0f0f0f 0%, #1f1f1f 100%);
+    color: #f8f8f8;
+    border: 1px solid #1f1f1f;
 }
 
 .status-unavailable {
-    background: #e74c3c;
-    color: white;
+    background: #e0e0e0;
+    color: #111111;
+    border: 1px solid #c4c4c4;
+}
+
+.status-label--ok {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1f1f1f 100%);
+    color: #f8f8f8;
+    border: 1px solid #1f1f1f;
+}
+
+.status-label--err {
+    background: #e0e0e0;
+    color: #111111;
+    border: 1px solid #c4c4c4;
 }
 
 /* 现代化单选框样式 */
@@ -1215,7 +1271,7 @@
     -webkit-appearance: none;
     width: 22px;
     height: 22px;
-    border: 2px solid #e1e5e9;
+    border: 2px solid #d3d3d3;
     border-radius: 50%;
     position: relative;
     cursor: pointer;
@@ -1226,21 +1282,21 @@
 }
 
 .custom-radio input[type="radio"]:hover {
-    border-color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    border-color: #0f0f0f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     transform: translateY(-1px) scale(1.05);
 }
 
 .custom-radio input[type="radio"]:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 .custom-radio input[type="radio"]:checked {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    border-color: #0f0f0f;
+    background: linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
 .custom-radio input[type="radio"]:checked::after {
@@ -1282,7 +1338,7 @@
 }
 
 .custom-radio input[type="radio"]:checked + .radio-label {
-    color: #667eea;
+    color: #0f0f0f;
 }
 
 /* 单选框禁用状态 */
@@ -1309,7 +1365,7 @@
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
-    border: 2px solid #e1e5e9;
+    border: 2px solid #d3d3d3;
     border-radius: 6px;
     position: relative;
     cursor: pointer;
@@ -1321,21 +1377,21 @@
 }
 
 .form-group input[type="checkbox"]:hover {
-    border-color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    border-color: #0f0f0f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     transform: translateY(-1px);
 }
 
 .form-group input[type="checkbox"]:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 .form-group input[type="checkbox"]:checked {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    border-color: #0f0f0f;
+    background: linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
 .form-group input[type="checkbox"]:checked::after {
@@ -1390,18 +1446,18 @@
     background-position: right 12px center;
     background-size: 16px;
     padding-right: 40px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 8px;
     transition: all 0.3s ease;
 }
 
 .form-group select:hover {
-    border-color: #667eea;
+    border-color: #0f0f0f;
 }
 
 .form-group select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
 }
 
@@ -1410,7 +1466,7 @@
 .form-group input[type="password"],
 .form-group input[type="number"],
 .form-group input[type="url"] {
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 8px;
     transition: all 0.3s ease;
     background: white;
@@ -1420,15 +1476,15 @@
 .form-group input[type="password"]:hover,
 .form-group input[type="number"]:hover,
 .form-group input[type="url"]:hover {
-    border-color: #667eea;
+    border-color: #0f0f0f;
 }
 
 .form-group input[type="text"]:focus,
 .form-group input[type="password"]:focus,
 .form-group input[type="number"]:focus,
 .form-group input[type="url"]:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
 }
 
@@ -1476,7 +1532,7 @@
 .searchable-select-input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 8px;
     background: white;
     font-size: 14px;
@@ -1485,8 +1541,8 @@
 }
 
 .searchable-select-input:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
     cursor: text;
 }
@@ -1497,7 +1553,7 @@
     left: 0;
     right: 0;
     background: white;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-top: none;
     border-radius: 0 0 8px 8px;
     max-height: 200px;
@@ -1524,8 +1580,8 @@
 }
 
 .searchable-select-option.highlighted {
-    background-color: #667eea;
-    color: white;
+    background-color: #0f0f0f;
+    color: #f8f8f8;
 }
 
 .searchable-select-option:last-child {
@@ -1541,7 +1597,7 @@
 .searchable-select-container.open .searchable-select-input {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #dcdcdc;
 }
 
 /* 滚动条美化 */
@@ -1563,28 +1619,39 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, #0f0f0f 0%, #262626 100%);
+    color: #f8f8f8;
+    border: 1px solid #0f0f0f;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-    color: white;
+    background: linear-gradient(135deg, #1f1f1f 0%, #3a3a3a 100%);
+    color: #f8f8f8;
+    border: 1px solid #1f1f1f;
+}
+
+.btn-secondary {
+    background: #f2f2f2;
+    color: #111111;
+    border: 1px solid #d0d0d0;
 }
 
 .btn-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
+    background: linear-gradient(135deg, #f5f5f5 0%, #dedede 100%);
+    color: #111111;
+    border: 1px solid #cfcfcf;
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
+    background: linear-gradient(135deg, #e9e9e9 0%, #d1d1d1 100%);
+    color: #111111;
+    border: 1px solid #c3c3c3;
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: white;
+    background: linear-gradient(135deg, #2a2a2a 0%, #0f0f0f 100%);
+    color: #f8f8f8;
+    border: 1px solid #0f0f0f;
 }
 
 /* OpenAI模型输入框样式 */
@@ -1597,7 +1664,7 @@
 .model-input,
 .model-select {
     flex: 1;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 8px;
     padding: 10px 45px 10px 15px;
     font-size: 0.9rem;
@@ -1607,13 +1674,13 @@
 
 .model-input:hover,
 .model-select:hover {
-    border-color: #667eea;
+    border-color: #0f0f0f;
 }
 
 .model-input:focus,
 .model-select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
 }
 
@@ -1637,10 +1704,10 @@
 }
 
 .model-fetch-btn:hover {
-    background: #667eea;
-    color: white;
+    background: #0f0f0f;
+    color: #f8f8f8;
     transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
 .model-fetch-btn:disabled {
@@ -1674,7 +1741,7 @@
 #image-service .form-group select {
     width: 100%;
     padding: 8px 12px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 6px;
     font-size: 0.9em;
     transition: all 0.3s ease;
@@ -1682,8 +1749,8 @@
 
 #image-service .form-group input:focus,
 #image-service .form-group select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
 }
 
@@ -1705,7 +1772,7 @@
 
 /* 图片获取方式选择框特殊样式 */
 #image-service label[onclick="toggleImageSourceConfig()"] {
-    border: 2px solid #e9ecef !important;
+    border: 2px solid #dcdcdc !important;
     border-radius: 12px !important;
     padding: 16px 20px !important;
     background: white !important;
@@ -1716,8 +1783,8 @@
 }
 
 #image-service label[onclick="toggleImageSourceConfig()"]:hover {
-    border-color: #667eea !important;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15) !important;
+    border-color: #0f0f0f !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
     transform: translateY(-2px) !important;
 }
 
@@ -1728,7 +1795,7 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
     transition: left 0.5s;
 }
 
@@ -1738,12 +1805,12 @@
 
 /* 选中状态的图片获取方式 */
 #image-service label[onclick="toggleImageSourceConfig()"] input[type="checkbox"]:checked + div {
-    color: #667eea;
+    color: #0f0f0f;
 }
 
 #image-service label[onclick="toggleImageSourceConfig()"] input[type="checkbox"]:checked {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #0f0f0f;
+    background: linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%);
 }
 
 /* 复选框标签优化 */
@@ -1766,17 +1833,17 @@
 }
 
 .pollinations-option {
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(40, 167, 69, 0.2);
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px;
     padding: 12px 16px;
     transition: all 0.3s ease;
 }
 
 .pollinations-option:hover {
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(40, 167, 69, 0.4);
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+    background: rgba(17, 17, 17, 0.04);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pollinations-checkbox-label {
@@ -1803,14 +1870,14 @@
 
 .pollinations-option-text strong {
     font-weight: 600;
-    color: #495057;
+    color: #111111;
     font-size: 0.95em;
     line-height: 1.3;
     display: block;
 }
 
 .pollinations-option-text small {
-    color: #155724;
+    color: #4a4a4a;
     font-size: 0.85em;
     line-height: 1.4;
     font-weight: 400;
@@ -1834,7 +1901,7 @@
 #generation-params .form-group select {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     border-radius: 8px;
     font-size: 0.95em;
     transition: all 0.3s ease;
@@ -1842,8 +1909,8 @@
 
 #generation-params .form-group input:focus,
 #generation-params .form-group select:focus {
-    border-color: #f39c12;
-    box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     outline: none;
 }
 
@@ -1869,13 +1936,13 @@
 .input-with-range input[type="range"] {
     height: 6px;
     border-radius: 3px;
-    background: #e9ecef;
+    background: #e5e5e5;
     outline: none;
     transition: all 0.3s ease;
 }
 
 .input-with-range input[type="range"]:hover {
-    background: #dee2e6;
+    background: #dcdcdc;
 }
 
 .input-with-range input[type="range"]::-webkit-slider-thumb {
@@ -1883,14 +1950,14 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #f39c12;
+    background: #0f0f0f;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
 }
 
 .input-with-range input[type="range"]::-webkit-slider-thumb:hover {
-    background: #e67e22;
+    background: #2a2a2a;
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
@@ -1899,7 +1966,7 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #f39c12;
+    background: #0f0f0f;
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -1907,7 +1974,7 @@
 }
 
 .input-with-range input[type="range"]::-moz-range-thumb:hover {
-    background: #e67e22;
+    background: #2a2a2a;
     transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
@@ -1956,8 +2023,8 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
@@ -1966,11 +2033,11 @@
 }
 
 .toggle-switch:hover .toggle-slider {
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .toggle-switch input:focus + .toggle-slider {
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 /* 开关样式的标签 */
@@ -1986,22 +2053,22 @@
 }
 
 .toggle-label:hover {
-    color: #667eea;
+    color: #0f0f0f;
 }
 
 /* 为主要的启用选项应用开关样式 */
 .main-toggle-option {
     padding: 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: linear-gradient(135deg, #f9f9f9 0%, #ededed 100%);
     border-radius: 12px;
-    border: 2px solid #e9ecef;
+    border: 2px solid #dcdcdc;
     transition: all 0.3s ease;
     margin-bottom: 20px;
 }
 
 .main-toggle-option:hover {
-    border-color: #667eea;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+    border-color: #0f0f0f;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 /* 响应式设计 */
@@ -3739,16 +3806,16 @@ function showNotification(message, type = 'info') {
     // 设置背景颜色
     switch (type) {
         case 'success':
-            notification.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
+            notification.style.background = 'linear-gradient(135deg, #0f0f0f 0%, #2a2a2a 100%)';
             break;
         case 'error':
-            notification.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+            notification.style.background = 'linear-gradient(135deg, #555555 0%, #1f1f1f 100%)';
             break;
         case 'warning':
-            notification.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+            notification.style.background = 'linear-gradient(135deg, #666666 0%, #2f2f2f 100%)';
             break;
         default:
-            notification.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+            notification.style.background = 'linear-gradient(135deg, #2a2a2a 0%, #0f0f0f 100%)';
     }
 
     notification.textContent = message;
@@ -3782,7 +3849,7 @@ function showLoading(message) {
 
 function showTestResult(result, success) {
     const statusIcon = success ? '✅' : '❌';
-    const statusColor = success ? '#27ae60' : '#e74c3c';
+    const statusColor = success ? '#0f0f0f' : '#555555';
     
     let content = `
         <div style="text-align: center; margin-bottom: 20px;">
@@ -3810,7 +3877,7 @@ function showTestResult(result, success) {
         `;
     } else {
         content += `
-            <div style="background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+            <div style="background: #f1f1f1; padding: 20px; border-radius: 8px; border-left: 4px solid #111111;">
                 <p><strong>错误信息:</strong></p>
                 <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
                     ${result.detail || result.error || '未知错误'}
@@ -3828,7 +3895,7 @@ function showAllTestResults(results) {
     
     results.forEach(({provider, result, success}) => {
         const statusIcon = success ? '✅' : '❌';
-        const statusColor = success ? '#27ae60' : '#e74c3c';
+        const statusColor = success ? '#0f0f0f' : '#555555';
         
         content += `
             <div style="border: 1px solid #ecf0f1; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
@@ -3838,7 +3905,7 @@ function showAllTestResults(results) {
                 </div>
                 ${success ? 
                     `<p style="color: #7f8c8d; font-size: 0.9em;">模型: ${result.model} | 响应: ${result.response_preview.substring(0, 50)}...</p>` :
-                    `<p style="color: #e74c3c; font-size: 0.9em;">错误: ${result.detail || result.error}</p>`
+                    `<p style="color: #555555; font-size: 0.9em;">错误: ${result.detail || result.error}</p>`
                 }
             </div>
         `;
@@ -3891,10 +3958,10 @@ function updateImageServiceStatus(status) {
     if (statusElement) {
         if (status.status === 'ok' && status.available_providers.length > 0) {
             statusElement.textContent = '✅ 正常运行';
-            statusElement.style.background = '#27ae60';
+            statusElement.style.background = '#0f0f0f';
         } else {
             statusElement.textContent = '❌ 服务异常';
-            statusElement.style.background = '#e74c3c';
+            statusElement.style.background = '#555555';
         }
     }
 
@@ -3909,7 +3976,7 @@ function updateImageServiceStatus(status) {
 
 function showImageTestResult(result, success) {
     const statusIcon = success ? '✅' : '❌';
-    const statusColor = success ? '#27ae60' : '#e74c3c';
+    const statusColor = success ? '#0f0f0f' : '#555555';
 
     let content = `
         <div style="text-align: center; margin-bottom: 20px;">
@@ -3944,7 +4011,7 @@ function showImageTestResult(result, success) {
         `;
     } else {
         content += `
-            <div style="background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+            <div style="background: #f1f1f1; padding: 20px; border-radius: 8px; border-left: 4px solid #111111;">
                 <p><strong>错误信息:</strong></p>
                 <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
                     ${result.detail || result.error || '未知错误'}
