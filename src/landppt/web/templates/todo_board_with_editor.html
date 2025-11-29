@@ -7,27 +7,39 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --ink-strong: #0f172a;
+            --ink: #111111;
+            --ink-soft: #6b7280;
+            --surface: #ffffff;
+            --surface-subtle: #f5f5f5;
+            --surface-contrast: #111111;
+            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(17, 17, 17, 0.12);
+            --glass-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+            --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.1);
+            --text-primary: var(--ink);
+            --text-secondary: var(--ink-soft);
+            --text-muted: #9ca3af;
+            --border-color: rgba(17, 17, 17, 0.12);
+            --border-radius-sm: 10px;
+            --border-radius-md: 14px;
+            --border-radius-lg: 20px;
+            --border-radius-xl: 28px;
+            --spacing-xs: 8px;
+            --spacing-sm: 12px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+        }
+
         body {
-            background: var(--primary-gradient);
+            background: var(--surface-subtle);
             min-height: 100vh;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             position: relative;
             overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
         }
         
         .main-container {
@@ -43,13 +55,17 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            color: #1a202c;
+            background: rgba(255, 255, 255, 0.95);
+            color: var(--text-primary);
             padding: 24px 32px;
             position: relative;
-            border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
             border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+        }
+
+        .main-container > .header {
+            background: var(--glass-bg);
         }
 
         .header-content {
@@ -68,14 +84,14 @@
         .header-icon {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--surface-contrast);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: var(--surface);
             font-size: 20px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
         }
 
         .header-text {
@@ -88,14 +104,14 @@
         .header h2 {
             font-weight: 700;
             font-size: 1.75rem;
-            color: #1a202c;
+            color: var(--text-primary);
             margin: 0;
             line-height: 1.2;
         }
 
         .header-subtitle {
             font-size: 0.875rem;
-            color: #64748b;
+            color: var(--text-secondary);
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -106,6 +122,19 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+
+        .header .btn-outline-light {
+            background: transparent;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+            box-shadow: none;
+        }
+
+        .header .btn-outline-light:hover {
+            background: var(--surface-contrast);
+            border-color: var(--surface-contrast) !important;
+            color: var(--surface) !important;
         }
         
         .content-area {
@@ -122,32 +151,14 @@
         }
         
         .editor-toolbar {
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-            border-bottom: 1px solid rgba(0,0,0,0.08);
+            background: var(--surface);
+            border-bottom: 1px solid var(--glass-border);
             padding: 24px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            box-shadow: var(--glass-shadow);
             position: relative;
-            backdrop-filter: blur(10px);
-        }
-
-        .editor-toolbar::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
-            background-size: 200% 100%;
-            animation: gradientShift 3s ease-in-out infinite;
-        }
-
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
         }
 
         .toolbar-title {
@@ -157,50 +168,29 @@
         }
 
         .toolbar-title i {
-            color: #667eea;
-            filter: drop-shadow(0 2px 4px rgba(102, 126, 234, 0.3));
+            color: var(--surface-contrast);
         }
 
         .toolbar-title h4 {
             margin: 0;
-            color: #2c3e50;
+            color: var(--text-primary);
             font-weight: 700;
             font-size: 1.4rem;
-            background: linear-gradient(135deg, #2c3e50 0%, #667eea 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         .status-indicator {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
-            border-left: 5px solid #2196f3;
+            background: var(--surface);
+            border-left: 5px solid var(--surface-contrast);
             padding: 20px 25px;
             margin: 25px 32px;
             border-radius: 0 12px 12px 0;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.15);
+            box-shadow: var(--glass-shadow);
             position: relative;
             overflow: hidden;
         }
 
-        .status-indicator::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent 30%, rgba(33, 150, 243, 0.05) 50%, transparent 70%);
-            animation: statusShimmer 2s ease-in-out infinite;
-        }
-
-        @keyframes statusShimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
         .status-indicator h6 {
-            color: #1976d2;
+            color: var(--text-primary);
             font-weight: 700;
             margin-bottom: 10px;
             display: flex;
@@ -211,7 +201,7 @@
         }
 
         .status-indicator #statusMessage {
-            color: #2c3e50;
+            color: var(--text-secondary);
             font-weight: 500;
             position: relative;
             z-index: 1;
@@ -221,10 +211,7 @@
             flex: 1;
             padding: 32px;
             overflow-y: auto;
-            background:
-                linear-gradient(135deg, #f8f9fa 0%, #ffffff 50%, #f1f3f4 100%),
-                radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.05) 0%, transparent 50%);
+            background: var(--surface);
             max-height: calc(100vh - 300px);
             /* 优化的网格布局 - 固定卡片尺寸，居中对齐 */
             display: grid;
@@ -235,51 +222,33 @@
             position: relative;
         }
 
-        .slides-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 50px,
-                    rgba(102, 126, 234, 0.02) 50px,
-                    rgba(102, 126, 234, 0.02) 100px
-                );
-            pointer-events: none;
-        }
-
         .welcome-message {
             text-align: center;
             padding: 60px 20px;
-            color: #6c757d;
+            color: var(--text-secondary);
             grid-column: 1 / -1; /* 占据整个网格宽度 */
+            border: 1px solid black; 
+            border-radius: 8px; 
         }
 
+
         .welcome-message i {
-            color: #007bff;
+            color: var(--surface-contrast);
             margin-bottom: 20px;
         }
 
         .welcome-message h4 {
-            color: #2c3e50;
+            color: var(--text-primary);
             margin-bottom: 15px;
             font-weight: 600;
         }
         
         .slide-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            background: var(--surface);
             border-radius: 16px;
-            box-shadow:
-                0 8px 32px rgba(0,0,0,0.08),
-                0 2px 8px rgba(0,0,0,0.04),
-                inset 0 1px 0 rgba(255,255,255,0.8);
+            box-shadow: var(--glass-shadow);
             overflow: hidden;
-            border: 2px solid transparent;
+            border: 1px solid var(--glass-border);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
@@ -291,56 +260,35 @@
             backdrop-filter: blur(10px);
         }
 
-        .slide-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            z-index: 1;
-        }
-
         .slide-card:hover {
             transform: translateY(-6px) scale(1.02);
-            box-shadow:
-                0 16px 48px rgba(0,0,0,0.12),
-                0 8px 24px rgba(102, 126, 234, 0.15),
-                inset 0 1px 0 rgba(255,255,255,0.9);
-            border-color: #667eea;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            border-color: var(--surface-contrast);
         }
 
-        .slide-card:hover::before {
-            opacity: 1;
-        }
-        
         .slide-card.generating {
-            border-color: #007bff;
+            border-color: var(--surface-contrast);
             animation: pulse 2s infinite;
         }
         
         .slide-card.completed {
-            border-color: #28a745;
+            border-color: var(--surface-contrast);
         }
         
         .slide-card.error {
-            border-color: #dc3545;
+            border-color: var(--border-color);
         }
 
         .slide-preview.error {
-            background: #f8f9fa;
+            background: var(--surface-subtle);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .slide-preview.error::before {
-            content: "⚠️ 内容加载失败";
-            color: #dc3545;
+            content: "内容加载失败";
+            color: var(--text-primary);
             font-size: 14px;
             font-weight: 500;
         }
@@ -357,8 +305,8 @@
         
         .slide-header {
             padding: 18px 26px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 50%, #f1f3f4 100%);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            background: var(--surface);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -369,26 +317,10 @@
             z-index: 2;
         }
 
-        .slide-header::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent 0%, #667eea 50%, transparent 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .slide-card:hover .slide-header::before {
-            opacity: 1;
-        }
-
         .slide-header h6 {
             margin: 0;
             font-weight: 700;
-            color: #2c3e50;
+            color: var(--text-primary);
             font-size: 15px;
             display: flex;
             align-items: center;
@@ -397,9 +329,8 @@
         }
 
         .slide-header h6 i {
-            color: #667eea;
+            color: var(--surface-contrast);
             font-size: 17px;
-            filter: drop-shadow(0 1px 2px rgba(102, 126, 234, 0.3));
         }
 
         .slide-actions {
@@ -409,19 +340,19 @@
         }
 
         .slide-actions .badge {
-            background: linear-gradient(135deg, #007bff, #0056b3) !important;
-            color: white;
+            background: var(--surface-subtle) !important;
+            color: var(--text-secondary);
             font-weight: 500;
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 11px;
             letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+            box-shadow: none;
         }
 
         .fullscreen-btn {
-            background: linear-gradient(135deg, #6c757d, #495057);
-            color: white;
+            background: var(--surface-contrast);
+            color: var(--surface);
             border: none;
             border-radius: 8px;
             padding: 8px 12px;
@@ -434,9 +365,8 @@
         }
 
         .fullscreen-btn:hover {
-            background: linear-gradient(135deg, #007bff, #0056b3);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,123,255,0.4);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .fullscreen-overlay {
@@ -471,8 +401,8 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: #dc3545;
-            color: white;
+            background: var(--surface-contrast);
+            color: var(--surface);
             border: none;
             border-radius: 50%;
             width: 40px;
@@ -487,27 +417,26 @@
         }
 
         .close-fullscreen:hover {
-            background: #c82333;
             transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
         
         .slide-preview {
             width: 100%;
             height: 225px; /* 400px * 9/16 = 225px，固定高度 */
             border: none;
-            background: white;
+            background: var(--surface);
             border-radius: 0 0 16px 16px;
             overflow: hidden;
             position: relative;
-            /* 平滑过渡效果 */
             transition: all 0.3s ease;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
         }
 
         .slide-preview:hover {
             box-shadow:
                 inset 0 1px 3px rgba(0,0,0,0.1),
-                0 4px 20px rgba(102, 126, 234, 0.15);
+                0 4px 20px rgba(0,0,0,0.12);
         }
 
         .slide-preview iframe {
@@ -527,7 +456,7 @@
 
         /* iframe加载状态 */
         .slide-preview.loading {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
             background-size: 200% 100%;
             animation: loading 1.5s infinite;
         }
@@ -542,14 +471,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f8f9fa;
-            color: #6c757d;
+            background: var(--surface-subtle);
+            color: var(--text-secondary);
             font-size: 18px;
         }
         
         .generation-status {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
+            background: var(--surface-subtle);
+            border-left: 4px solid var(--surface-contrast);
             padding: 15px;
             margin: 20px 0;
             border-radius: 0 5px 5px 0;
@@ -572,38 +501,28 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: none;
+            background: var(--surface-contrast);
+            color: var(--surface);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-        }
-
+        .btn-primary,
+        .btn-success,
+        .btn-info,
         .btn-danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
+            background: var(--surface-contrast);
+            color: var(--surface);
         }
 
         .btn-outline-light {
-            background: white;
-            color: #475569;
-            border: 2px solid #e2e8f0;
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
             padding: 10px 20px;
             border-radius: 10px;
             font-weight: 600;
@@ -613,15 +532,15 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: none;
         }
 
         .btn-outline-light:hover {
-            background: #f8fafc;
-            border-color: #667eea;
-            color: #667eea;
+            background: var(--surface-contrast);
+            border-color: var(--surface-contrast);
+            color: var(--surface);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
         }
 
         .btn-outline-light:active {
@@ -853,16 +772,16 @@
 
                 <div class="slides-container" id="slidesContainer">
                     <div class="welcome-message">
-                        <div style="position: relative; display: inline-block; margin-bottom: 35px;">
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%); border-radius: 50%; animation: pulseGlow 3s ease-in-out infinite;"></div>
-                            <i class="fas fa-rocket fa-4x" style="color: #667eea; filter: drop-shadow(0 6px 12px rgba(102, 126, 234, 0.4)); animation: rocketFloat 3s ease-in-out infinite; position: relative; z-index: 1;"></i>
+                        <div class="welcome-message-icon">
+                            <div class="welcome-message-orbit"></div>
+                            <i class="fas fa-rocket fa-4x"></i>
                         </div>
-                        <h4 style="color: #2c3e50; font-weight: 800; margin-bottom: 25px; font-size: 2.2em; background: linear-gradient(135deg, #2c3e50 0%, #667eea 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">准备创建精彩的演示文稿</h4>
-                        <p class="lead" style="color: #7f8c8d; font-size: 1.3em; line-height: 1.7; margin-bottom: 35px; font-weight: 500;">点击"开始生成"按钮，AI 将为您创建专业的 PPT 幻灯片</p>
-                        <div class="mt-4" style="display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;">
-                            <span class="feature-badge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; cursor: default;"><i class="fas fa-brain"></i> AI 驱动</span>
-                            <span class="feature-badge" style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700; box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4); display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; cursor: default;"><i class="fas fa-bolt"></i> 快速生成</span>
-                            <span class="feature-badge" style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: 700; box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4); display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; cursor: default;"><i class="fas fa-palette"></i> 精美设计</span>
+                        <h4 class="welcome-message-title">准备创建精彩的演示文稿</h4>
+                        <p class="welcome-message-subtitle">点击“开始生成”按钮，AI 将为您创建专业的 PPT 幻灯片</p>
+                        <div class="welcome-message-features">
+                            <span class="feature-badge"><i class="fas fa-brain"></i> AI 驱动</span>
+                            <span class="feature-badge"><i class="fas fa-bolt"></i> 快速生成</span>
+                            <span class="feature-badge"><i class="fas fa-palette"></i> 精准设计</span>
                         </div>
                     </div>
                 </div>
@@ -884,26 +803,88 @@
                     }
                 }
 
+                .welcome-message-icon {
+                    position: relative;
+                    display: inline-block;
+                    margin-bottom: 35px;
+                }
+
+                .welcome-message-orbit {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 120px;
+                    height: 120px;
+                    background: radial-gradient(circle, rgba(0,0,0,0.08) 0%, transparent 70%);
+                    border-radius: 50%;
+                    animation: pulseGlow 3s ease-in-out infinite;
+                }
+
+                .welcome-message-icon i {
+                    color: var(--surface-contrast);
+                    animation: rocketFloat 3s ease-in-out infinite;
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .welcome-message-title {
+                    color: var(--text-primary);
+                    font-weight: 800;
+                    margin-bottom: 25px;
+                    font-size: 2.2em;
+                    letter-spacing: -0.01em;
+                }
+
+                .welcome-message-subtitle {
+                    color: var(--text-secondary);
+                    font-size: 1.1em;
+                    line-height: 1.6;
+                    margin-bottom: 35px;
+                    font-weight: 500;
+                }
+
+                .welcome-message-features {
+                    display: flex;
+                    gap: 18px;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                }
+
+                .feature-badge {
+                    background: var(--surface-subtle);
+                    color: var(--text-primary);
+                    padding: 12px 24px;
+                    border-radius: 30px;
+                    font-weight: 700;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    transition: all 0.3s ease;
+                    cursor: default;
+                    border: 1px solid var(--border-color);
+                }
+
                 .feature-badge:hover {
-                    transform: translateY(-3px) scale(1.05);
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                    transform: translateY(-3px) scale(1.02);
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
                 }
 
                 /* 进度条美化 */
                 .progress {
                     height: 8px;
                     border-radius: 10px;
-                    background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 100%);
+                    background: var(--surface-subtle);
                     overflow: hidden;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
                 }
 
                 .progress-bar {
-                    background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+                    background: var(--surface-contrast);
                     background-size: 200% 100%;
                     animation: progressShine 2s ease-in-out infinite;
                     border-radius: 10px;
-                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                 }
 
                 @keyframes progressShine {
@@ -922,92 +903,6 @@
                     display: inline-flex;
                     align-items: center;
                     gap: 6px;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    transition: all 0.3s ease;
-                    border: 1px solid transparent;
-                }
-
-                .connection-status i {
-                    font-size: 8px;
-                    animation: pulse 2s infinite;
-                }
-
-                .connection-status.connecting {
-                    background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-                    color: #d63031;
-                    border-color: #fdcb6e;
-                }
-
-                .connection-status.connecting i {
-                    color: #fdcb6e;
-                    animation: pulse 1s infinite;
-                }
-
-                .connection-status.connected {
-                    background: linear-gradient(135deg, #d1f2eb, #a3e4d7);
-                    color: #00b894;
-                    border-color: #00b894;
-                }
-
-                .connection-status.connected i {
-                    color: #00b894;
-                    animation: none;
-                }
-
-                .connection-status.reconnecting {
-                    background: linear-gradient(135deg, #fab1a0, #e17055);
-                    color: #d63031;
-                    border-color: #e17055;
-                }
-
-                .connection-status.reconnecting i {
-                    color: #e17055;
-                    animation: spin 1s linear infinite;
-                }
-
-                .connection-status.error,
-                .connection-status.failed {
-                    background: linear-gradient(135deg, #fab1a0, #e17055);
-                    color: #d63031;
-                    border-color: #d63031;
-                }
-
-                .connection-status.error i,
-                .connection-status.failed i {
-                    color: #d63031;
-                    animation: none;
-                }
-
-                .connection-status.disconnected {
-                    background: linear-gradient(135deg, #ddd, #bbb);
-                    color: #636e72;
-                    border-color: #636e72;
-                }
-
-                .connection-status.disconnected i {
-                    color: #636e72;
-                    animation: none;
-                }
-
-                .connection-status.completed,
-                .connection-status.stopped {
-                    background: linear-gradient(135deg, #a8e6cf, #7fcdcd);
-                    color: #00b894;
-                    border-color: #00b894;
-                }
-
-                .connection-status.completed i,
-                .connection-status.stopped i {
-                    color: #00b894;
-                    animation: none;
-                }
-
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
                 }
 
                 @keyframes pulse {
@@ -1489,11 +1384,17 @@
             statusDiv.className = 'generation-status';
             
             if (type === 'error') {
-                statusDiv.style.borderLeftColor = '#dc3545';
-                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.borderLeftColor = 'var(--surface-contrast)';
+                statusDiv.style.background = 'var(--surface-subtle)';
+                statusMessage.style.color = 'var(--text-primary)';
             } else if (type === 'complete') {
-                statusDiv.style.borderLeftColor = '#28a745';
-                statusDiv.style.background = '#d4edda';
+                statusDiv.style.borderLeftColor = 'var(--surface-contrast)';
+                statusDiv.style.background = 'var(--surface)';
+                statusMessage.style.color = 'var(--text-primary)';
+            } else {
+                statusDiv.style.borderLeftColor = 'var(--surface-contrast)';
+                statusDiv.style.background = 'var(--surface-subtle)';
+                statusMessage.style.color = 'var(--text-secondary)';
             }
         }
 

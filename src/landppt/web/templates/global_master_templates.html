@@ -26,8 +26,8 @@
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(circle at 25% 25%, rgba(240, 147, 251, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 75% 75%, rgba(79, 172, 254, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 25% 25%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(0, 0, 0, 0.04) 0%, transparent 50%);
     animation: templatesFloat 20s ease-in-out infinite;
 }
 
@@ -40,10 +40,7 @@
     font-size: 1.8rem;
     font-weight: 700;
     margin-bottom: var(--spacing-sm);
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--ink-strong);
     position: relative;
     z-index: 1;
     letter-spacing: -0.02em;
@@ -96,8 +93,8 @@ textarea, select {
 
 .glass-input:focus, input[type="text"]:focus, input[type="email"]:focus,
 input[type="password"]:focus, textarea:focus, select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0f172a;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
     background: #ffffff;
 }
 
@@ -120,7 +117,7 @@ input[type="checkbox"] {
     width: 18px;
     height: 18px;
     margin-right: 8px;
-    accent-color: #667eea;
+    accent-color: #0f172a;
     cursor: pointer;
 }
 
@@ -206,20 +203,20 @@ select {
         <div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <h2 style="color: var(--text-primary); margin: 0; font-size: 1.3rem; font-weight: 600;">模板管理</h2>
-                <a href="https://landppt-template.52yyds.top" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.3s ease;">模板广场</a>
+                <a href="https://landppt-template.52yyds.top" target="_blank" style="color: var(--text-primary); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.3s ease;">模板广场</a>
             </div>
             <p style="color: var(--text-secondary); margin: 4px 0 0 0; font-size: 0.95rem;">创建、编辑和管理您的PPT模板</p>
         </div>
         <div class="templates-actions">
             <button id="createTemplateBtn" class="btn btn-primary">
-                ➕ 新建模板
+                新建模板
             </button>
             <button id="generateWithAIBtn" class="btn btn-success">
-                🤖 AI生成模板
+                AI生成模板
             </button>
             <input type="file" id="importTemplateInput" accept=".html,.json" style="display: none;">
-            <button id="importTemplateBtn" class="btn btn-secondary" onclick="document.getElementById('importTemplateInput').click()">
-                📥 导入模板
+            <button id="importTemplateBtn" class="btn btn-secondary">
+                导入模板
             </button>
         </div>
     </div>
@@ -315,9 +312,9 @@ select {
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                    <button type="button" id="previewTemplateBtn" class="btn btn-secondary">👁️ 预览</button>
+                    <button type="button" id="previewTemplateBtn" class="btn btn-secondary"><i class="fas fa-eye"></i> 预览</button>
                     <button type="button" id="cancelBtn" class="btn btn-secondary">取消</button>
-                    <button type="submit" class="btn btn-primary">💾 保存</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存</button>
                 </div>
             </form>
         </div>
@@ -363,15 +360,15 @@ select {
                             <div class="generation-mode-selector">
                                 <div class="mode-option">
                                     <input type="radio" id="mode_text_only" name="generation_mode" value="text_only" checked>
-                                    <label for="mode_text_only">📝 纯文本生成</label>
+                                    <label for="mode_text_only">纯文本生成</label>
                                 </div>
                                 <div class="mode-option">
                                     <input type="radio" id="mode_reference_style" name="generation_mode" value="reference_style">
-                                    <label for="mode_reference_style">🎨 参考风格 (借鉴图片设计元素)</label>
+                                    <label for="mode_reference_style">参考风格 (借鉴图片设计元素)</label>
                                 </div>
                                 <div class="mode-option">
                                     <input type="radio" id="mode_exact_replica" name="generation_mode" value="exact_replica">
-                                    <label for="mode_exact_replica">🔄 1:1还原 (尽可能准确复制图片设计)</label>
+                                    <label for="mode_exact_replica">1:1还原 (尽可能准确复制图片设计)</label>
                                 </div>
                             </div>
 
@@ -379,7 +376,7 @@ select {
                             <div id="imageUploadArea" class="image-upload-area" style="display: none;">
                                 <div class="upload-dropzone" id="uploadDropzone">
                                     <div class="upload-content">
-                                        <div class="upload-icon">📷</div>
+                                        <div class="upload-icon"><i class="fas fa-image"></i></div>
                                         <div class="upload-text">
                                             <p><strong>拖拽图片到此处</strong> 或 <button type="button" class="upload-btn" id="selectImageBtn">选择文件</button></p>
                                             <p class="upload-hint">支持 JPG、PNG、WebP 格式，最大 10MB</p>
@@ -391,7 +388,7 @@ select {
                                 <!-- 图片预览区域 -->
                                 <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
                                     <div class="image-preview-header">
-                                        <h4>📷 上传的参考图片</h4>
+                                        <h4><i class="fas fa-image"></i> 上传的参考图片</h4>
                                         <button type="button" class="remove-image-btn" id="removeImageBtn" title="移除图片">✕</button>
                                     </div>
                                     <div class="image-preview-content">
@@ -408,7 +405,7 @@ select {
 
                     <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                         <button type="button" id="cancelAIBtn" class="btn btn-secondary">取消</button>
-                        <button type="submit" class="btn btn-success">🤖 生成</button>
+                        <button type="submit" class="btn btn-success">生成</button>
                     </div>
                 </form>
             </div>
@@ -416,7 +413,7 @@ select {
             <!-- AI生成进度区域 -->
             <div id="aiGenerationProgress" style="display: none;">
                 <div class="ai-generation-header">
-                    <h3 style="margin: 0; color: var(--text-primary); font-size: 1.3rem;">🤖 AI正在生成您的模板...</h3>
+                    <h3 style="margin: 0; color: var(--text-primary); font-size: 1.3rem;">AI正在生成您的模板...</h3>
                     <div class="generation-status">
                         <div class="status-indicator">
                             <div class="status-dot"></div>
@@ -430,21 +427,21 @@ select {
                 </div>
 
                 <div class="generation-actions" style="margin-top: 20px; text-align: center;">
-                    <button type="button" id="cancelGenerationBtn" class="btn btn-secondary">⏹️ 取消生成</button>
+                    <button type="button" id="cancelGenerationBtn" class="btn btn-secondary">取消生成</button>
                 </div>
             </div>
 
             <!-- 生成完成区域 -->
             <div id="aiGenerationComplete" style="display: none;">
                 <div class="completion-header">
-                    <h3 style="margin: 0; color: #28a745; font-size: 1.2rem;">✅ 模板生成完成！</h3>
+                    <h3 style="margin: 0; color: #28a745; font-size: 1.2rem;">模板生成完成！</h3>
                 </div>
 
                 <!-- 模板预览区域 -->
                 <div class="template-preview-section" style="margin: 20px 0;">
                     <div class="preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h4 style="margin: 0; color: #333;">模板预览</h4>
-                        <button type="button" id="fullPreviewBtn" class="btn btn-sm btn-outline-primary">🔍 全屏预览</button>
+                        <button type="button" id="fullPreviewBtn" class="btn btn-sm btn-outline-primary">全屏预览</button>
                     </div>
                     <div id="generatedTemplatePreview" style="border: 1px solid #ddd; border-radius: 8px; height: 300px; overflow: hidden; background: #f8f9fa;">
                         <iframe id="generatedTemplateIframe" style="width: 100%; height: 100%; border: none; transform: scale(0.5); transform-origin: 0 0; width: 200%; height: 200%;"></iframe>
@@ -455,7 +452,7 @@ select {
                 <div class="llm-response-section" style="margin: 20px 0;">
                     <div class="response-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h4 style="margin: 0; color: #333;">AI思考过程</h4>
-                        <button type="button" id="toggleLLMResponseBtn" class="btn btn-sm btn-outline-info">📋 查看完整响应</button>
+                        <button type="button" id="toggleLLMResponseBtn" class="btn btn-sm btn-outline-info"><i class="fas fa-file-alt"></i> 查看完整响应</button>
                     </div>
                     <div id="llmResponseContainer" style="display: none;">
                         <div class="response-content" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; max-height: 400px; overflow-y: auto;">
@@ -464,7 +461,7 @@ select {
                                     <span style="color: #495057; font-weight: 600;">原始响应</span>
                                 </div>
                                 <div>
-                                    <button type="button" id="copyResponseBtn" class="btn btn-sm btn-outline-secondary" title="复制响应内容">📋 复制</button>
+                                    <button type="button" id="copyResponseBtn" class="btn btn-sm btn-outline-secondary" title="复制响应内容"><i class="fas fa-copy"></i> 复制</button>
                                 </div>
                             </div>
                             <div id="rawResponse" class="response-tab-content">
@@ -479,7 +476,7 @@ select {
                     <h4 style="margin: 0 0 10px 0; color: #333;">继续调整模板</h4>
                     <div class="adjustment-input-group" style="display: flex; gap: 10px;">
                         <input type="text" id="adjustmentInput" class="form-control" placeholder="请描述您希望如何调整模板，例如：改变颜色、调整布局、修改字体等..." style="flex: 1;">
-                        <button type="button" id="adjustTemplateBtn" class="btn btn-primary">🔄 调整</button>
+                        <button type="button" id="adjustTemplateBtn" class="btn btn-primary">调整</button>
                     </div>
                     <div id="adjustmentProgress" style="display: none; margin-top: 10px;">
                         <div class="progress" style="height: 4px;">
@@ -490,8 +487,8 @@ select {
                 </div>
 
                 <div class="completion-actions" style="margin-top: 20px; text-align: center; display: flex; gap: 10px; justify-content: center;">
-                    <button type="button" id="saveGeneratedTemplateBtn" class="btn btn-success">💾 保存模板</button>
-                    <button type="button" id="regenerateTemplateBtn" class="btn btn-warning">🔄 重新生成</button>
+                    <button type="button" id="saveGeneratedTemplateBtn" class="btn btn-success"><i class="fas fa-save"></i> 保存模板</button>
+                    <button type="button" id="regenerateTemplateBtn" class="btn btn-secondary">重新生成</button>
                     <button type="button" id="closeCompletionBtn" class="btn btn-secondary">关闭</button>
                 </div>
             </div>
@@ -539,8 +536,8 @@ select {
     display: inline-block;
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(102, 126, 234, 0.2);
-    border-top: 4px solid #667eea;
+    border: 4px solid rgba(0, 0, 0, 0.08);
+    border-top: 4px solid #0f172a;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
@@ -681,7 +678,7 @@ select {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #0f172a, #1f2937);
     transform: scaleX(0);
     transition: transform 0.3s ease;
 }
@@ -772,15 +769,15 @@ select {
 /* 现代化标签和徽章样式 */
 .tag {
     display: inline-block;
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
+    background: rgba(0, 0, 0, 0.06);
+    color: #0f172a;
     padding: 4px 12px;
     border-radius: var(--border-radius-sm);
     font-size: 0.75rem;
     font-weight: 500;
     margin-right: 6px;
     margin-bottom: 6px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
 }
@@ -946,7 +943,7 @@ select {
 .status-dot {
     width: 10px;
     height: 10px;
-    background: #667eea;
+    background: #0f172a;
     border-radius: 50%;
     animation: statusPulse 2s ease-in-out infinite;
 }
@@ -999,7 +996,7 @@ select {
     display: inline-block;
     width: 2px;
     height: 1.2em;
-    background: #667eea;
+    background: #0f172a;
     animation: blink 1s infinite;
     margin-left: 2px;
 }
@@ -1063,7 +1060,7 @@ select {
 }
 
 .mode-option input[type="radio"]:checked + label {
-    color: #667eea;
+    color: #0f172a;
     font-weight: 600;
 }
 
@@ -1083,8 +1080,8 @@ select {
 
 .upload-dropzone:hover,
 .upload-dropzone.dragover {
-    border-color: #667eea;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #0f172a;
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .upload-content {
@@ -1112,7 +1109,7 @@ select {
 .upload-btn {
     background: none;
     border: none;
-    color: #667eea;
+    color: #0f172a;
     text-decoration: underline;
     cursor: pointer;
     font-size: inherit;
@@ -1464,13 +1461,13 @@ select {
 
 .page-number:hover {
     background: #f8f9fa;
-    border-color: #667eea;
+    border-color: #0f172a;
 }
 
 .page-number.active {
-    background: #667eea;
+    background: #0f172a;
     color: white;
-    border-color: #667eea;
+    border-color: #0f172a;
 }
 
 .page-number.disabled {
@@ -1521,732 +1518,9 @@ select {
 }
 </style>
 
-<script>
-// Global variables
-let templates = [];
-let editingTemplateId = null;
-let currentPage = 1;
-let pageSize = 6; // 默认每页显示6个，更容易看到分页效果
-let totalPages = 1;
-let totalCount = 0;
-let currentSearch = '';
-let currentTag = '';
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    loadTemplates(1);
-    setupEventListeners();
-});
+<script type="module" src="/static/js/pages/globalMasterTemplates.js"></script>
 
-function setupEventListeners() {
-    // Modal controls
-    document.getElementById('createTemplateBtn').addEventListener('click', () => openTemplateModal());
-    document.getElementById('generateWithAIBtn').addEventListener('click', () => openAIGenerationModal());
-    document.getElementById('closeModal').addEventListener('click', () => closeTemplateModal());
-    document.getElementById('closeAIModal').addEventListener('click', () => closeAIGenerationModal());
-    document.getElementById('closePreviewModal').addEventListener('click', () => closePreviewModal());
-    document.getElementById('cancelBtn').addEventListener('click', () => closeTemplateModal());
-    document.getElementById('cancelAIBtn').addEventListener('click', () => closeAIGenerationModal());
 
-    // AI生成相关按钮
-    document.getElementById('cancelGenerationBtn').addEventListener('click', () => {
-        // 取消生成并返回表单
-        document.getElementById('aiGenerationProgress').style.display = 'none';
-        document.getElementById('aiFormContainer').style.display = 'block';
-    });
 
-    document.getElementById('closeCompletionBtn').addEventListener('click', () => {
-        closeAIGenerationModal();
-        loadTemplates(1); // 刷新模板列表，回到第一页
-    });
-
-    // 新的模板预览和保存相关按钮
-    document.getElementById('saveGeneratedTemplateBtn').addEventListener('click', saveGeneratedTemplate);
-    document.getElementById('adjustTemplateBtn').addEventListener('click', adjustTemplate);
-    document.getElementById('regenerateTemplateBtn').addEventListener('click', () => {
-        // 重新生成模板 - 返回到表单
-        document.getElementById('aiGenerationComplete').style.display = 'none';
-        document.getElementById('aiFormContainer').style.display = 'block';
-
-        // 清理临时数据
-        if (window.generatedTemplateData) {
-            delete window.generatedTemplateData;
-        }
-    });
-
-    document.getElementById('fullPreviewBtn').addEventListener('click', () => {
-        if (window.generatedTemplateData && window.generatedTemplateData.html_template) {
-            showPreview(window.generatedTemplateData.html_template);
-        } else {
-            alert('没有可预览的模板');
-        }
-    });
-
-    // 调整输入框的回车键支持
-    document.getElementById('adjustmentInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            adjustTemplate();
-        }
-    });
-
-    // LLM响应查看功能
-    document.getElementById('toggleLLMResponseBtn').addEventListener('click', toggleLLMResponse);
-
-    // 响应标签切换功能已移除，只保留原始响应
-
-    // 复制响应内容
-    document.getElementById('copyResponseBtn').addEventListener('click', copyLLMResponse);
-
-    // Form submissions
-    document.getElementById('templateForm').addEventListener('submit', handleTemplateSubmit);
-    document.getElementById('aiGenerationForm').addEventListener('submit', handleAIGeneration);
-
-    // Preview button
-    document.getElementById('previewTemplateBtn').addEventListener('click', previewTemplate);
-
-    // Import functionality
-    document.getElementById('importTemplateInput').addEventListener('change', handleTemplateImport);
-
-    // Filters
-    document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 500));
-    document.getElementById('tagFilter').addEventListener('change', handleTagFilter);
-    document.getElementById('refreshBtn').addEventListener('click', () => loadTemplates(1));
-
-    // Pagination
-    document.getElementById('prevPageBtn').addEventListener('click', () => loadTemplates(currentPage - 1));
-    document.getElementById('nextPageBtn').addEventListener('click', () => loadTemplates(currentPage + 1));
-    document.getElementById('pageSizeSelect').addEventListener('change', handlePageSizeChange);
-
-    // Close modals when clicking outside
-    window.addEventListener('click', function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = 'none';
-        }
-    });
-
-    // 初始化图片上传功能
-    initImageUpload();
-}
-
-async function loadTemplates(page = 1) {
-    showLoading(true);
-    try {
-        // Build query parameters
-        const params = new URLSearchParams({
-            active_only: 'true',
-            page: page.toString(),
-            page_size: pageSize.toString()
-        });
-
-        if (currentSearch) {
-            params.append('search', currentSearch);
-        }
-
-        if (currentTag) {
-            params.append('tags', currentTag);
-        }
-
-        const response = await fetch(`/api/global-master-templates/?${params}`);
-
-        if (!response.ok) {
-            throw new Error('Failed to load templates');
-        }
-
-        const data = await response.json();
-        templates = data.templates;
-
-        // Update pagination info
-        currentPage = data.pagination.current_page;
-        totalPages = data.pagination.total_pages;
-        totalCount = data.pagination.total_count;
-
-
-
-        renderTemplates(templates);
-        updatePagination();
-        updateTagFilter();
-    } catch (error) {
-        console.error('Error loading templates:', error);
-        alert('加载模板失败: ' + error.message);
-    } finally {
-        showLoading(false);
-    }
-}
-
-function renderTemplates(templatesToRender) {
-    const grid = document.getElementById('templatesGrid');
-
-    if (templatesToRender.length === 0) {
-        grid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
-                <h3>暂无模板</h3>
-                <p>点击"新建模板"或"AI生成模板"来创建第一个模板</p>
-            </div>
-        `;
-        return;
-    }
-    
-    grid.innerHTML = templatesToRender.map((template, index) => `
-        <div class="template-card" data-template-id="${template.id}">
-            <div class="template-preview" id="preview-${template.id}">
-                <iframe
-                    class="template-preview-iframe"
-                    id="iframe-${template.id}"
-                    onload="adjustIframeContent(${template.id})"
-                ></iframe>
-                <div class="preview-overlay" onclick="previewTemplateById(${template.id})" title="点击查看完整预览">
-                    <div class="preview-overlay-text"><i class="fas fa-search-plus"></i> 点击放大预览</div>
-                </div>
-            </div>
-            <div class="template-info">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <h4 style="margin: 0; color: #2c3e50; font-size: 16px;">${template.template_name}</h4>
-                    ${template.is_default ? '<span class="default-badge">默认</span>' : ''}
-                </div>
-                <p style="margin: 0 0 8px 0; color: #666; font-size: 14px; line-height: 1.4;">${template.description || '暂无描述'}</p>
-                <div style="margin-bottom: 8px;">
-                    ${template.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                </div>
-                <div style="font-size: 12px; color: #999;">
-                    使用次数: ${template.usage_count} | 创建者: ${template.created_by}
-                </div>
-            </div>
-            <div class="template-actions">
-                <button class="btn btn-sm btn-primary" onclick="editTemplate(${template.id})">✏️ 编辑</button>
-                <button class="btn btn-sm btn-warning" onclick="duplicateTemplate(${template.id})">📋 复制</button>
-                <button class="btn btn-sm" style="background: #17a2b8; color: white;" onclick="exportTemplate(${template.id})">� 导出</button>
-                ${!template.is_default ?
-                    `<button class="btn btn-sm btn-success" onclick="setDefaultTemplate(${template.id})">⭐ 设为默认</button>` :
-                    ''
-                }
-                ${!template.is_default ?
-                    `<button class="btn btn-sm btn-danger" onclick="deleteTemplate(${template.id})">🗑️ 删除</button>` :
-                    ''
-                }
-            </div>
-        </div>
-    `).join('');
-
-    // Load template content into iframes after rendering
-    setTimeout(() => {
-        console.log('Starting to load template previews for', templatesToRender.length, 'templates');
-        templatesToRender.forEach(template => {
-            console.log('Loading preview for template:', template.id, template.template_name);
-            loadTemplatePreview(template.id);
-        });
-    }, 500);
-}
-
-async function loadTemplatePreview(templateId) {
-    try {
-        console.log('Loading preview for template', templateId);
-        const response = await fetch('/api/global-master-templates/' + templateId);
-        if (!response.ok) {
-            console.warn('Failed to load template', templateId, 'for preview');
-            showPreviewFallback(templateId);
-            return;
-        }
-
-        const template = await response.json();
-        const iframe = document.getElementById('iframe-' + templateId);
-
-        console.log('Template', templateId, 'loaded:', template.template_name);
-
-        if (iframe && template.html_template && template.html_template.trim()) {
-            console.log('Setting up iframe for template', templateId);
-
-            // 使用实际的模板HTML内容，但添加一些示例数据
-            let previewHtml = template.html_template;
-
-            // 替换模板变量为示例内容
-            previewHtml = previewHtml.replace(/\{\{\s*title\s*\}\}/g, template.template_name);
-            previewHtml = previewHtml.replace(/\{\{\s*content\s*\}\}/g, '这是模板预览内容');
-            previewHtml = previewHtml.replace(/\{\{\s*slide_number\s*\}\}/g, '1');
-            previewHtml = previewHtml.replace(/\{\{\s*total_slides\s*\}\}/g, '1');
-
-            // 确保HTML有基本结构
-            if (!previewHtml.includes('<!DOCTYPE') && !previewHtml.includes('<html')) {
-                previewHtml = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { width: 1280px; height: 720px; margin: 0; padding: 0; overflow: hidden; }
-    </style>
-</head>
-<body>
-    ${previewHtml}
-</body>
-</html>`;
-            }
-
-            // Create a blob URL for the HTML content
-            const blob = new Blob([previewHtml], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-
-            // Set up load handlers
-            iframe.onload = function() {
-                console.log('Iframe loaded successfully for template', templateId);
-                setTimeout(function() {
-                    URL.revokeObjectURL(url);
-                }, 2000);
-            };
-
-            iframe.onerror = function() {
-                console.warn('Iframe failed to load for template', templateId);
-                showPreviewFallback(templateId);
-                URL.revokeObjectURL(url);
-            };
-
-            // Set the src to trigger loading
-            iframe.src = url;
-
-        } else {
-            console.warn('No HTML template content for template', templateId);
-            showPreviewFallback(templateId);
-        }
-    } catch (error) {
-        console.error('Error loading preview for template', templateId, ':', error);
-        showPreviewFallback(templateId);
-    }
-}
-
-function showPreviewFallback(templateId) {
-    const previewContainer = document.getElementById(`preview-${templateId}`);
-    if (previewContainer) {
-        previewContainer.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999; font-size: 14px; flex-direction: column;">
-                <div style="font-size: 24px; margin-bottom: 8px;">📄</div>
-                <div>暂无预览</div>
-            </div>
-        `;
-    }
-}
-
-function adjustIframeContent(templateId) {
-    // This function can be used to adjust iframe content after loading if needed
-    // Currently just a placeholder for future enhancements
-}
-
-// 导出模板功能 - 在HTML中定义以便onclick可以访问
-async function exportTemplate(templateId) {
-    try {
-        const response = await fetch(`/api/global-master-templates/${templateId}`);
-        if (!response.ok) {
-            throw new Error('Failed to load template');
-        }
-
-        const template = await response.json();
-
-        // 准备导出数据
-        const exportData = {
-            template_name: template.template_name,
-            description: template.description,
-            html_template: template.html_template,
-            tags: template.tags,
-            is_default: false, // 导出时不保留默认状态
-            export_info: {
-                exported_at: new Date().toISOString(),
-                original_id: template.id,
-                original_created_at: template.created_at
-            }
-        };
-
-        // 创建下载链接
-        const dataStr = JSON.stringify(exportData, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(dataBlob);
-        link.download = `${template.template_name}_${new Date().toISOString().split('T')[0]}.json`;
-
-        // 触发下载
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // 清理URL
-        setTimeout(() => {
-            URL.revokeObjectURL(link.href);
-        }, 1000);
-
-        console.log('模板导出成功:', template.template_name);
-
-    } catch (error) {
-        console.error('Error exporting template:', error);
-        alert('导出模板失败: ' + error.message);
-    }
-}
-
-// 其他需要在HTML中定义的函数，以便onclick可以访问
-function editTemplate(templateId) {
-    openTemplateModal(templateId);
-}
-
-// AI生成模态框相关函数
-function openAIGenerationModal() {
-    const modal = document.getElementById('aiGenerationModal');
-    modal.style.display = 'block';
-
-    // 重置表单
-    document.getElementById('aiGenerationForm').reset();
-    document.getElementById('aiFormContainer').style.display = 'block';
-    document.getElementById('aiGenerationProgress').style.display = 'none';
-    document.getElementById('aiGenerationComplete').style.display = 'none';
-
-    // 清除上传的图片
-    if (typeof clearUploadedImage === 'function') {
-        clearUploadedImage();
-    }
-
-    // 重新初始化图片上传功能
-    setTimeout(() => {
-        if (typeof initImageUpload === 'function') {
-            initImageUpload();
-        }
-
-        // 确保初始状态正确
-        const imageUploadArea = document.getElementById('imageUploadArea');
-        const textOnlyRadio = document.querySelector('input[name="generation_mode"][value="text_only"]');
-        if (imageUploadArea && textOnlyRadio && textOnlyRadio.checked) {
-            imageUploadArea.style.display = 'none';
-        }
-    }, 200);
-}
-
-function closeAIGenerationModal() {
-    const modal = document.getElementById('aiGenerationModal');
-    modal.style.display = 'none';
-
-    // 清理数据
-    clearUploadedImage();
-    if (window.generatedTemplateData) {
-        delete window.generatedTemplateData;
-    }
-}
-
-// LLM响应查看功能
-function toggleLLMResponse() {
-    const container = document.getElementById('llmResponseContainer');
-    const btn = document.getElementById('toggleLLMResponseBtn');
-
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        btn.textContent = '📋 隐藏响应';
-        btn.classList.remove('btn-outline-info');
-        btn.classList.add('btn-info');
-    } else {
-        container.style.display = 'none';
-        btn.textContent = '📋 查看完整响应';
-        btn.classList.remove('btn-info');
-        btn.classList.add('btn-outline-info');
-    }
-}
-
-// 标签切换功能已移除，只保留原始响应显示
-
-function copyLLMResponse() {
-    // 复制原始响应
-    const rawCode = document.getElementById('rawResponseCode');
-    const textToCopy = rawCode ? rawCode.textContent : '';
-
-    if (textToCopy && textToCopy !== '暂无AI响应数据（模板已保存）') {
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            // 临时改变按钮文本以显示成功
-            const btn = document.getElementById('copyResponseBtn');
-            const originalText = btn.textContent;
-            btn.textContent = '✅ 已复制';
-            btn.classList.remove('btn-outline-secondary');
-            btn.classList.add('btn-success');
-
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-outline-secondary');
-            }, 2000);
-        }).catch(err => {
-            console.error('复制失败:', err);
-            alert('复制失败，请手动选择文本复制');
-        });
-    } else {
-        alert('暂无可复制的响应内容');
-    }
-}
-
-// LLM响应处理函数已移至global_master_templates.js文件中
-
-async function duplicateTemplate(templateId) {
-    const newName = prompt('请输入新模板的名称:');
-    if (!newName || !newName.trim()) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/global-master-templates/${templateId}/duplicate?new_name=${encodeURIComponent(newName.trim())}`, {
-            method: 'POST'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to duplicate template');
-        }
-
-        loadTemplates(currentPage);
-        alert('模板复制成功！');
-    } catch (error) {
-        console.error('Error duplicating template:', error);
-        alert('复制模板失败: ' + error.message);
-    }
-}
-
-async function setDefaultTemplate(templateId) {
-    if (!confirm('确定要将此模板设为默认模板吗？')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/global-master-templates/${templateId}/set-default`, {
-            method: 'POST'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to set default template');
-        }
-
-        loadTemplates(currentPage);
-        alert('默认模板设置成功！');
-    } catch (error) {
-        console.error('Error setting default template:', error);
-        alert('设置默认模板失败: ' + error.message);
-    }
-}
-
-async function deleteTemplate(templateId) {
-    if (!confirm('确定要删除此模板吗？此操作不可恢复。')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/global-master-templates/${templateId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to delete template');
-        }
-
-        // 如果删除后当前页没有数据且不是第一页，则回到上一页
-        const shouldGoToPrevPage = templates.length === 1 && currentPage > 1;
-        loadTemplates(shouldGoToPrevPage ? currentPage - 1 : currentPage);
-        alert('模板删除成功！');
-    } catch (error) {
-        console.error('Error deleting template:', error);
-        alert('删除模板失败: ' + error.message);
-    }
-}
-
-async function previewTemplateById(templateId) {
-    try {
-        const response = await fetch(`/api/global-master-templates/${templateId}/preview`);
-        if (!response.ok) {
-            throw new Error('Failed to load template preview');
-        }
-
-        const data = await response.json();
-        showPreview(data.html_template);
-    } catch (error) {
-        console.error('Error loading template preview:', error);
-        alert('加载预览失败: ' + error.message);
-    }
-}
-
-function showPreview(htmlContent) {
-    const modal = document.getElementById('previewModal');
-    const frame = document.getElementById('previewFrame');
-
-    // Create blob URL for the HTML content
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-
-    frame.src = url;
-    modal.style.display = 'flex';
-
-    // Clean up the blob URL after a delay
-    setTimeout(() => {
-        URL.revokeObjectURL(url);
-    }, 1000);
-}
-
-// Pagination functions
-function updatePagination() {
-    const paginationContainer = document.getElementById('paginationContainer');
-    const paginationInfo = document.getElementById('paginationInfo');
-    const prevBtn = document.getElementById('prevPageBtn');
-    const nextBtn = document.getElementById('nextPageBtn');
-    const pageNumbers = document.getElementById('pageNumbers');
-    // Always show pagination if there are templates
-    if (totalCount > 0) {
-        paginationContainer.style.display = 'block';
-    } else {
-        paginationContainer.style.display = 'none';
-        return;
-    }
-
-    // Update info
-    const startItem = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-    const endItem = Math.min(currentPage * pageSize, totalCount);
-    paginationInfo.textContent = `显示第 ${startItem}-${endItem} 项，共 ${totalCount} 项`;
-
-    // Update buttons
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
-
-    // Generate page numbers (only if more than 1 page)
-    if (totalPages > 1) {
-        generatePageNumbers(pageNumbers);
-        pageNumbers.style.display = 'flex';
-    } else {
-        pageNumbers.style.display = 'none';
-    }
-}
-
-function generatePageNumbers(container) {
-    container.innerHTML = '';
-
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    // Adjust start page if we're near the end
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    // Add first page and ellipsis if needed
-    if (startPage > 1) {
-        addPageNumber(container, 1);
-        if (startPage > 2) {
-            addEllipsis(container);
-        }
-    }
-
-    // Add visible page numbers
-    for (let i = startPage; i <= endPage; i++) {
-        addPageNumber(container, i);
-    }
-
-    // Add ellipsis and last page if needed
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            addEllipsis(container);
-        }
-        addPageNumber(container, totalPages);
-    }
-}
-
-function addPageNumber(container, pageNum) {
-    const pageBtn = document.createElement('button');
-    pageBtn.className = `page-number ${pageNum === currentPage ? 'active' : ''}`;
-    pageBtn.textContent = pageNum;
-    pageBtn.onclick = () => loadTemplates(pageNum);
-    container.appendChild(pageBtn);
-}
-
-function addEllipsis(container) {
-    const ellipsis = document.createElement('span');
-    ellipsis.className = 'page-number disabled';
-    ellipsis.textContent = '...';
-    container.appendChild(ellipsis);
-}
-
-function handleSearch() {
-    currentSearch = document.getElementById('searchInput').value.trim();
-    loadTemplates(1); // Reset to first page when searching
-}
-
-function handleTagFilter() {
-    currentTag = document.getElementById('tagFilter').value;
-    loadTemplates(1); // Reset to first page when filtering
-}
-
-function handlePageSizeChange() {
-    pageSize = parseInt(document.getElementById('pageSizeSelect').value);
-    loadTemplates(1); // Reset to first page when changing page size
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// 简单的代码高亮函数
-function highlightCode() {
-    const codeBlocks = document.querySelectorAll('pre code');
-    codeBlocks.forEach(block => {
-        const language = block.className.replace('language-', '');
-        if (language === 'html' || language === 'xml') {
-            highlightHTML(block);
-        } else if (language === 'css') {
-            highlightCSS(block);
-        } else if (language === 'javascript' || language === 'js') {
-            highlightJS(block);
-        }
-    });
-}
-
-function highlightHTML(block) {
-    let html = block.textContent;
-    // HTML标签
-    html = html.replace(/(&lt;\/?)([a-zA-Z][a-zA-Z0-9]*)(.*?)(&gt;)/g,
-        '$1<span style="color: #e06c75;">$2</span>$3$4');
-    // 属性名
-    html = html.replace(/(\s)([a-zA-Z-]+)(=)/g,
-        '$1<span style="color: #d19a66;">$2</span>$3');
-    // 属性值
-    html = html.replace(/(=)(".*?")/g,
-        '$1<span style="color: #98c379;">$2</span>');
-    block.innerHTML = html;
-}
-
-function highlightCSS(block) {
-    let css = block.textContent;
-    // 选择器
-    css = css.replace(/^([^{]+)(\{)/gm,
-        '<span style="color: #e06c75;">$1</span>$2');
-    // 属性名
-    css = css.replace(/(\s+)([a-zA-Z-]+)(:)/g,
-        '$1<span style="color: #d19a66;">$2</span>$3');
-    // 属性值
-    css = css.replace(/(:)([^;]+)(;)/g,
-        '$1<span style="color: #98c379;">$2</span>$3');
-    block.innerHTML = css;
-}
-
-function highlightJS(block) {
-    let js = block.textContent;
-    // 关键字
-    const keywords = ['function', 'var', 'let', 'const', 'if', 'else', 'for', 'while', 'return', 'class', 'extends'];
-    keywords.forEach(keyword => {
-        const regex = new RegExp(`\\b(${keyword})\\b`, 'g');
-        js = js.replace(regex, '<span style="color: #c678dd;">$1</span>');
-    });
-    // 字符串
-    js = js.replace(/('.*?'|".*?")/g, '<span style="color: #98c379;">$1</span>');
-    // 注释
-    js = js.replace(/(\/\/.*$)/gm, '<span style="color: #5c6370;">$1</span>');
-    block.innerHTML = js;
-}
-</script>
-
-<script src="/static/js/global_master_templates.js"></script>
 {% endblock %}

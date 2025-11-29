@@ -4,10 +4,10 @@
 
 {% block extra_css %}
 <style>
-/* 现代化项目详情页面 */
+/* Monochrome project detail presentation */
 .project-detail-hero {
     background: var(--glass-bg);
-    backdrop-filter: blur(30px);
+    backdrop-filter: blur(24px);
     border: 1px solid var(--glass-border);
     color: var(--text-primary);
     padding: var(--spacing-2xl) var(--spacing-lg);
@@ -21,13 +21,10 @@
 .project-detail-hero::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background:
-        radial-gradient(circle at 20% 30%, rgba(52, 152, 219, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(155, 89, 182, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 20% 30%, rgba(17, 17, 17, 0.1) 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, rgba(17, 17, 17, 0.08) 0%, transparent 55%);
     animation: projectDetailFloat 22s ease-in-out infinite;
 }
 
@@ -40,17 +37,14 @@
     font-size: 2.2rem;
     font-weight: 700;
     margin-bottom: var(--spacing-md);
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
     position: relative;
     z-index: 1;
-    letter-spacing: -0.02em;
 }
 
 .project-detail-hero p {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     color: var(--text-secondary);
     margin: 0;
     position: relative;
@@ -60,7 +54,6 @@
 
 .project-detail-hero code {
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     padding: var(--spacing-xs) var(--spacing-md);
     border-radius: var(--border-radius-sm);
@@ -68,7 +61,6 @@
     color: var(--text-primary);
 }
 
-/* 状态指示器美化 */
 .status-indicator {
     width: 70px;
     height: 70px;
@@ -76,48 +68,50 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 2.5rem;
+    color: var(--surface);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
     margin-right: var(--spacing-xl);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
     position: relative;
-}
-
-.status-indicator::before {
-    content: '';
-    position: absolute;
-    top: -3px;
-    left: -3px;
-    right: -3px;
-    bottom: -3px;
-    border-radius: 50%;
-    background: linear-gradient(45deg, rgba(255,255,255,0.3), transparent);
-    z-index: -1;
+    text-transform: uppercase;
 }
 
 .status-indicator.completed {
-    background: var(--success-gradient);
+    background: #1f2933;
 }
 
 .status-indicator.in_progress {
-    background: var(--accent-gradient);
+    background: #2d2d2d;
 }
 
 .status-indicator.draft {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    background: #4b5563;
 }
 
 .status-indicator.error {
-    background: var(--secondary-gradient);
+    background: #111111;
 }
 
-/* 项目信息卡片美化 */
+.status-indicator::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.status-indicator__text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
 .project-info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--spacing-lg);
     background: var(--glass-bg);
-    backdrop-filter: blur(15px);
     border: 1px solid var(--glass-border);
     padding: var(--spacing-xl);
     border-radius: var(--border-radius-lg);
@@ -140,8 +134,203 @@
 .project-info-item p {
     color: var(--text-primary);
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     margin: 0;
+}
+
+.section-heading {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-lg) 0;
+}
+
+.section-subheading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 var(--spacing-sm) 0;
+}
+
+.status-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.status-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.status-title {
+    color: var(--text-primary);
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.status-meta {
+    color: var(--text-muted);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.action-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.action-button {
+    flex: 1 1 180px;
+    min-width: 160px;
+}
+
+.progress-track {
+    height: 16px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #1f2933;
+    transition: width 0.4s ease;
+}
+
+.progress-meta {
+    text-align: center;
+    margin-top: 10px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.stage-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    gap: 15px;
+}
+
+.stage-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.85rem;
+}
+
+.status-icon--completed {
+    background: #1f2933;
+}
+
+.status-icon--running {
+    background: #2d2d2d;
+}
+
+.status-icon--failed {
+    background: #4b5563;
+}
+
+.status-icon--pending {
+    background: #6b7280;
+}
+
+.stage-title {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.stage-description {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 2px 0 0 0;
+}
+
+.mini-progress {
+    background: var(--glass-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    height: 4px;
+    margin-top: 6px;
+}
+
+.mini-progress__fill {
+    height: 100%;
+    background: #1f2933;
+    transition: width 0.3s ease;
+}
+
+.btn-sm {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+.modal-close-button {
+    background: var(--surface-subtle);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.modal-close-button:hover {
+    background: var(--surface);
+    transform: scale(1.05);
+}
+
+.modal-btn-primary {
+    background: var(--surface-contrast);
+    color: var(--surface);
+    border-color: var(--surface-contrast);
+}
+
+.modal-btn-primary:hover {
+    background: #000;
+}
+
+.modal-btn-neutral {
+    background: var(--surface-subtle);
+    color: var(--text-primary);
+    border-color: var(--glass-border);
+}
+
+.modal-btn-neutral:hover {
+    background: var(--surface);
+}
+
+.modal-btn-outline {
+    background: transparent;
+    border-color: var(--glass-border);
+    color: var(--text-primary);
+}
+
+.modal-btn-outline:hover {
+    background: var(--surface-subtle);
 }
 </style>
 {% endblock %}
@@ -152,63 +341,63 @@
     <p>项目ID: <code>{{ project.project_id }}</code></p>
 </div>
 
-<div style="max-width: 1400px; margin: 0 auto; padding: var(--spacing-lg);">`
+<div style="max-width: 1400px; margin: 0 auto; padding: var(--spacing-lg);">
 
 <div class="grid">
     <!-- Project Information -->
     <div class="card">
-        <h3 style="color: #3498db; margin-bottom: 15px;">📋 项目信息</h3>
+        <h3 class="section-heading">项目信息</h3>
         
         <div style="margin-bottom: var(--spacing-xl);">
-            <div style="display: flex; align-items: center; margin-bottom: var(--spacing-lg);">
+            <div class="status-summary">
                 {% if project.status == 'completed' %}
                     <div class="status-indicator completed">
-                        ✅
+                        <span class="status-indicator__text">完成</span>
                     </div>
                 {% elif project.status == 'in_progress' %}
                     <div class="status-indicator in_progress">
-                        🔄
+                        <span class="status-indicator__text">进行</span>
                     </div>
                 {% elif project.status == 'draft' %}
                     <div class="status-indicator draft">
-                        📝
+                        <span class="status-indicator__text">草稿</span>
                     </div>
                 {% else %}
                     <div class="status-indicator error">
-                        ❌
+                        <span class="status-indicator__text">异常</span>
                     </div>
                 {% endif %}
                 
-                <div>
+                <div class="status-details">
                     {% if project.status == 'completed' %}
-                        <h4 style="color: #2c3e50; margin-bottom: 5px;">项目已完成</h4>
-                        <p style="color: #7f8c8d; margin: 0;">所有阶段已完成</p>
+                        <h4 class="status-title">项目已完成</h4>
+                        <p class="status-meta">所有阶段已完成</p>
                     {% elif project.status == 'in_progress' %}
                         {% if todo_board %}
                             {% set current_stage = todo_board.stages | selectattr('status', 'equalto', 'running') | first %}
                             {% if current_stage %}
-                                <h4 style="color: #2c3e50; margin-bottom: 5px;">{{ current_stage.name }}中</h4>
-                                <p style="color: #7f8c8d; margin: 0;">当前正在执行</p>
+                                <h4 class="status-title">{{ current_stage.name }}中</h4>
+                                <p class="status-meta">当前正在执行</p>
                             {% else %}
                                 {% set next_stage = todo_board.stages | selectattr('status', 'equalto', 'pending') | first %}
                                 {% if next_stage %}
-                                    <h4 style="color: #2c3e50; margin-bottom: 5px;">等待{{ next_stage.name }}</h4>
-                                    <p style="color: #7f8c8d; margin: 0;">下一个阶段</p>
+                                    <h4 class="status-title">等待{{ next_stage.name }}</h4>
+                                    <p class="status-meta">下一个阶段</p>
                                 {% else %}
-                                    <h4 style="color: #2c3e50; margin-bottom: 5px;">项目进行中</h4>
-                                    <p style="color: #7f8c8d; margin: 0;">正在处理中</p>
+                                    <h4 class="status-title">项目进行中</h4>
+                                    <p class="status-meta">正在处理中</p>
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <h4 style="color: #2c3e50; margin-bottom: 5px;">项目进行中</h4>
-                            <p style="color: #7f8c8d; margin: 0;">正在处理中</p>
+                            <h4 class="status-title">项目进行中</h4>
+                            <p class="status-meta">正在处理中</p>
                         {% endif %}
                     {% elif project.status == 'draft' %}
-                        <h4 style="color: #2c3e50; margin-bottom: 5px;">草稿状态</h4>
-                        <p style="color: #7f8c8d; margin: 0;">等待开始</p>
+                        <h4 class="status-title">草稿状态</h4>
+                        <p class="status-meta">等待开始</p>
                     {% else %}
-                        <h4 style="color: #2c3e50; margin-bottom: 5px;">{{ project.status | title }}</h4>
-                        <p style="color: #7f8c8d; margin: 0;">当前项目状态</p>
+                        <h4 class="status-title">{{ project.status | title }}</h4>
+                        <p class="status-meta">当前项目状态</p>
                     {% endif %}
                 </div>
             </div>
@@ -234,32 +423,32 @@
         </div>
 
         {% if project.requirements %}
-        <div style="background: var(--glass-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); padding: var(--spacing-xl); border-radius: var(--border-radius-lg); margin-bottom: var(--spacing-xl);">
+        <div class="card" style="background: var(--surface); border: 1px solid var(--glass-border);">
             <strong style="color: var(--text-secondary); display: block; margin-bottom: var(--spacing-md); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.9rem;">特殊要求</strong>
-            <p style="color: var(--text-primary); margin: 0; line-height: 1.6; font-size: 1.1rem;">{{ project.requirements }}</p>
+            <p style="color: var(--text-primary); margin: 0; line-height: 1.6; font-size: 1.05rem;">{{ project.requirements }}</p>
         </div>
         {% endif %}
         
         <!-- Project Actions -->
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="action-group">
             {% if project.status == 'in_progress' and todo_board %}
-            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="flex: 1;">
-                📋 TODO 看板
+            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary action-button">
+                查看 TODO 看板
             </a>
             {% endif %}
 
             {% if project.status == 'completed' and project.slides_html %}
-            <a href="/projects/{{ project.project_id }}/fullscreen" class="btn btn-success" target="_blank" style="flex: 1;">
-                🔍 预览 PPT
+            <a href="/projects/{{ project.project_id }}/fullscreen" class="btn btn-success action-button" target="_blank">
+                预览 PPT
             </a>
             {% endif %}
             
-            <button onclick="archiveProject()" class="btn btn-warning" style="flex: 1;">
-                📦 归档项目
+            <button onclick="archiveProject()" class="btn btn-warning action-button">
+                归档项目
             </button>
             
-            <button onclick="deleteProject()" class="btn btn-danger" style="flex: 1;">
-                🗑️ 删除项目
+            <button onclick="deleteProject()" class="btn btn-danger action-button">
+                删除项目
             </button>
         </div>
     </div>
@@ -267,38 +456,38 @@
     <!-- TODO Board Progress -->
     {% if todo_board %}
     <div class="card">
-        <h3 style="color: #27ae60; margin-bottom: 15px;">📈 进度概览</h3>
+        <h3 class="section-heading">进度概览</h3>
         
         <div style="margin-bottom: 20px;">
-            <div style="background: #ecf0f1; border-radius: 15px; overflow: hidden; height: 20px;">
-                <div style="background: linear-gradient(90deg, #27ae60, #2ecc71); height: 100%; width: {{ todo_board.overall_progress }}%; transition: width 0.5s ease; border-radius: 15px;"></div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: {{ todo_board.overall_progress }}%"></div>
             </div>
-            <p style="text-align: center; margin-top: 10px; color: #2c3e50; font-weight: bold;">
+            <p class="progress-meta">
                 总体进度: {{ "%.1f" | format(todo_board.overall_progress) }}%
             </p>
         </div>
         
         <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
-            <h4 style="color: #2c3e50; margin-bottom: 10px;">阶段状态</h4>
+            <h4 class="section-subheading">阶段状态</h4>
             {% for stage in todo_board.stages %}
-            <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 12px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="margin-right: 15px;">
+            <div class="stage-row">
+                <div class="stage-icon">
                     {% if stage.status == 'completed' %}
-                        <span style="color: #27ae60; font-size: 1.2em;">✅</span>
+                        <span class="status-icon status-icon--completed"><i class="fas fa-check"></i></span>
                     {% elif stage.status == 'running' %}
-                        <span style="color: #3498db; font-size: 1.2em;">🔄</span>
+                        <span class="status-icon status-icon--running"><i class="fas fa-spinner"></i></span>
                     {% elif stage.status == 'failed' %}
-                        <span style="color: #e74c3c; font-size: 1.2em;">❌</span>
+                        <span class="status-icon status-icon--failed"><i class="fas fa-times"></i></span>
                     {% else %}
-                        <span style="color: #95a5a6; font-size: 1.2em;">⏳</span>
+                        <span class="status-icon status-icon--pending"><i class="fas fa-clock"></i></span>
                     {% endif %}
                 </div>
                 <div style="flex: 1;">
-                    <strong style="color: #2c3e50; font-size: 0.9em;">{{ stage.name }}</strong>
-                    <p style="color: #7f8c8d; font-size: 0.8em; margin: 2px 0 0 0;">{{ stage.description }}</p>
+                    <strong class="stage-title">{{ stage.name }}</strong>
+                    <p class="stage-description">{{ stage.description }}</p>
                     {% if stage.status == 'running' and stage.progress is defined %}
-                    <div style="background: #ecf0f1; border-radius: 5px; overflow: hidden; height: 4px; margin-top: 5px;">
-                        <div style="background: #3498db; height: 100%; width: {{ stage.progress }}%; transition: width 0.3s ease;"></div>
+                    <div class="mini-progress">
+                        <div class="mini-progress__fill" style="width: {{ stage.progress }}%"></div>
                     </div>
                     {% endif %}
                 </div>
@@ -306,32 +495,32 @@
                     {% if stage.status == 'pending' %}
                         {% if stage.id == 'requirements_confirmation' %}
                             <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                <i class="fas fa-play"></i> 开始
+                                开始
                             </a>
                         {% elif stage.id == 'outline_generation' %}
                             <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                <i class="fas fa-brain"></i> 生成大纲
+                                生成大纲
                             </a>
                         {% elif stage.id == 'ppt_creation' %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                <i class="fas fa-magic"></i> 生成PPT
+                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
+                                生成PPT
                             </a>
                         {% else %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                <i class="fas fa-play"></i> 开始
+                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
+                                开始
                             </a>
                         {% endif %}
                     {% elif stage.status == 'running' %}
-                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-info" style="font-size: 0.8em; padding: 6px 12px;">
-                            <i class="fas fa-eye"></i> 查看进度
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-info btn-sm">
+                            查看进度
                         </a>
                     {% elif stage.status == 'completed' %}
-                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-success" style="font-size: 0.8em; padding: 6px 12px;">
-                            <i class="fas fa-check"></i> 已完成
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-success btn-sm">
+                            已完成
                         </a>
                     {% elif stage.status == 'failed' %}
-                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-warning" style="font-size: 0.8em; padding: 6px 12px;">
-                            <i class="fas fa-redo"></i> 重试
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-warning btn-sm">
+                            重试
                         </a>
                     {% endif %}
                 </div>
@@ -346,24 +535,24 @@
 {% if project.outline and project.outline is not none and project.outline.get('slides') %}
 <div style="margin-top: 40px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="color: #2c3e50; margin: 0;">📄 PPT 大纲</h3>
+        <h3 class="section-heading" style="margin: 0;">PPT 大纲</h3>
         <div style="display: flex; gap: 10px;">
             <button onclick="toggleOutlineView()" class="btn btn-info" style="font-size: 0.9em;">
-                <i class="fas fa-eye"></i> <span id="viewToggleText">详细视图</span>
+                切换视图
             </button>
             <button onclick="editOutline()" class="btn btn-primary" style="font-size: 0.9em;">
-                <i class="fas fa-edit"></i> 修改大纲
+                编辑大纲
             </button>
             <button onclick="exportOutlineJSON()" class="btn btn-success" style="font-size: 0.9em;">
-                <i class="fas fa-download"></i> 导出JSON
+                导出JSON
             </button>
         </div>
     </div>
 
     <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
         <div style="text-align: center; margin-bottom: 20px;">
-            <h4 style="color: #3498db; margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') }}</h4>
-            <p style="color: #7f8c8d;">
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') }}</h4>
+            <p style="color: var(--text-secondary);">
                 总共 {{ project.outline.get('slides', [])|length }} 页幻灯片 |
                 场景: {{ project.outline.get('metadata', {}).get('scenario', project.scenario) }} |
                 语言: {{ project.outline.get('metadata', {}).get('language', 'zh') }}
@@ -372,43 +561,43 @@
 
         <!-- 简洁视图 -->
         <div id="compactView" style="display: block;">
-            <div style="background: #f8f9fa; border-radius: 10px; padding: 20px;">
+            <div style="background: var(--surface-muted); border-radius: 10px; padding: 20px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
                     {% for slide in project.outline.get('slides', []) %}
-                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #3498db; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;"
+                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #1f2933; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;"
                          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
 
                         <!-- 操作按钮 -->
                         <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
                             <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary" style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="编辑此页">
-                                <i class="fas fa-edit"></i>
+                                编辑
                             </button>
                             <button onclick="viewSlideDetail({{ loop.index0 }})" class="btn btn-info" style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="查看详情">
-                                <i class="fas fa-eye"></i>
+                                详情
                             </button>
                         </div>
 
                         <div onclick="viewSlideDetail({{ loop.index0 }})" style="cursor: pointer; margin-right: 60px;">
                             <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <span style="background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
+                                <span style="background: #1f2933; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
                                     {{ slide.get('page_number', loop.index) }}
                                 </span>
-                                <strong style="color: #2c3e50; font-size: 0.9em;">{{ slide.get('title', '未命名幻灯片') }}</strong>
+                                <strong style="color: var(--text-primary); font-size: 0.9em;">{{ slide.get('title', '未命名幻灯片') }}</strong>
                             </div>
                             {% if slide.get('subtitle') %}
-                            <p style="color: #7f8c8d; font-size: 0.8em; margin: 5px 0; font-style: italic;">{{ slide.get('subtitle') }}</p>
+                            <p style="color: var(--text-secondary); font-size: 0.8em; margin: 5px 0; font-style: italic;">{{ slide.get('subtitle') }}</p>
                             {% endif %}
-                            <div style="color: #666; font-size: 0.8em; line-height: 1.4;">
+                            <div style="color: var(--text-secondary); font-size: 0.8em; line-height: 1.4;">
                                 {% if slide.get('content_points') and slide.get('content_points')|length > 0 %}
                                     {{ slide.get('content_points')[0][:80] }}{% if slide.get('content_points')[0]|length > 80 %}...{% endif %}
                                     {% if slide.get('content_points')|length > 1 %}
-                                    <br><span style="color: #95a5a6;">+{{ slide.get('content_points')|length - 1 }} 个要点</span>
+                                    <br><span style="color: var(--text-muted);">+{{ slide.get('content_points')|length - 1 }} 个要点</span>
                                     {% endif %}
                                 {% elif slide.get('content') %}
                                     {{ slide.get('content')[:80] }}{% if slide.get('content')|length > 80 %}...{% endif %}
                                 {% else %}
-                                    <span style="color: #95a5a6;">暂无内容</span>
+                                    <span style="color: var(--text-muted);">暂无内容</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -421,26 +610,26 @@
         <!-- 详细视图 -->
         <div id="detailView" style="display: none; max-height: 500px; overflow-y: auto;">
             {% for slide in project.outline.get('slides', []) %}
-            <div style="padding: 20px; margin-bottom: 15px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #3498db; position: relative;">
+            <div style="padding: 20px; margin-bottom: 15px; background: var(--surface-muted); border-radius: 10px; border-left: 4px solid #1f2933; position: relative;">
                 <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                    <span style="background: #3498db; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
+                    <span style="background: #1f2933; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
                         {{ slide.get('page_number', loop.index) }}
                     </span>
                     <div style="flex: 1;">
-                        <strong style="color: #2c3e50; font-size: 1.1em;">{{ slide.get('title', '未命名幻灯片') }}</strong>
+                        <strong class="stage-title">{{ slide.get('title', '未命名幻灯片') }}</strong>
                         {% if slide.get('subtitle') %}
-                        <br><em style="color: #7f8c8d; font-size: 0.9em;">{{ slide.get('subtitle') }}</em>
+                        <br><em style="color: var(--text-secondary); font-size: 0.9em;">{{ slide.get('subtitle') }}</em>
                         {% endif %}
                     </div>
                     <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;" title="编辑此页">
-                        <i class="fas fa-edit"></i> 编辑
+                        编辑
                     </button>
                 </div>
 
                 {% if slide.get('content_points') %}
                 <div style="margin-top: 10px;">
-                    <h5 style="color: #555; margin-bottom: 8px; font-size: 0.9em;">内容要点：</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: #555; line-height: 1.6;">
+                    <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容要点：</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.6;">
                         {% for point in slide.get('content_points', []) %}
                         <li style="margin-bottom: 5px;">{{ point }}</li>
                         {% endfor %}
@@ -448,14 +637,14 @@
                 </div>
                 {% elif slide.get('content') %}
                 <div style="margin-top: 10px;">
-                    <h5 style="color: #555; margin-bottom: 8px; font-size: 0.9em;">内容：</h5>
-                    <div style="background: white; padding: 15px; border-radius: 6px; color: #555; line-height: 1.6; white-space: pre-wrap;">{{ slide.get('content') }}</div>
+                    <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容：</h5>
+                    <div style="background: white; padding: 15px; border-radius: 6px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">{{ slide.get('content') }}</div>
                 </div>
                 {% endif %}
 
                 {% if slide.get('slide_type') %}
                 <div style="margin-top: 10px;">
-                    <span style="background: #e8f4fd; color: #3498db; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                    <span style="background: var(--surface); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
                         类型: {{ slide.get('slide_type') }}
                     </span>
                 </div>
@@ -468,19 +657,19 @@
 {% elif project.outline and project.outline is not none %}
 <!-- Show outline content if it exists but doesn't have slides structure -->
 <div style="margin-top: 40px;">
-    <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">📄 PPT 大纲</h3>
+    <h3 class="section-heading" style="text-align: center;">PPT 大纲</h3>
 
     <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
         <div style="text-align: center; margin-bottom: 20px;">
-            <h4 style="color: #3498db; margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') if project.outline else (project.topic or '未命名大纲') }}</h4>
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') if project.outline else (project.topic or '未命名大纲') }}</h4>
             <p style="color: #7f8c8d;">大纲内容</p>
         </div>
 
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto;">
+        <div style="background: var(--surface-muted); padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto;">
             {% if project.outline and project.outline.get('content') %}
-            <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; margin: 0;">{{ project.outline.get('content') }}</pre>
+            <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; margin: 0; color: var(--text-secondary);">{{ project.outline.get('content') }}</pre>
             {% else %}
-            <p style="color: #7f8c8d; text-align: center; margin: 0;">大纲内容正在生成中...</p>
+            <p style="color: var(--text-muted); text-align: center; margin: 0;">大纲内容正在生成中...</p>
             {% endif %}
         </div>
     </div>
@@ -490,27 +679,27 @@
 <!-- Version History -->
 {% if versions %}
 <div style="margin-top: 40px;">
-    <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">📚 版本历史</h3>
+    <h3 class="section-heading" style="text-align: center;">版本历史</h3>
     
     <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
         {% for version in versions %}
-        <div style="display: flex; align-items: center; padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+        <div style="display: flex; align-items: center; padding: 15px; margin-bottom: 10px; background: var(--surface-muted); border-radius: 8px;">
             <div style="margin-right: 20px;">
-                <div style="width: 40px; height: 40px; background: #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                <div style="width: 40px; height: 40px; background: #1f2933; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
                     v{{ version.version }}
                 </div>
             </div>
             
             <div style="flex: 1;">
-                <strong style="color: #2c3e50;">{{ version.description }}</strong>
-                <p style="color: #7f8c8d; margin: 5px 0 0 0; font-size: 0.9em;">
+                <strong style="color: var(--text-primary);">{{ version.description }}</strong>
+                <p style="color: var(--text-secondary); margin: 5px 0 0 0; font-size: 0.9em;">
                     {{ version.timestamp | strftime('%Y-%m-%d %H:%M:%S') }}
                 </p>
             </div>
             
             <div style="margin-left: 15px;">
                 <button onclick="restoreVersion({{ version.version }})" class="btn btn-primary" style="font-size: 0.9em;">
-                    🔄 恢复此版本
+                    恢复此版本
                 </button>
             </div>
         </div>
@@ -521,11 +710,11 @@
 
 <!-- Navigation -->
 <div style="text-align: center; margin-top: 40px;">
-    <a href="/projects" class="btn" style="background: #95a5a6; margin: 0 10px;">
-        📋 返回项目列表
+    <a href="/projects" class="btn" style="background: #1f2933; color: white; margin: 0 10px;">
+        返回项目列表
     </a>
     <a href="/dashboard" class="btn btn-primary" style="margin: 0 10px;">
-        📊 项目仪表板
+        项目仪表板
     </a>
 </div>
 {% endblock %}
@@ -566,7 +755,7 @@ async function deleteProject() {
                 // Show loading indicator
                 const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
                 const originalText = deleteBtn.innerHTML;
-                deleteBtn.innerHTML = '🔄 删除中...';
+                deleteBtn.innerHTML = '删除中...';
                 deleteBtn.disabled = true;
 
                 const response = await fetch(`/api/database/projects/${projectId}`, {
@@ -590,7 +779,7 @@ async function deleteProject() {
 
                 // Restore button state
                 const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
-                deleteBtn.innerHTML = '🗑️ 删除项目';
+                deleteBtn.innerHTML = '删除项目';
                 deleteBtn.disabled = false;
             }
         }
@@ -697,18 +886,18 @@ function editOutline() {
 
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="color: #2c3e50; margin: 0;">编辑PPT大纲</h3>
-            <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+            <h3 style="color: var(--text-primary); margin: 0;">编辑PPT大纲</h3>
+            <button type="button" class="modal-close-button" onclick="this.closest('.modal').remove()" aria-label="关闭">×</button>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column;">
             <textarea id="outlineEditor" style="flex: 1; border: 2px solid #ecf0f1; border-radius: 8px; padding: 15px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: none;" placeholder="编辑大纲JSON...">${JSON.stringify(projectOutline, null, 2)}</textarea>
             <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: space-between;">
-                <button onclick="aiOptimizeFullOutlineInProjectDetail()" class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                <button type="button" onclick="aiOptimizeFullOutlineInProjectDetail()" class="btn modal-btn-primary">
                     <i class="fas fa-robot"></i> 优化大纲
                 </button>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="this.closest('.modal').remove()" class="btn" style="background: #95a5a6;">取消</button>
-                    <button onclick="saveOutlineChanges()" class="btn btn-primary">保存修改</button>
+                    <button type="button" onclick="this.closest('.modal').remove()" class="btn modal-btn-neutral">取消</button>
+                    <button type="button" onclick="saveOutlineChanges()" class="btn modal-btn-primary">保存修改</button>
                 </div>
             </div>
         </div>
@@ -809,16 +998,16 @@ function editSingleSlide(slideIndex) {
     `;
 
     // 构建内容要点的编辑界面
-    let contentPointsHtml = '<h5 style="color: #555; margin: 15px 0 8px 0;">内容要点：</h5>';
+    let contentPointsHtml = '<h5 style="color: var(--text-secondary); margin: 15px 0 8px 0; font-size: 0.9rem;">内容要点：</h5>';
     contentPointsHtml += '<div id="contentPointsContainer">';
 
     if (slide.content_points && slide.content_points.length > 0) {
         slide.content_points.forEach((point, index) => {
             contentPointsHtml += `
-                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <input type="text" id="point_${index}" value="${point.replace(/"/g, '&quot;')}"
-                           style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 8px;">
-                    <button onclick="removeContentPoint(${index})" style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">删除</button>
+                           style="flex: 1; padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: 8px; background: var(--surface); color: var(--text-primary);">
+                    <button type="button" class="btn btn-sm modal-btn-outline" onclick="removeContentPoint(${index})">删除</button>
                 </div>
             `;
         });
@@ -826,32 +1015,32 @@ function editSingleSlide(slideIndex) {
 
     contentPointsHtml += '</div>';
     contentPointsHtml += `
-        <button onclick="addContentPoint()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 8px 15px; cursor: pointer; margin-top: 10px;">
-            + 添加要点
+        <button type="button" class="btn btn-sm modal-btn-primary" onclick="addContentPoint()" style="margin-top: 10px;">
+            添加要点
         </button>
     `;
 
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="color: #2c3e50; margin: 0;">编辑第${slide.page_number || slideIndex + 1}页</h3>
-            <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+            <h3 style="color: var(--text-primary); margin: 0;">编辑第${slide.page_number || slideIndex + 1}页</h3>
+            <button type="button" class="modal-close-button" onclick="this.closest('.modal').remove()" aria-label="关闭">×</button>
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; color: #555; font-weight: bold;">标题：</label>
+            <label style="display: block; margin-bottom: 5px; color: var(--text-secondary); font-weight: 600;">标题：</label>
             <input type="text" id="slideTitle" value="${slide.title || ''}"
-                   style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;">
+                   style="width: 100%; padding: 10px; border: 1px solid var(--glass-border); border-radius: 10px; font-size: 14px; background: var(--surface); color: var(--text-primary);">
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; color: #555; font-weight: bold;">副标题：</label>
+            <label style="display: block; margin-bottom: 5px; color: var(--text-secondary); font-weight: 600;">副标题：</label>
             <input type="text" id="slideSubtitle" value="${slide.subtitle || ''}"
-                   style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;">
+                   style="width: 100%; padding: 10px; border: 1px solid var(--glass-border); border-radius: 10px; font-size: 14px; background: var(--surface); color: var(--text-primary);">
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; color: #555; font-weight: bold;">幻灯片类型：</label>
-            <select id="slideType" style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;">
+            <label style="display: block; margin-bottom: 5px; color: var(--text-secondary); font-weight: 600;">幻灯片类型：</label>
+            <select id="slideType" style="width: 100%; padding: 10px; border: 1px solid var(--glass-border); border-radius: 10px; font-size: 14px; background: var(--surface); color: var(--text-primary);">
                 <option value="content" ${slide.slide_type === 'content' ? 'selected' : ''}>内容页</option>
                 <option value="title" ${slide.slide_type === 'title' ? 'selected' : ''}>标题页</option>
                 <option value="conclusion" ${slide.slide_type === 'conclusion' ? 'selected' : ''}>结论页</option>
@@ -864,19 +1053,19 @@ function editSingleSlide(slideIndex) {
 
         ${slide.content ? `
         <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; color: #555; font-weight: bold;">内容：</label>
+            <label style="display: block; margin-bottom: 5px; color: var(--text-secondary); font-weight: 600;">内容：</label>
             <textarea id="slideContent" rows="4"
-                      style="width: 100%; padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px; resize: vertical;">${slide.content}</textarea>
+                      style="width: 100%; padding: 10px; border: 1px solid var(--glass-border); border-radius: 10px; font-size: 14px; resize: vertical; background: var(--surface); color: var(--text-primary);">${slide.content}</textarea>
         </div>
         ` : ''}
 
         <div style="display: flex; gap: 10px; justify-content: space-between; margin-top: 20px;">
-            <button onclick="aiOptimizeSingleSlideInProjectDetail(${slideIndex})" class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+            <button type="button" onclick="aiOptimizeSingleSlideInProjectDetail(${slideIndex})" class="btn modal-btn-primary">
                 <i class="fas fa-robot"></i> AI优化
             </button>
             <div style="display: flex; gap: 10px;">
-                <button onclick="this.closest('.modal').remove()" class="btn" style="background: #95a5a6;">取消</button>
-                <button onclick="saveSingleSlideChanges(${slideIndex})" class="btn btn-primary">保存修改</button>
+                <button type="button" onclick="this.closest('.modal').remove()" class="btn modal-btn-neutral">取消</button>
+                <button type="button" onclick="saveSingleSlideChanges(${slideIndex})" class="btn modal-btn-primary">保存修改</button>
             </div>
         </div>
     `;
@@ -1048,9 +1237,10 @@ function showAIOptimizeModal(config) {
         // 创建弹窗内容
         const content = document.createElement('div');
         content.style.cssText = `
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            background: var(--surface);
             border-radius: 20px; padding: 0; max-width: 600px; width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
             animation: slideIn 0.3s ease; max-height: 90vh; overflow: hidden;
             display: flex; flex-direction: column;
         `;
@@ -1074,65 +1264,221 @@ function showAIOptimizeModal(config) {
                     from { transform: translateY(-50px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
-                .ai-optimize-modal .suggestion-tag {
-                    display: inline-block;
-                    padding: 6px 12px;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    margin: 4px;
+                .ai-optimize-modal__header {
+                    background: var(--surface-contrast);
+                    color: var(--surface);
+                    padding: 24px 32px;
+                }
+                .ai-optimize-modal__header-content {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 16px;
+                }
+                .ai-optimize-modal__title {
+                    margin: 0 0 6px 0;
+                    font-size: 1.3rem;
+                    font-weight: 700;
+                    letter-spacing: -0.01em;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .ai-optimize-modal__subtitle {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    color: rgba(255, 255, 255, 0.72);
+                }
+                .ai-optimize-modal__close {
+                    border: none;
+                    background: rgba(255, 255, 255, 0.12);
+                    color: var(--surface);
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    font-size: 1.2rem;
                     cursor: pointer;
-                    transition: all 0.3s ease;
-                    border: 2px solid transparent;
+                    transition: background 0.2s ease, transform 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
-                .ai-optimize-modal .suggestion-tag:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                    border-color: #667eea;
-                    background: linear-gradient(135deg, #764ba2, #667eea);
+                .ai-optimize-modal__close:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: scale(1.05);
                 }
-                .ai-optimize-modal textarea:focus {
+                .ai-optimize-modal__body {
+                    padding: 30px 32px;
+                    flex: 1;
+                    overflow-y: auto;
+                    background: var(--surface);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+                .ai-optimize-modal__body .current-info {
+                    background: var(--surface-subtle);
+                    border-left: 3px solid var(--surface-contrast);
+                    padding: 16px 18px;
+                    border-radius: 12px;
+                    color: var(--text-secondary);
+                    font-size: 0.95rem;
+                    line-height: 1.7;
+                }
+                .ai-optimize-modal__body .current-info strong {
+                    color: var(--surface-contrast);
+                    font-weight: 600;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .input-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                .input-label {
+                    display: block;
+                    color: var(--text-primary);
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                    letter-spacing: 0.01em;
+                }
+                .input-textarea {
+                    width: 100%;
+                    min-height: 120px;
+                    padding: 16px 18px;
+                    border: 1px solid var(--glass-border);
+                    border-radius: 12px;
+                    font-size: 0.95rem;
+                    resize: vertical;
+                    font-family: inherit;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    color: var(--text-primary);
+                    background: var(--surface);
+                }
+                .input-textarea::placeholder {
+                    color: var(--text-muted);
+                    opacity: 0.9;
+                }
+                .input-textarea:focus {
                     outline: none;
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    border-color: var(--surface-contrast);
+                    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+                }
+                .suggestions {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .suggestion-label {
+                    display: block;
+                    color: var(--text-secondary);
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    letter-spacing: 0.02em;
+                }
+                .suggestion-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+                .suggestion-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 6px 14px;
+                    background: var(--surface-subtle);
+                    border: 1px solid var(--glass-border);
+                    border-radius: 999px;
+                    font-size: 0.8rem;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .suggestion-tag:hover {
+                    transform: translateY(-2px);
+                    background: var(--surface-contrast);
+                    border-color: var(--surface-contrast);
+                    color: var(--surface);
+                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+                }
+                .ai-optimize-modal__footer {
+                    padding: 20px 32px;
+                    background: var(--surface);
+                    border-top: 1px solid var(--glass-border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 16px;
+                }
+                .footer-hint {
+                    color: var(--text-secondary);
+                    font-size: 0.85rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .footer-actions {
+                    display: flex;
+                    gap: 12px;
+                }
+                .footer-actions .btn {
+                    min-width: 110px;
+                    justify-content: center;
+                }
+                .modal-cancel {
+                    background: var(--surface-subtle);
+                    border-color: var(--border-color);
+                    color: var(--text-primary);
+                }
+                .modal-cancel:hover {
+                    background: var(--surface);
+                }
+                @media (max-width: 520px) {
+                    .ai-optimize-modal__header,
+                    .ai-optimize-modal__body,
+                    .ai-optimize-modal__footer {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                    }
+                    .footer-actions {
+                        width: 100%;
+                        flex-direction: column;
+                    }
+                    .footer-actions .btn {
+                        width: 100%;
+                    }
                 }
             </style>
             
-            <!-- 头部 -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 20px 20px 0 0; position: relative;">
-                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\\"http://www.w3.org/2000/svg\\" viewBox=\\"0 0 100 100\\"><defs><pattern id=\\"dots\\" width=\\"20\\" height=\\"20\\" patternUnits=\\"userSpaceOnUse\\"><circle cx=\\"10\\" cy=\\"10\\" r=\\"1\\" fill=\\"white\\" opacity=\\"0.1\\"/></pattern></defs><rect width=\\"100\\" height=\\"100\\" fill=\\"url(%23dots)\\"/></svg></div>
-                <div style="position: relative; z-index: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="margin: 0 0 8px 0; font-size: 1.3em; font-weight: 700;">
-                                <i class="fas fa-magic" style="margin-right: 10px;"></i>${config.title}
-                            </h3>
-                            <p style="margin: 0; opacity: 0.9; font-size: 0.9em;">${config.subtitle}</p>
-                        </div>
-                        <button onclick="this.closest('.ai-optimize-modal').remove()" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                            ×
-                        </button>
+            <div class="ai-optimize-modal__header">
+                <div class="ai-optimize-modal__header-content">
+                    <div>
+                        <h3 class="ai-optimize-modal__title">
+                            <i class="fas fa-magic"></i>${config.title}
+                        </h3>
+                        <p class="ai-optimize-modal__subtitle">${config.subtitle}</p>
                     </div>
+                    <button type="button" class="ai-optimize-modal__close" onclick="this.closest('.ai-optimize-modal').remove()" aria-label="关闭">
+                        <span aria-hidden="true">×</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- 内容区域 -->
-            <div style="padding: 30px; flex: 1; overflow-y: auto;">
-                <!-- 当前信息展示 -->
-                <div style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="color: #2c3e50; font-size: 0.9em; line-height: 1.6;">
-                        <strong style="color: #3498db;"><i class="fas fa-info-circle"></i> 当前内容</strong><br>
+            <div class="ai-optimize-modal__body">
+                <div class="current-info">
+                    <div>
+                        <strong><i class="fas fa-info-circle"></i> 当前内容</strong><br>
                         ${config.currentInfo}
                     </div>
                 </div>
 
-                <!-- 输入框 -->
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 0.95em;">
+                <div class="input-group">
+                    <label class="input-label" for="aiOptimizeInput">
                         <i class="fas fa-edit"></i> 请描述您的优化需求
                     </label>
-                    <textarea id="aiOptimizeInput" style="width: 100%; min-height: 120px; padding: 15px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 14px; resize: vertical; font-family: inherit; transition: all 0.3s ease;" placeholder="详细描述您希望如何优化此内容...
+                    <textarea id="aiOptimizeInput" class="input-textarea" placeholder="详细描述您希望如何优化此内容...
 
 例如：
 - 增加更多技术细节
@@ -1140,28 +1486,26 @@ function showAIOptimizeModal(config) {
 - 添加案例分析"></textarea>
                 </div>
 
-                <!-- 快捷建议 -->
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 0.85em;">
+                <div class="suggestions">
+                    <label class="suggestion-label">
                         <i class="fas fa-lightbulb"></i> 点击快捷建议快速填充
                     </label>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <div class="suggestion-list">
                         ${suggestions.map(s => `<span class="suggestion-tag" onclick="document.getElementById('aiOptimizeInput').value = '${s}'">${s}</span>`).join('')}
                     </div>
                 </div>
             </div>
 
-            <!-- 底部按钮 -->
-            <div style="padding: 20px 30px; background: #f8f9fa; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e9ecef;">
-                <div style="color: #7f8c8d; font-size: 0.85em;">
+            <div class="ai-optimize-modal__footer">
+                <div class="footer-hint">
                     <i class="fas fa-robot"></i> AI将根据您的需求智能优化内容
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="this.closest('.ai-optimize-modal').remove()" class="btn btn-sm" style="background: #95a5a6; color: white; padding: 10px 20px;">
-                        <i class="fas fa-times"></i> 取消
+                <div class="footer-actions">
+                    <button type="button" class="btn btn-sm modal-cancel" onclick="this.closest('.ai-optimize-modal').remove()">
+                        取消
                     </button>
-                    <button id="confirmOptimizeBtn" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px;">
-                        <i class="fas fa-magic"></i> 开始优化
+                    <button type="button" id="confirmOptimizeBtn" class="btn btn-sm btn-primary">
+                        开始优化
                     </button>
                 </div>
             </div>

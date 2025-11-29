@@ -65,22 +65,6 @@ async def get_all_templates(
         raise HTTPException(status_code=500, detail="Failed to get templates")
 
 
-@router.get("/{template_id}", response_model=GlobalMasterTemplateDetailResponse)
-async def get_template_by_id(template_id: int):
-    """Get a global master template by ID"""
-    try:
-        template = await template_service.get_template_by_id(template_id)
-        if not template:
-            raise HTTPException(status_code=404, detail="Template not found")
-        
-        return GlobalMasterTemplateDetailResponse(**template)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get template {template_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get template")
-
-
 @router.put("/{template_id}", response_model=dict)
 async def update_template(template_id: int, update_data: GlobalMasterTemplateUpdate):
     """Update a global master template"""
@@ -151,6 +135,22 @@ async def get_default_template():
     except Exception as e:
         logger.error(f"Failed to get default template: {e}")
         raise HTTPException(status_code=500, detail="Failed to get default template")
+
+
+@router.get("/{template_id}", response_model=GlobalMasterTemplateDetailResponse)
+async def get_template_by_id(template_id: int):
+    """Get a global master template by ID"""
+    try:
+        template = await template_service.get_template_by_id(template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        return GlobalMasterTemplateDetailResponse(**template)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get template {template_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get template")
 
 
 @router.post("/generate")

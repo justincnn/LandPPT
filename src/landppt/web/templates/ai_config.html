@@ -3,9 +3,9 @@
 {% block title %}系统配置管理 - LandPPT{% endblock %}
 
 {% block content %}
-<div style="text-align: center; margin-bottom: 40px;">
-    <h2 style="color: #2c3e50; margin-bottom: 20px;">⚙️ 系统配置管理</h2>
-    <p style="font-size: 1.1em; color: #7f8c8d;">
+<div class="page-hero">
+    <h2 class="page-title">系统配置管理</h2>
+    <p class="page-subtitle">
         配置和管理 LandPPT 的所有系统参数，包括 AI 提供者、生成参数、应用配置等
     </p>
 </div>
@@ -14,16 +14,16 @@
 <div style="margin-bottom: 30px;">
     <div class="config-tabs" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
         <button class="tab-btn active" onclick="switchTab('ai-providers')" data-tab="ai-providers">
-            🤖 AI 提供者
+            AI 提供者
         </button>
         <button class="tab-btn" onclick="switchTab('generation-params')" data-tab="generation-params">
-            🎛️ 生成参数
+            生成参数
         </button>
         <button class="tab-btn" onclick="switchTab('app-config')" data-tab="app-config">
-            🔧 应用配置
+            应用配置
         </button>
         <button class="tab-btn" onclick="switchTab('image-service')" data-tab="image-service">
-            🎨 图片服务
+            图片服务
         </button>
     </div>
 </div>
@@ -32,12 +32,12 @@
 <div id="ai-providers" class="tab-content active">
     <div class="grid">
         <div class="card">
-            <h3 style="color: #3498db; margin-bottom: 15px;">📊 当前状态</h3>
+            <h3 class="section-heading">当前状态</h3>
 
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                 <p style="margin-bottom: 10px;">
                     <strong>当前提供者:</strong>
-                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9em;">
+                    <span class="pill pill--solid">
                         {{ current_provider }}
                     </span>
                 </p>
@@ -47,19 +47,19 @@
                 <p>
                     <strong>状态:</strong>
                     {% if current_provider in available_providers %}
-                        <span style="color: #27ae60;">✅ 正常运行</span>
+                        <span class="status-label status-label--ok">正常运行</span>
                     {% else %}
-                        <span style="color: #e74c3c;">❌ 配置错误</span>
+                        <span class="status-label status-label--err">配置错误</span>
                     {% endif %}
                 </p>
             </div>
 
             <div style="text-align: center;">
                 <button onclick="testCurrentProvider()" class="btn btn-primary" style="margin-right: 10px;">
-                    🧪 测试当前提供者
+                    测试当前提供者
                 </button>
                 <button onclick="refreshProviders()" class="btn btn-primary">
-                    🔄 刷新状态
+                    刷新状态
                 </button>
             </div>
         </div>
@@ -68,7 +68,7 @@
     </div>
 
     <div style="margin-top: 30px;">
-        <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">🔧 AI 提供者详情配置</h3>
+        <h3 class="section-heading" style="text-align: center;">AI 提供者详情配置</h3>
 
         <div class="grid">
             {% for provider in ["openai", "anthropic", "google", "azure_openai", "ollama", "302ai"] %}
@@ -76,28 +76,28 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h4 style="color: #2c3e50; margin: 0;">
                         {% if provider == "openai" %}
-                            🤖 OpenAI
+                            OpenAI
                         {% elif provider == "anthropic" %}
-                            🧠 Anthropic Claude
+                            Anthropic Claude
                         {% elif provider == "google" %}
-                            🌟 Google Gemini
+                            Google Gemini
                         {% elif provider == "azure_openai" %}
-                            ☁️ Azure OpenAI
+                            Azure OpenAI
                         {% elif provider == "ollama" %}
-                            🏠 Ollama (本地)
+                            Ollama (本地)
                         {% elif provider == "302ai" %}
-                            🚀 302.AI
+                            302.AI
                         {% endif %}
                     </h4>
 
                     <div style="display: flex; gap: 10px; align-items: center;">
                         {% if provider_status[provider] %}
                             <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
-                                ✅ 可用
+                                可用
                             </span>
                         {% else %}
                             <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
-                                ❌ 不可用
+                                不可用
                             </span>
                         {% endif %}
 
@@ -139,7 +139,7 @@
                                        placeholder="{{ current_config.get('openai_model', 'gpt-4o') }}">
                                 <button type="button" onclick="fetchAndShowModels()" id="openai_model_fetch_btn"
                                         class="model-fetch-btn" title="获取可用模型列表">
-                                    📋
+                                    列表
                                 </button>
                             </div>
                         </div>
@@ -236,7 +236,7 @@
                                        placeholder="{{ current_config.get('302ai_model', 'gpt-4o') }}">
                                 <button type="button" onclick="fetch302AIModels()" id="302ai_model_fetch_btn"
                                         class="model-fetch-btn" title="获取可用模型列表">
-                                    📋
+                                    列表
                                 </button>
                             </div>
                         </div>
@@ -245,10 +245,10 @@
 
                 <div style="text-align: center; margin-top: 15px;">
                     <button onclick="testProvider('{{ provider }}')" class="btn btn-primary" style="margin-right: 10px;">
-                        🧪 测试
+                        测试
                     </button>
                     <button onclick="saveProviderConfig('{{ provider }}')" class="btn btn-success">
-                        💾 保存配置
+                        保存配置
                     </button>
                 </div>
             </div>
@@ -262,7 +262,7 @@
         <div class="card" style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div>
-                    <h3 style="color: #2c3e50; margin-bottom: 6px;">🧠 模型任务配置</h3>
+                    <h3 class="section-heading" style="margin-bottom: 6px;">模型任务配置</h3>
                     <p style="color: #7f8c8d; margin: 0;">该区域为高级设置，可为不同功能指定专用提供者和模型，未设置时将继承默认配置。</p>
                 </div>
                 <button type="button" id="model-role-toggle-btn" class="btn btn-secondary" style="min-width: 140px;" onclick="toggleModelRoleSettings()">
@@ -306,7 +306,7 @@
                             </div>
                             <input type="text" name="{{ role.model_field }}" class="model-input role-model-input" data-model-field="{{ role.model_field }}" value="{{ current_config.get(role.model_field, '') }}" placeholder="留空时使用提供者默认模型">
                             <button type="button" class="model-fetch-btn openai-fetch-btn" data-model-field="{{ role.model_field }}" onclick="fetchRoleOpenAIModels(this)" style="display: none;" title="获取可用模型列表">
-                                📋
+                                列表
                             </button>
                         </div>
                         <small style="color: #7f8c8d;">留空表示继承该提供者默认模型</small>
@@ -324,7 +324,7 @@
 
 <div id="generation-params" class="tab-content" style="display: none;">
     <div class="card">
-        <h3 style="color: #f39c12; margin-bottom: 30px; text-align: center;">🎛️ AI 生成参数配置</h3>
+        <h3 class="section-heading" style="margin-bottom: 30px; text-align: center;">AI 生成参数配置</h3>
 
         <!-- 主要配置区域 -->
         <div style="display: flex; flex-direction: column; gap: 30px;">
@@ -332,7 +332,7 @@
             <!-- AI 生成参数 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <h4 style="color: #f39c12; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🎯</span> AI 生成参数
+                    AI 生成参数
                 </h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
                     <div class="form-group">
@@ -397,7 +397,7 @@
             <!-- 批量生成PPT配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <h4 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🚀</span> 批量生成PPT
+                    批量生成PPT
                 </h4>
                 
                 <div style="margin-bottom: 20px;">
@@ -453,7 +453,7 @@
                             </span>
                         </div>
                         <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
-                            💡 <strong>提示：</strong>数值越大，生成速度越快，但对AI服务的并发请求压力也越大。<br>
+                            <strong>提示：</strong>数值越大，生成速度越快，但对AI服务的并发请求压力也越大。<br>
                             推荐值：<span style="color: #667eea; font-weight: 500;">3-5页</span>（平衡速度与稳定性）
                         </small>
                     </div>
@@ -461,7 +461,7 @@
 
                 <div style="margin-top: 15px; padding: 12px 16px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 4px solid #667eea;">
                     <p style="margin: 0; font-size: 0.9em; color: #495057; line-height: 1.6;">
-                        <strong>⚠️ 注意事项：</strong><br>
+                        <strong>注意事项：</strong><br>
                         • 启用批量生成可能会增加AI API的调用频率和费用<br>
                         • 部分AI提供商可能有并发请求限制，请根据实际情况调整<br>
                         • 如遇到频率限制错误，建议降低并行页数或关闭此功能
@@ -471,8 +471,8 @@
 
             <!-- 研究功能配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #e74c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🔍</span> 研究功能配置
+                <h4 class="section-heading" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    研究功能配置
                 </h4>
 
                 <!-- 研究提供商选择 -->
@@ -522,7 +522,7 @@
                 <!-- 高级选项 -->
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
                     <h5 style="color: #e74c3c; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                        <span>⚙️</span> 高级选项
+                        高级选项
                     </h5>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                         <div class="form-group">
@@ -562,8 +562,8 @@
 
             <!-- 其他配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #9b59b6; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>📄</span> 其他配置
+                <h4 class="section-heading" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    其他配置
                 </h4>
                 <div class="form-group">
                     <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
@@ -582,7 +582,7 @@
         <!-- 操作按钮 -->
         <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
             <button onclick="saveGenerationParams()" class="btn btn-success" style="padding: 12px 30px; font-weight: 600; font-size: 1.05em;">
-                💾 保存生成参数
+                保存生成参数
             </button>
         </div>
     </div>
@@ -593,11 +593,11 @@
 <!-- 应用配置标签页 -->
 <div id="app-config" class="tab-content" style="display: none;">
     <div class="card">
-        <h3 style="color: #9b59b6; margin-bottom: 20px;">🔧 应用配置</h3>
+        <h3 class="section-heading" style="margin-bottom: 20px;">应用配置</h3>
 
         <div class="grid">
             <div>
-                <h4 style="color: #3498db; margin-bottom: 15px;">服务器配置</h4>
+                <h4 class="subheading">服务器配置</h4>
 
                 <div class="form-group">
                     <label>主机地址 (HOST):</label>
@@ -624,7 +624,7 @@
             </div>
 
             <div>
-                <h4 style="color: #27ae60; margin-bottom: 15px;">安全配置</h4>
+                <h4 class="subheading">安全配置</h4>
 
                 <div class="form-group">
                     <label>密钥 (SECRET_KEY):</label>
@@ -642,7 +642,7 @@
             </div>
 
             <div>
-                <h4 style="color: #f39c12; margin-bottom: 15px;">文件上传配置</h4>
+                <h4 class="subheading">文件上传配置</h4>
 
                 <div class="form-group">
                     <label>最大文件大小 (MAX_FILE_SIZE):</label>
@@ -665,7 +665,7 @@
             </div>
 
             <div>
-                <h4 style="color: #e74c3c; margin-bottom: 15px;">数据库配置</h4>
+                <h4 class="subheading">数据库配置</h4>
 
                 <div class="form-group">
                     <label>数据库URL (DATABASE_URL):</label>
@@ -678,7 +678,7 @@
 
         <div style="text-align: center; margin-top: 20px;">
             <button onclick="saveAppConfig()" class="btn btn-success" style="margin-right: 10px;">
-                💾 保存应用配置
+                保存应用配置
             </button>
         </div>
     </div>
@@ -687,12 +687,12 @@
 <!-- 图片服务配置标签页 -->
 <div id="image-service" class="tab-content" style="display: none;">
     <div class="card">
-        <h3 style="color: #e67e22; margin-bottom: 20px;">🎨 图片服务配置</h3>
+        <h3 class="section-heading" style="margin-bottom: 20px;">图片服务配置</h3>
 
         <!-- 服务状态显示 -->
         <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #dee2e6;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                <h4 style="color: #495057; margin: 0; font-size: 1.1em;">📊 服务状态</h4>
+                <h4 class="subheading" style="margin: 0; font-size: 1.1em;">服务状态</h4>
                 <span id="image-service-status" style="background: #95a5a6; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 500;">
                     检查中...
                 </span>
@@ -709,8 +709,8 @@
 
             <!-- 基础设置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #28a745; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🎨</span> 图片服务设置
+                <h4 class="subheading" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    图片服务设置
                 </h4>
 
                 <div class="main-toggle-option">
@@ -733,27 +733,27 @@
                             <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="toggleImageSourceConfig()">
                                 <input type="checkbox" name="enable_local_images" value="true" style="transform: scale(1.1);">
                                 <div style="flex: 1;">
-                                    <div style="font-weight: 500; color: #495057;">📁 本地图床</div>
+                                    <div style="font-weight: 500; color: #495057;">本地图床</div>
                                     <small style="color: #6c757d;">从本地图片库中智能选择合适的图片</small>
                                 </div>
                             </label>
                             <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="toggleImageSourceConfig()">
                                 <input type="checkbox" name="enable_network_search" value="true" style="transform: scale(1.1);">
                                 <div style="flex: 1;">
-                                    <div style="font-weight: 500; color: #495057;">🌐 网络搜索</div>
+                                    <div style="font-weight: 500; color: #495057;">网络搜索</div>
                                     <small style="color: #6c757d;">通过Unsplash、Pixabay等API搜索高质量网络图片</small>
                                 </div>
                             </label>
                             <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: white; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="toggleImageSourceConfig()">
                                 <input type="checkbox" name="enable_ai_generation" value="true" style="transform: scale(1.1);">
                                 <div style="flex: 1;">
-                                    <div style="font-weight: 500; color: #495057;">🎨 AI生成</div>
+                                    <div style="font-weight: 500; color: #495057;">AI生成</div>
                                     <small style="color: #6c757d;">使用AI模型生成定制化创意图片</small>
                                 </div>
                             </label>
                         </div>
                         <div style="margin-top: 15px; padding: 12px; background: #e7f3ff; border-radius: 6px; border-left: 3px solid #007bff;">
-                            <small style="color: #0056b3; font-weight: 500;">💡 提示：可以同时启用多种方式，AI会根据页面内容智能选择最合适的图片来源</small>
+                            <small style="color: #4b5563; font-weight: 500;">提示：可以同时启用多种方式，AI会根据页面内容智能选择最合适的图片来源</small>
                         </div>
                     </div>
                 </div>
@@ -761,14 +761,14 @@
 
             <!-- API密钥配置 -->
             <div style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h4 style="color: #007bff; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                    <span>🔑</span> API密钥配置
+                <h4 class="subheading" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    API密钥配置
                 </h4>
 
                 <!-- AI图片生成服务 -->
                 <div style="margin-bottom: 30px;">
-                    <h5 style="color: #6f42c1; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                        <span>🎨</span> AI图片生成服务
+                    <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        AI图片生成服务
                     </h5>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                         <div class="form-group">
@@ -791,8 +791,8 @@
 
                 <!-- Pollinations免费服务 -->
                 <div style="margin-bottom: 30px;">
-                    <h5 style="color: #28a745; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                        <span>🌸</span> Pollinations (免费服务)
+                    <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        Pollinations (免费服务)
                     </h5>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                         <div class="form-group">
@@ -812,8 +812,8 @@
                         </div>
                     </div>
                     <div style="margin-top: 15px; padding: 12px 16px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; border-left: 4px solid #28a745;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #155724; font-weight: 500;">✅ 基础功能免费</span>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #374151; font-weight: 500;">
+                            基础功能免费
                         </div>
                         <small style="color: #155724; margin-top: 5px; display: block;">Pollinations提供免费的AI图片生成服务，Token可选用于高级功能</small>
                     </div>
@@ -821,8 +821,8 @@
 
                 <!-- 网络图片搜索服务 -->
                 <div>
-                    <h5 style="color: #17a2b8; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                        <span>🌐</span> 网络图片搜索服务
+                    <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        网络图片搜索服务
                     </h5>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                         <div class="form-group">
@@ -861,9 +861,9 @@
                 <!-- 配置选项容器 -->
                 <div style="display: flex; flex-direction: column; gap: 20px;">
                     <!-- 本地图床配置 -->
-                    <div id="local-images-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #27ae60;">
-                        <h5 style="color: #27ae60; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <span>📁</span> 本地图床配置
+                    <div id="local-images-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                        <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            本地图床配置
                         </h5>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                             <div class="form-group">
@@ -887,9 +887,9 @@
                     </div>
 
                     <!-- 网络搜索配置 -->
-                    <div id="network-search-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #17a2b8;">
-                        <h5 style="color: #17a2b8; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <span>🌐</span> 网络搜索配置
+                    <div id="network-search-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                        <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            网络搜索配置
                         </h5>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                             <div class="form-group">
@@ -910,9 +910,9 @@
                     </div>
 
                     <!-- AI生成配置 -->
-                    <div id="ai-generation-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #6f42c1;">
-                        <h5 style="color: #6f42c1; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <span>🎨</span> AI生成配置
+                    <div id="ai-generation-config" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                        <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            AI生成配置
                         </h5>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px;">
                             <div class="form-group">
@@ -940,9 +940,9 @@
                         </div>
 
                         <!-- Pollinations特定配置 -->
-                        <div id="pollinations-specific-config" style="display: none; padding: 20px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
-                            <h6 style="color: #155724; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                                <span>🌸</span> Pollinations 配置
+                        <div id="pollinations-specific-config" style="display: none; padding: 20px; background: #f3f4f6; border-radius: 8px; border-left: 4px solid #1f2933;">
+                            <h6 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                Pollinations 配置
                             </h6>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 15px;">
                                 <div class="form-group">
@@ -1006,9 +1006,9 @@
                     </div>
 
                     <!-- 全局图片配置 -->
-                    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
-                        <h5 style="color: #856404; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <span>⚙️</span> 全局图片配置
+                    <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #1f2933;">
+                        <h5 class="subheading" style="margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            全局图片配置
                         </h5>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                             <div class="form-group">
@@ -1036,7 +1036,7 @@
             <!-- 操作按钮 -->
             <div style="text-align: center; margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
                 <button onclick="saveImageServiceConfig()" class="btn btn-success" style="padding: 12px 30px; font-weight: 600; font-size: 1.05em;">
-                    💾 保存配置
+                    保存配置
                 </button>
             </div>
         </div>
@@ -1049,7 +1049,7 @@
 <div id="testModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
         <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">
-            🧪 AI 提供者测试结果
+            AI 提供者测试结果
         </h3>
         
         <div id="testResults" style="margin-bottom: 20px;">
@@ -3231,7 +3231,7 @@ async function fetchRoleOpenAIModels(buttonElement) {
     } finally {
         buttonElement.disabled = false;
         buttonElement.classList.remove('loading');
-        buttonElement.innerHTML = '📋';
+        buttonElement.innerHTML = '列表';
     }
 }
 
@@ -4191,7 +4191,7 @@ async function fetchAndShowModels() {
         // 恢复按钮状态
         fetchButton.classList.remove('loading');
         fetchButton.disabled = false;
-        fetchButton.textContent = '📋';
+        fetchButton.textContent = '列表';
     }
 }
 
@@ -4287,7 +4287,7 @@ async function fetch302AIModels() {
         // 恢复按钮状态
         fetchButton.classList.remove('loading');
         fetchButton.disabled = false;
-        fetchButton.textContent = '📋';
+        fetchButton.textContent = '列表';
     }
 }
 

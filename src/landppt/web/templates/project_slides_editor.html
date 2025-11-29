@@ -17,31 +17,40 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.min.css">
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --success-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --surface-dark: #0f0f10;
+            --surface-darker: #050506;
+            --surface-muted: #f4f5f7;
+            --surface-elevated: #ffffff;
 
-            --glass-bg: rgba(255, 255, 255, 0.25);
-            --glass-border: rgba(255, 255, 255, 0.18);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            --border-color: #d2d5da;
+            --border-color-strong: #101114;
 
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
+            --text-primary: #15171c;
+            --text-secondary: #3b3f45;
+            --text-muted: #6b7078;
+
+            --accent-color: #111214;
+            --accent-strong: #000000;
+            --accent-contrast: #ffffff;
+
+            --shadow-soft: 0 20px 40px rgba(0, 0, 0, 0.08);
+
+            --primary-color: #111214;
+            --secondary-color: #1f2023;
+
+            --glass-bg: #f3f4f6;
+            --glass-border: #d2d5da;
+            --glass-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
 
             --bg-primary: #ffffff;
-            --border-color: #e2e8f0;
-
-            --text-primary: #2d3748;
-            --text-secondary: #4a5568;
-            --text-muted: #718096;
+            --bg-secondary: #f6f7f9;
+            --bg-tertiary: #eceff2;
 
             --border-radius: 8px;
-            --border-radius-sm: 12px;
-            --border-radius-md: 16px;
-            --border-radius-lg: 24px;
-            --border-radius-xl: 32px;
+            --border-radius-sm: 10px;
+            --border-radius-md: 14px;
+            --border-radius-lg: 20px;
+            --border-radius-xl: 28px;
 
             --spacing-xs: 8px;
             --spacing-sm: 12px;
@@ -52,34 +61,27 @@
         }
 
         body {
-            background: var(--primary-gradient);
+            background: var(--surface-dark);
             min-height: 100vh;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             position: relative;
             overflow-x: hidden;
+            color: var(--text-primary);
+        }
+
+        * {
+            backdrop-filter: none !important;
         }
 
         body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
+            display: none;
         }
 
         .editor-container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--glass-border);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
             border-radius: var(--border-radius-xl);
-            box-shadow: var(--glass-shadow);
+            box-shadow: var(--shadow-soft);
             margin: var(--spacing-lg);
             overflow: hidden;
             position: relative;
@@ -87,8 +89,8 @@
         }
 
         .editor-header {
-            background: var(--primary-gradient);
-            color: white;
+            background: var(--accent-color);
+            color: var(--accent-contrast);
             padding: var(--spacing-md) var(--spacing-xl);
             position: relative;
             overflow: hidden;
@@ -96,21 +98,7 @@
         }
 
         .editor-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-            animation: headerFloat 25s ease-in-out infinite;
-        }
-
-        @keyframes headerFloat {
-            0%, 100% { transform: scale(1) rotate(0deg); }
-            50% { transform: scale(1.02) rotate(1deg); }
+            display: none;
         }
 
         .editor-header h1,
@@ -134,9 +122,8 @@
         }
         
         .slides-sidebar {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-right: 1px solid var(--glass-border);
+            background: var(--surface-elevated);
+            border-right: 1px solid var(--border-color);
             height: calc(100vh - 140px);
             overflow-y: auto;
             display: flex;
@@ -153,13 +140,11 @@
         }
 
         .slide-thumbnail {
-            border: 2px solid transparent;
+            border: 1px solid var(--border-color);
             border-radius: var(--border-radius-md);
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 15px rgba(31, 38, 135, 0.2);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            background: var(--surface-elevated);
             position: relative;
             user-select: none;
             flex-shrink: 0;
@@ -167,38 +152,16 @@
             overflow: hidden;
         }
 
-        .slide-thumbnail::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--accent-gradient);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-            z-index: 1;
-        }
-
         .slide-thumbnail:hover {
-            border-color: rgba(79, 172, 254, 0.5);
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
-        }
-
-        .slide-thumbnail:hover::before {
-            transform: scaleX(1);
+            border-color: var(--border-color-strong);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
         }
 
         .slide-thumbnail.active {
-            border-color: rgba(67, 233, 123, 0.7);
-            box-shadow: 0 8px 25px rgba(67, 233, 123, 0.4);
-            transform: translateY(-4px) scale(1.02);
-        }
-
-        .slide-thumbnail.active::before {
-            background: var(--success-gradient);
-            transform: scaleX(1);
+            border-color: var(--accent-strong);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+            transform: translateY(-3px);
         }
 
         .slide-thumbnail.dragging {
@@ -240,15 +203,16 @@
         .slide-title {
             padding: 4px 2px;
             font-size: 10px;
-            font-weight: bold;
+            font-weight: 600;
             text-align: center;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            background: var(--surface-muted);
+            border-top: 1px solid var(--border-color);
             line-height: 1.1;
-            height: 24px; /* 固定标题高度 */
+            height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-secondary);
         }
         
         .main-editor {
@@ -258,14 +222,12 @@
         }
         
         .editor-toolbar {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid var(--glass-border);
+            background: var(--surface-elevated);
+            border-bottom: 1px solid var(--border-color);
             padding: var(--spacing-sm) var(--spacing-lg);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 15px rgba(31, 38, 135, 0.1);
             position: relative;
         }
         
@@ -276,8 +238,8 @@
         
         .preview-pane {
             flex: 1;
-            background: #f8f9fa;
-            border-right: 1px solid #dee2e6;
+            background: var(--surface-muted);
+            border-right: 1px solid var(--border-color);
             position: relative;
         }
         
@@ -466,11 +428,11 @@
         }
 
         .CodeMirror-selected {
-            background: rgba(52, 152, 219, 0.2) !important;
+            background-color: rgba(52, 152, 219, 0.2) !important;
         }
 
         .CodeMirror-focused .CodeMirror-selected {
-            background: rgba(52, 152, 219, 0.3) !important;
+            background-color: rgba(52, 152, 219, 0.3) !important;
         }
 
         /* 主题色彩调整 */
@@ -611,8 +573,8 @@
             padding: 0;
             border-radius: var(--border-radius-sm);
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid var(--border-color);
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -620,86 +582,46 @@
             position: relative;
             overflow: hidden;
             font-size: 16px;
-            backdrop-filter: blur(15px);
-        }
-
-        .btn-group-custom .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .btn-group-custom .btn:hover::before {
-            left: 100%;
-        }
-
-        .btn-primary {
-            background: rgba(102, 126, 234, 0.3);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
-            border-color: rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-success {
-            background: rgba(86, 171, 47, 0.3);
-            color: white;
-            box-shadow: 0 4px 15px rgba(86, 171, 47, 0.2);
-            border-color: rgba(86, 171, 47, 0.4);
-        }
-
-        .btn-info {
-            background: rgba(79, 172, 254, 0.3);
-            color: white;
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
-            border-color: rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-warning {
-            background: rgba(255, 154, 158, 0.3);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.2);
-            border-color: rgba(255, 154, 158, 0.4);
+            background: var(--surface-muted);
+            color: var(--text-primary);
         }
 
         .btn-group-custom .btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+            border-color: var(--border-color-strong);
         }
 
-        .btn-group-custom .btn:hover.btn-primary {
-            background: rgba(102, 126, 234, 0.5);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        .btn-group-custom .btn i {
+            font-size: 14px;
         }
 
-        .btn-group-custom .btn:hover.btn-success {
-            background: rgba(86, 171, 47, 0.5);
-            box-shadow: 0 6px 20px rgba(86, 171, 47, 0.4);
+        .btn-primary,
+        .btn-warning,
+        .btn-success,
+        .btn-info {
+            background: var(--accent-contrast);
+            color: var(--accent-strong);
+            border-color: var(--border-color);
         }
 
+        .btn-group-custom .btn:hover.btn-primary,
+        .btn-group-custom .btn:hover.btn-warning,
+        .btn-group-custom .btn:hover.btn-success,
         .btn-group-custom .btn:hover.btn-info {
-            background: rgba(79, 172, 254, 0.5);
-            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-group-custom .btn:hover.btn-warning {
-            background: rgba(255, 154, 158, 0.5);
-            box-shadow: 0 6px 20px rgba(255, 154, 158, 0.4);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
         }
 
         /* 返回按钮样式 */
         .btn-outline-light {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: transparent;
+            color: var(--accent-contrast);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             padding: var(--spacing-sm) var(--spacing-lg);
             border-radius: var(--border-radius-md);
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -710,65 +632,44 @@
         }
 
         .btn-outline-light:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-            color: white;
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 20px 35px rgba(255, 255, 255, 0.08);
             text-decoration: none;
         }
 
-        .btn-outline-light:active {
-            transform: translateY(0) scale(0.98);
-        }
-
         .mode-toggle {
-            background: rgba(102, 126, 234, 0.3);
-            color: white;
-            border: 1px solid rgba(102, 126, 234, 0.4);
+            background: var(--surface-muted);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
             padding: 0;
             width: 42px;
             height: 42px;
             border-radius: var(--border-radius-sm);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, background-color 0.2s ease;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+            box-shadow: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             position: relative;
             overflow: hidden;
-            backdrop-filter: blur(15px);
-        }
-
-        .mode-toggle::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.6s;
         }
 
         .mode-toggle:hover {
-            transform: translateY(-2px) scale(1.02);
-            background: rgba(102, 126, 234, 0.5);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            border-color: rgba(255, 255, 255, 0.6);
-        }
-
-        .mode-toggle:hover::before {
-            left: 100%;
+            transform: translateY(-1px);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            border-color: var(--accent-strong);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
         }
 
         .mode-toggle.active {
-            background: rgba(86, 171, 47, 0.4);
-            box-shadow: 0 6px 20px rgba(86, 171, 47, 0.4);
-            border-color: rgba(86, 171, 47, 0.6);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            border-color: var(--accent-strong);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
         }
 
         /* 优化悬浮提示样式 */
@@ -833,11 +734,11 @@
 
         /* 按钮激活状态优化 */
         .btn-group-custom .btn:active {
-            transform: translateY(0) scale(0.95);
+            transform: translateY(0);
         }
 
         .mode-toggle:active {
-            transform: translateY(0) scale(0.95);
+            transform: translateY(0);
         }
 
         /* 按钮禁用状态 */
@@ -850,24 +751,6 @@
         .btn-group-custom .btn:disabled:hover {
             transform: none !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        /* 按钮脉冲动画 */
-        @keyframes buttonPulse {
-            0% {
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-            }
-            50% {
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-            }
-            100% {
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-            }
-        }
-
-        /* 为活跃的模式切换按钮添加脉冲效果 */
-        .mode-toggle.active {
-            animation: buttonPulse 2s ease-in-out infinite;
         }
 
         /* 按钮组整体动画 */
@@ -887,15 +770,14 @@
         }
 
         .export-section {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-top: 1px solid var(--glass-border);
+            background: var(--surface-elevated);
+            border-top: 1px solid var(--border-color);
             padding: var(--spacing-lg) var(--spacing-xl);
             text-align: center;
             position: sticky;
             bottom: 0;
             z-index: 100;
-            box-shadow: 0 -4px 20px rgba(31, 38, 135, 0.2);
+            box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.05);
             min-height: 80px;
         }
 
@@ -1297,12 +1179,11 @@
             right: -650px; /* 增加默认宽度 */
             width: 650px; /* 增加默认宽度 */
             height: 100vh;
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            border: 1px solid var(--glass-border);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
             border-right: none;
             border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
-            box-shadow: var(--glass-shadow);
+            box-shadow: var(--shadow-soft);
             z-index: 2000;
             transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
@@ -1317,23 +1198,9 @@
             right: 0;
         }
 
-        .ai-edit-sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 20% 20%, rgba(79, 172, 254, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(67, 233, 123, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
-        }
-
         .ai-edit-sidebar-header {
-            background: var(--primary-gradient);
-            color: white;
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
             padding: var(--spacing-sm) var(--spacing-lg);
             display: flex;
             justify-content: space-between;
@@ -1344,19 +1211,6 @@
             border-radius: var(--border-radius-xl) 0 0 0;
         }
 
-        .ai-edit-sidebar-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
-            animation: headerFloat 25s ease-in-out infinite;
-        }
-
         .ai-edit-sidebar-header h4 {
             margin: 0;
             font-size: 1.125rem;
@@ -1364,21 +1218,18 @@
             flex: 1;
             position: relative;
             z-index: 1;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
             letter-spacing: -0.01em;
         }
 
         .ai-current-slide-info {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            background: var(--surface-muted);
+            border: 1px solid var(--border-color);
             padding: 2px var(--spacing-xs);
             border-radius: var(--border-radius-md);
             font-size: 0.75rem;
             font-weight: 600;
             margin-right: var(--spacing-sm);
-            color: white;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            color: var(--text-secondary);
             position: relative;
             z-index: 1;
         }
@@ -1392,10 +1243,9 @@
         }
 
         .ai-outline-btn {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            color: white;
+            background: var(--surface-muted);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
             padding: var(--spacing-xs) var(--spacing-sm);
             border-radius: var(--border-radius-sm);
             cursor: pointer;
@@ -1405,26 +1255,12 @@
             overflow: hidden;
         }
 
-        .ai-outline-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.6s;
-        }
-
         .ai-outline-btn:hover {
-            background: rgba(255,255,255,0.2);
-            border-color: rgba(255,255,255,0.4);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            border-color: var(--accent-strong);
             transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
-        }
-
-        .ai-outline-btn:hover::before {
-            left: 100%;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
         }
 
         .ai-sidebar-resize-handle {
@@ -1445,10 +1281,9 @@
         }
 
         .ai-edit-sidebar-close {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            color: white;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--accent-contrast);
             font-size: 1.125rem;
             cursor: pointer;
             padding: var(--spacing-xs);
@@ -1463,26 +1298,11 @@
             overflow: hidden;
         }
 
-        .ai-edit-sidebar-close::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.6s;
-        }
-
         .ai-edit-sidebar-close:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.4);
-            transform: translateY(-1px) scale(1.05);
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
-        }
-
-        .ai-edit-sidebar-close:hover::before {
-            left: 100%;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
         }
 
         .ai-edit-content {
@@ -1509,26 +1329,11 @@
             overflow-y: auto;
             padding: var(--spacing-md);
             margin-bottom: var(--spacing-md);
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
+            background: var(--surface-muted);
+            border: 1px solid var(--border-color);
             border-radius: var(--border-radius-md);
-            box-shadow: 0 4px 15px rgba(31, 38, 135, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
             position: relative;
-        }
-
-        .ai-chat-messages::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(circle at 10% 10%, rgba(79, 172, 254, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 90% 90%, rgba(67, 233, 123, 0.05) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
         }
 
         .ai-message {
@@ -1538,42 +1343,40 @@
             max-width: 85%;
             word-wrap: break-word;
             position: relative;
-            backdrop-filter: blur(10px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .ai-message.user {
-            background: var(--primary-gradient);
-            color: white;
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
             margin-left: auto;
             margin-right: var(--spacing-md);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--accent-strong);
         }
 
         .ai-message.assistant {
-            background: var(--glass-bg);
+            background: var(--surface-elevated);
             color: var(--text-primary);
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--border-color);
             margin-right: auto;
             margin-left: var(--spacing-md);
-            box-shadow: 0 4px 15px rgba(31, 38, 135, 0.1);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
         }
 
         .ai-message.system {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-muted);
+            background: var(--surface-elevated);
+            color: var(--text-secondary);
             font-style: italic;
             text-align: center;
             margin: var(--spacing-xs) var(--spacing-md);
             font-size: 0.75rem;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
         }
 
         .ai-message:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(31, 38, 135, 0.2);
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.12);
         }
 
         .ai-input-container {
@@ -1581,41 +1384,40 @@
             flex-direction: column;
             gap: var(--spacing-sm);
             position: relative;
-            border: 2px solid transparent;
+            border: 2px solid var(--border-color);
             border-radius: var(--border-radius-md);
             padding: var(--spacing-sm);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--surface-elevated);
         }
 
         .ai-input-container.drag-over {
-            background-color: rgba(79, 172, 254, 0.1) !important;
-            border-color: rgba(79, 172, 254, 0.6) !important;
+            background-color: rgba(0, 0, 0, 0.04) !important;
+            border-color: var(--accent-strong) !important;
             transform: scale(1.02) !important;
-            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3) !important;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.16) !important;
         }
 
         .ai-input-container.drag-over::before {
-            content: '📷 释放图片到此处上传';
+            content: '释放图片到此处上传';
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(79, 172, 254, 0.9);
-            color: white;
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
             padding: var(--spacing-sm) var(--spacing-md);
             border-radius: var(--border-radius-md);
             font-size: 0.875rem;
             font-weight: 600;
             z-index: 1000;
-            pointer-events: none;
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
         }
 
         /* 选中图像信息容器样式 */
         .ai-selected-image-container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            background: var(--surface-muted);
+            border: 1px solid var(--border-color);
             border-radius: var(--border-radius-md);
             margin-bottom: var(--spacing-md);
             overflow: hidden;
@@ -1629,12 +1431,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .ai-selected-image-header h6 {
-            margin: 0;
             font-size: 0.875rem;
             font-weight: 600;
         }
@@ -1731,9 +1527,9 @@
             color: white;
             padding: var(--spacing-sm) var(--spacing-md);
             border-radius: var(--border-radius-sm);
+            cursor: pointer;
             font-size: 0.875rem;
             font-weight: 600;
-            cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
@@ -1742,7 +1538,7 @@
         }
 
         .ai-regenerate-image-btn {
-            background: var(--accent-gradient);
+            background: var(--accent-strong);
         }
 
         .ai-regenerate-image-btn:hover {
@@ -1813,7 +1609,7 @@
 
         .ai-send-btn {
             background: var(--primary-gradient);
-            color: white;
+            color: black;
             border: none;
             padding: var(--spacing-sm) var(--spacing-lg);
             border-radius: var(--border-radius-md);
@@ -2194,7 +1990,7 @@
         }
 
         .quick-edit-overlay::before {
-            content: '💡 点击文本直接编辑 | Enter保存 | ESC取消 | 再次点击修改退出';
+            content: ' 点击文本直接编辑 | Enter保存 | ESC取消 | 再次点击修改退出';
             position: absolute;
             top: 10px;
             left: 50%;
@@ -2238,7 +2034,7 @@
         }
 
         .quick-edit-highlight::before {
-            content: '✏️';
+            content: ' ';
             position: absolute !important;
             top: -8px !important;
             right: -8px !important;
@@ -2268,8 +2064,8 @@
 
         /* 魔术棒按钮样式 */
         .magic-wand-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: white !important;
+            background: var(--accent-strong) !important;
+            color: var(--accent-contrast) !important;
             border: none !important;
             border-radius: 50% !important;
             width: 28px !important;
@@ -2284,45 +2080,34 @@
             opacity: 0.7 !important;
             position: relative !important;
             overflow: hidden !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
         }
 
         .magic-wand-btn::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
-            transition: left 0.6s !important;
+            content: none !important;
         }
 
         .magic-wand-btn:hover {
             opacity: 1 !important;
-            transform: translateY(-2px) scale(1.1) !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5) !important;
-            background: linear-gradient(135deg, #7c8cff 0%, #8a5cb8 100%) !important;
-        }
-
-        .magic-wand-btn:hover::before {
-            left: 100% !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important;
+            background: #1f1f1f !important;
         }
 
         .magic-wand-btn:active {
-            transform: translateY(0) scale(1.05) !important;
+            transform: translateY(0) !important;
         }
 
         .magic-wand-btn:disabled {
             opacity: 0.5 !important;
             cursor: not-allowed !important;
             transform: none !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
         }
 
         .magic-wand-btn:disabled:hover {
             transform: none !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
         }
 
         /* 删除要点按钮样式 */
@@ -2366,63 +2151,75 @@
             transform: translateX(2px) !important;
         }
 
-        /* 增强所有要点按钮样式 */
-        .enhance-all-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: white !important;
-            border: none !important;
-            padding: 8px 16px !important;
-            border-radius: 6px !important;
-            cursor: pointer !important;
-            font-size: 14px !important;
-            transition: all 0.3s ease !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
-            position: relative !important;
-            overflow: hidden !important;
+        /* 大纲编辑弹窗按钮样式 */
+        .outline-modal-btn {
+            background: var(--accent-contrast);
+            color: var(--accent-strong);
+            border: 1px solid var(--accent-strong);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.01em;
         }
 
-        .enhance-all-btn::before {
-            content: '' !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: -100% !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
-            transition: left 0.6s !important;
+        .outline-modal-btn:hover {
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .outline-modal-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .outline-modal-btn--solid {
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+        }
+
+        .outline-modal-btn--solid:hover {
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .outline-modal-btn i {
+            font-size: 14px;
+        }
+
+        .outline-modal-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .outline-modal-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 增强所有要点按钮样式 */
+        .enhance-all-btn {
+            background: var(--accent-contrast) !important;
+            color: var(--accent-strong) !important;
+            border: 1px solid var(--accent-strong) !important;
+            gap: 6px !important;
         }
 
         .enhance-all-btn:hover {
-            transform: translateY(-2px) scale(1.02) !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5) !important;
-            background: linear-gradient(135deg, #7c8cff 0%, #8a5cb8 100%) !important;
-        }
-
-        .enhance-all-btn:hover::before {
-            left: 100% !important;
-        }
-
-        .enhance-all-btn:active {
-            transform: translateY(0) scale(1.0) !important;
-        }
-
-        .enhance-all-btn:disabled {
-            opacity: 0.6 !important;
-            cursor: not-allowed !important;
-            transform: none !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
-        }
-
-        .enhance-all-btn:disabled:hover {
-            transform: none !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+            background: var(--accent-strong) !important;
+            color: var(--accent-contrast) !important;
         }
 
         .direct-editing::before {
-            content: '📝 正在编辑... (Enter保存 / ESC取消)';
+            content: ' 正在编辑... (Enter保存 / ESC取消)';
             position: absolute !important;
             top: -30px !important;
             left: 0 !important;
@@ -2557,7 +2354,7 @@
 
         .image-select-header {
             background: var(--primary-gradient);
-            color: white;
+            color: var(--glass-text);
             padding: var(--spacing-md) var(--spacing-lg);
             display: flex;
             justify-content: space-between;
@@ -2583,8 +2380,6 @@
             margin: 0;
             font-size: 1.125rem;
             font-weight: 600;
-            position: relative;
-            z-index: 1;
             display: flex;
             align-items: center;
             gap: var(--spacing-xs);
@@ -2594,7 +2389,7 @@
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            color: white;
+            color: var(--glass-text);
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -2714,7 +2509,7 @@
 
         .image-library-header {
             background: var(--primary-gradient);
-            color: white;
+            color: var(--glass-text);
             padding: var(--spacing-md) var(--spacing-lg);
             display: flex;
             justify-content: space-between;
@@ -2760,7 +2555,7 @@
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
-            color: white;
+            color: var(--glass-text);
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -2867,20 +2662,24 @@
         }
 
         .image-library-loading p {
-            margin: 0;
-            font-size: 0.875rem;
-            opacity: 0.8;
-        }
 
-        .image-library-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: var(--spacing-md);
-            padding: var(--spacing-sm);
-        }
+.image-library-item {
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    border: 2px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    aspect-ratio: 1;
+}
 
-        .image-library-item {
-            background: var(--glass-bg);
+.image-library-item:hover {
+    transform: scale(1.05);
+    border-color: rgba(79, 172, 254, 0.6);
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
             backdrop-filter: blur(15px);
             border: 2px solid var(--glass-border);
             border-radius: var(--border-radius-md);
@@ -3501,8 +3300,6 @@
             opacity: 1;
         }
 
-
-
         /* 响应式设计 - AI侧栏优化 */
         @media (max-width: 1200px) {
             .ai-edit-sidebar {
@@ -3574,8 +3371,6 @@
                 padding: 4px 8px;
             }
 
-
-
             .ai-input-box {
                 min-height: 60px;
                 font-size: 0.8125rem;
@@ -3589,46 +3384,26 @@
 
         /* Speech Script Dialog Styles */
         .speech-modal-content {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 24px;
-            box-shadow:
-                0 20px 40px rgba(0, 0, 0, 0.15),
-                0 8px 32px rgba(102, 126, 234, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-soft);
             overflow: hidden;
             position: relative;
-        }
-
-        .speech-modal-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .speech-modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #000;
+            color: #fff;
             padding: 24px 32px;
-            border-bottom: none;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .speech-modal-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%);
-            pointer-events: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .speech-modal-title {
@@ -3645,21 +3420,20 @@
         .speech-modal-icon {
             width: 32px;
             height: 32px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
         }
 
         .speech-modal-close {
             position: absolute;
             top: 24px;
             right: 32px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
+            background: var(--accent-contrast);
+            border: 1px solid var(--accent-strong);
+            color: var(--accent-strong);
             width: 32px;
             height: 32px;
             border-radius: 8px;
@@ -3667,24 +3441,313 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
             z-index: 2;
         }
 
         .speech-modal-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            transform: translateY(-1px);
         }
 
         .speech-modal-body {
             padding: 32px;
             color: var(--text-primary);
             background: transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
         }
 
         .speech-section {
-            margin-bottom: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .speech-config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .speech-config-card {
+            border: 1px solid rgba(0, 0, 0, 0.18);
+            border-radius: var(--border-radius-md);
+            background: rgba(255, 255, 255, 0.92);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .speech-config-card:hover,
+        .speech-config-card:focus-within {
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .speech-config-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #000;
+        }
+
+        .speech-config-description {
+            font-size: 0.75rem;
+            color: rgba(0, 0, 0, 0.55);
+            line-height: 1.4;
+        }
+
+        .speech-config-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .speech-config-extra {
+            margin-top: 8px;
+        }
+
+        .speech-config-card-full {
+            grid-column: 1 / -1;
+        }
+
+        .speech-form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .speech-form-select,
+        .speech-form-input,
+        .speech-form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid rgba(0, 0, 0, 0.18);
+            border-radius: var(--border-radius-sm);
+            background: rgba(255, 255, 255, 0.92);
+            color: #1a1a1a;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+
+        .speech-form-select:focus,
+        .speech-form-input:focus,
+        .speech-form-textarea:focus {
+            outline: none;
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+        }
+
+        .speech-form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .slide-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .slide-selection-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .slide-selection-grid::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        .slide-selection-grid::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .slide-selection-grid::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .slide-selection-item {
+            position: relative;
+        }
+
+        .slide-selection-checkbox {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .slide-selection-card {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 18px;
+            border: 1px solid rgba(0, 0, 0, 0.18);
+            border-radius: var(--border-radius-md);
+            background: rgba(255, 255, 255, 0.92);
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .slide-selection-card:hover {
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .slide-selection-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid rgba(0, 0, 0, 0.35);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            background: transparent;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .slide-selection-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slide-selection-title {
+            font-weight: 600;
+            color: #000;
+        }
+
+        .slide-selection-subtitle {
+            font-size: 0.75rem;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .slide-selection-checkbox:checked + .slide-selection-card {
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+        }
+
+        .slide-selection-checkbox:checked + .slide-selection-card .slide-selection-indicator {
+            background: #000;
+            border-color: #000;
+        }
+
+        .slide-selection-checkbox:checked + .slide-selection-card .slide-selection-indicator::after {
+            content: '✓';
+        }
+
+        .slide-selection-checkbox:focus-visible + .slide-selection-card {
+            outline: 2px solid #000;
+            outline-offset: 2px;
+        }
+
+        .speech-generation-type-group {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .speech-type-option {
+            position: relative;
+        }
+
+        .speech-type-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .speech-type-label {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 18px;
+            border-radius: var(--border-radius-md);
+            border: 1px solid rgba(0, 0, 0, 0.18);
+            background: rgba(255, 255, 255, 0.92);
+            color: #1a1a1a;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+        }
+
+        .speech-type-label:hover {
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .speech-type-option input[type="radio"]:focus-visible + .speech-type-label {
+            outline: 2px solid #000;
+            outline-offset: 2px;
+        }
+
+        .speech-type-option input[type="radio"]:checked + .speech-type-label {
+            border-color: #000;
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.85);
+            color: #000;
+        }
+
+        .speech-type-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.06);
+            color: #000;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .speech-type-option input[type="radio"]:checked + .speech-type-label .speech-type-icon,
+        .speech-type-label:hover .speech-type-icon {
+            background: #000;
+            color: #fff;
+        }
+
+        .speech-type-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .speech-type-title {
+            font-weight: 600;
+            color: inherit;
+        }
+
+        .speech-type-desc {
+            font-size: 0.8125rem;
+            color: rgba(0, 0, 0, 0.65);
+        }
+
+        .speech-type-option input[type="radio"]:checked + .speech-type-label .speech-type-desc {
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        @media (max-width: 768px) {
+            .speech-generation-type-group {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
         }
 
         .speech-section-title {
@@ -3701,226 +3764,181 @@
             content: '';
             width: 4px;
             height: 16px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: var(--accent-strong);
             border-radius: 2px;
         }
 
         .speech-modal-footer {
-            background: linear-gradient(145deg, rgba(248, 249, 250, 0.8) 0%, rgba(233, 236, 239, 0.6) 100%);
-            border-top: 1px solid rgba(222, 226, 230, 0.5);
             padding: 24px 32px;
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-muted);
             display: flex;
             gap: 12px;
             justify-content: flex-end;
-            backdrop-filter: blur(10px);
         }
 
-        .speech-generation-type-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
+        /* Custom Checkbox */
+        .speech-form-check {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
         }
 
-        @media (max-width: 768px) {
-            .speech-generation-type-group {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-        }
-
-        .speech-type-option {
-            position: relative;
-        }
-
-        .speech-type-option input[type="radio"] {
+        .speech-form-check input[type="checkbox"] {
             position: absolute;
             opacity: 0;
             width: 0;
             height: 0;
         }
 
-        .speech-type-label {
+        .speech-checkbox-label {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            text-align: center;
-            padding: 16px 12px;
-            border: 2px solid rgba(222, 226, 230, 0.6);
-            border-radius: 12px;
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 249, 250, 0.6) 100%);
+            gap: var(--spacing-sm);
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            height: 100%;
-            min-height: 100px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
         }
 
-        .speech-type-label::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .speech-type-label:hover {
-            border-color: rgba(102, 126, 234, 0.4);
-            transform: translateY(-3px);
-            box-shadow:
-                0 8px 25px rgba(102, 126, 234, 0.15),
-                0 3px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .speech-type-label:hover::before {
-            opacity: 1;
-        }
-
-        .speech-type-option input[type="radio"]:checked + .speech-type-label {
-            border-color: var(--primary-color);
-            background: linear-gradient(145deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.08) 100%);
-            box-shadow:
-                0 8px 25px rgba(102, 126, 234, 0.2),
-                0 3px 10px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            transform: translateY(-2px);
-        }
-
-        .speech-type-option input[type="radio"]:checked + .speech-type-label::before {
-            opacity: 1;
-        }
-
-        .speech-type-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        .speech-checkbox-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            flex-shrink: 0;
-            position: relative;
-            box-shadow:
-                0 2px 6px rgba(102, 126, 234, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
-            margin: 0 auto;
+            position: relative;
         }
 
-        .speech-type-icon svg {
-            width: 18px;
-            height: 18px;
+        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
-        .speech-type-option input[type="radio"]:checked + .speech-type-label .speech-type-icon {
-            transform: scale(1.05);
-            box-shadow:
-                0 6px 16px rgba(102, 126, 234, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4);
-        }
-
-        .speech-type-text {
-            flex: 1;
-        }
-
-        .speech-type-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 2px;
-            font-size: 14px;
-            line-height: 1.2;
-        }
-
-        .speech-type-desc {
-            color: var(--text-secondary);
+        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom::after {
+            content: '✓';
+            color: white;
             font-size: 12px;
-            line-height: 1.3;
-            opacity: 0.8;
+            font-weight: bold;
         }
 
-        .slide-selection-grid {
-            max-height: 200px;
-            overflow-y: auto;
+        /* Custom Buttons */
+        .speech-btn {
+            padding: 12px 24px;
+            border-radius: var(--border-radius-sm);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .speech-btn-secondary {
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .speech-btn-secondary:hover {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .speech-btn-outline {
+            background: transparent;
+            color: var(--accent-strong);
+            border: 1px solid var(--accent-strong);
+        }
+
+        .speech-btn-outline:hover {
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .speech-btn-primary {
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent-strong);
+        }
+
+        .speech-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+        }
+
+        .speech-btn-primary:active {
+            transform: translateY(0);
+        }
+
+        
+
+        /* Script Preview Styles */
+        .script-item {
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-lg);
-            padding: var(--spacing-md);
+            padding: var(--spacing-lg);
             background: var(--bg-secondary);
+            margin-bottom: var(--spacing-md);
         }
 
-        .slide-selection-item {
-            padding: var(--spacing-sm) 0;
+        .script-header {
             border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
         }
 
-        .slide-selection-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Custom Form Elements */
-        .speech-form-label {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-xs);
-            display: block;
-            font-size: 0.875rem;
-        }
-
-        .speech-form-select,
-        .speech-form-textarea {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 2px solid var(--border-color);
-            border-radius: var(--border-radius);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .speech-form-select:focus,
-        .speech-form-textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: var(--bg-primary);
-        }
-
-        .speech-form-textarea {
+        .script-content textarea {
             resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-            line-height: 1.5;
-        }
-
-        .speech-form-input {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 2px solid var(--border-color);
+            min-height: 120px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
+            padding: var(--spacing-md);
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-size: 0.875rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
         }
 
-        .speech-form-input:focus {
+        .script-content textarea:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: var(--bg-primary);
         }
 
-        .speech-form-input::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.7;
+        .scripts-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: var(--spacing-xs);
+        }
+
+        .scripts-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scripts-container::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        .scripts-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .scripts-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
 
         /* Speech Scripts Styles */
@@ -3939,6 +3957,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: var(--text-primary);
         }
 
         .speech-script-header h6 {
@@ -3973,7 +3992,7 @@
             font-size: 0.9rem;
             line-height: 1.6;
             white-space: pre-wrap;
-            border-left: 3px solid var(--primary-color);
+            border-left: 3px solid rgba(255, 255, 255, 0.4);
             background: rgba(248, 249, 250, 0.3);
         }
 
@@ -3993,23 +4012,24 @@
             padding: 8px 16px;
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            background: var(--bg-primary);
-            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
             font-size: 0.875rem;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .speech-script-btn:hover {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
+            background: #000;
+            color: #fff;
+            border-color: #000;
             transform: translateY(-1px);
         }
 
         .speech-script-btn-danger:hover {
             background: #dc3545;
             border-color: #dc3545;
+            color: #fff;
         }
 
         /* Speech Script Edit Styles */
@@ -4063,7 +4083,7 @@
             border-color: #545b62;
         }
 
-        /* Speech Modal Styles - Project Consistent */
+        /* Speech Modal Styles */
         .speech-modal-dialog {
             position: relative;
             margin: auto;
@@ -4089,36 +4109,38 @@
 
         .speech-modal-header {
             padding: var(--spacing-lg) var(--spacing-xl);
-            border-bottom: 1px solid var(--glass-border);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            background: #000;
+            color: #fff;
         }
 
         .speech-modal-title .speech-section-title {
             margin: 0;
             font-size: 1.25rem;
             font-weight: 600;
+            color: #fff;
         }
 
         .speech-modal-close {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
+            background: var(--accent-contrast);
+            border: 1px solid var(--accent-strong);
+            color: var(--accent-strong);
             cursor: pointer;
             padding: var(--spacing-sm);
             border-radius: var(--border-radius);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .speech-modal-close:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-            transform: scale(1.1);
+            background: var(--accent-strong);
+            color: var(--accent-contrast);
+            transform: translateY(-1px);
         }
 
         .speech-modal-body {
@@ -4223,7 +4245,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             position: relative;
         }
 
@@ -4255,6 +4277,8 @@
             overflow: hidden;
             min-width: 120px;
             justify-content: center;
+            background: var(--primary-color);
+            color: white;
         }
 
         .speech-btn::before {
@@ -4275,46 +4299,30 @@
         }
 
         .speech-btn-secondary {
-            background: linear-gradient(145deg, rgba(248, 249, 250, 0.9) 0%, rgba(233, 236, 239, 0.8) 100%);
-            color: var(--text-secondary);
-            border: 1px solid rgba(222, 226, 230, 0.8);
-            backdrop-filter: blur(10px);
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            background: var(--secondary-color);
+            color: white;
         }
 
         .speech-btn-secondary:hover {
-            background: linear-gradient(145deg, rgba(233, 236, 239, 0.9) 0%, rgba(222, 226, 230, 0.8) 100%);
-            color: var(--text-primary);
+            background: var(--secondary-color-hover);
             transform: translateY(-2px);
-            box-shadow:
-                0 4px 12px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
         }
 
         .speech-btn-outline {
             background: transparent;
             color: var(--primary-color);
             border: 2px solid var(--primary-color);
-            backdrop-filter: blur(10px);
         }
 
         .speech-btn-outline:hover {
             background: var(--primary-color);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .speech-btn-primary {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: var(--primary-color);
             color: white;
-            box-shadow:
-                0 4px 16px rgba(102, 126, 234, 0.3),
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .speech-btn-primary:hover {
@@ -4333,19 +4341,7 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
-        /* Speech Script Button Styles */
-        #speechScriptBtn {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            border: none;
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        #speechScriptBtn:hover {
-            background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
-        }
+        
 
         /* Script Preview Styles */
         .script-item {
@@ -4495,7 +4491,7 @@
                             <i class="fas fa-robot"></i>
                         </button>
                         <button class="btn btn-info btn-sm" id="speechScriptBtn" onclick="showSpeechScriptDialog()" title="生成演讲稿">
-                            <i class="fas fa-comment"></i>
+                            <i class="fas fa-commenting"></i>
                         </button>
                     </div>
                 </div>
@@ -7533,11 +7529,11 @@
                                     `).join('')}
                                 </div>
                                 <div style="margin-top: 8px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
-                                    <button class="enhance-all-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
-                                        🪄 <span>增强要点</span>
+                                    <button class="enhance-all-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点" style="background-color: #6c757d; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                        <span>增强要点</span>
                                     </button>
-                                    <button onclick="addNewBulletPoint()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px;">
-                                        <i class="fas fa-plus"></i> <span>添加要点</span>
+                                    <button type="button" onclick="addNewBulletPoint()" class="btn btn-sm modal-btn-primary bullet-add-btn" style="background-color: #6c757d; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                        <i class="fas fa-plus"></i><span>添加要点</span>
                                     </button>
                                 </div>
                             </div>
@@ -7550,12 +7546,12 @@
                                         <p style="margin: 0;">暂无要点，点击下方按钮添加</p>
                                     </div>
                                 </div>
-                                <div style="margin-top: 8px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
-                                    <button class="enhance-all-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
-                                        🪄 <span>增强所有要点</span>
+                                <div class="bullet-actions">
+                                    <button type="button" class="btn btn-sm modal-btn-neutral" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
+                                        <span>增强要点</span>
                                     </button>
-                                    <button onclick="addNewBulletPoint()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px;">
-                                        <i class="fas fa-plus"></i> <span>添加要点</span>
+                                    <button type="button" class="btn btn-sm modal-btn-primary bullet-add-btn" onclick="addNewBulletPoint()">
+                                        <i class="fas fa-plus"></i><span>添加要点</span>
                                     </button>
                                 </div>
                             </div>
@@ -7613,47 +7609,39 @@
 
             const outlineContainer = document.createElement('div');
             outlineContainer.style.cssText = `
-                background: white;
-                border-radius: 8px;
+                background: var(--bg-primary);
+                border-radius: 12px;
                 padding: 30px;
                 width: 90vw;
                 max-width: 1200px;
                 max-height: 85vh;
                 overflow-y: auto;
                 position: relative;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                border: 1px solid var(--border-color);
+                box-shadow: 0 20px 50px rgba(0,0,0,0.25);
             `;
 
             const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'modal-close-button';
             closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            closeBtn.style.cssText = `
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                background: #dc3545;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 36px;
-                height: 36px;
-                cursor: pointer;
-                font-size: 16px;
-                transition: all 0.3s ease;
-                z-index: 1;
-            `;
+            closeBtn.style.cssText += 'position:absolute;top:18px;right:18px;z-index:1;';
 
             // 添加按钮区域
             const buttonArea = `
                 <div style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
-                    <button onclick="aiOptimizeSingleSlideInSlidesEditor()" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
-                        <i class="fas fa-robot"></i> AI优化
+                    <button onclick="aiOptimizeSingleSlideInSlidesEditor()" class="outline-modal-btn outline-modal-btn--solid">
+                        <i class="fas fa-robot"></i>
+                        <span>AI优化</span>
                     </button>
                     <div style="display: flex; gap: 15px;">
-                        <button onclick="saveSlideOutline()" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
-                            <i class="fas fa-save"></i> 保存大纲
+                        <button onclick="saveSlideOutline()" class="outline-modal-btn outline-modal-btn--solid">
+                            <i class="fas fa-save"></i>
+                            <span>保存大纲</span>
                         </button>
-                        <button onclick="regenerateFromOutline()" style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s ease;">
-                            <i class="fas fa-sync"></i> 根据大纲重新生成
+                        <button onclick="regenerateFromOutline()" class="outline-modal-btn">
+                            <i class="fas fa-sync"></i>
+                            <span>根据大纲重新生成</span>
                         </button>
                     </div>
                 </div>
@@ -8103,7 +8091,7 @@
             promptText.style.margin = '0 0 10px 0';
 
             const extractBtn = document.createElement('button');
-            extractBtn.textContent = '🔍 尝试手动提取HTML';
+            extractBtn.textContent = '尝试手动提取HTML';
             extractBtn.style.cssText = `
                 background: #17a2b8;
                 color: white;
@@ -12552,7 +12540,8 @@
             speechScriptModal.style.backgroundColor = 'rgba(0,0,0,0.5)';
             speechScriptModal.style.zIndex = '20000';
             speechScriptModal.innerHTML = `
-                <div class="speech-modal-content" style="max-width: 1000px; width: 90vw; margin: auto;">
+                <div class="speech-modal-dialog" style="max-width: 90vw; width: 1200px;">
+                    <div class="speech-modal-content">
                         <div class="speech-modal-header">
                             <div class="speech-modal-title">
                                 <div class="speech-modal-icon">
@@ -12628,89 +12617,96 @@
                             </div>
 
                             <!-- Multi-slide Selection (hidden by default) -->
-                            <div id="multiSlideSelection" class="mb-4" style="display: none;">
-                                <h6 class="mb-3" style="color: var(--text-primary); font-weight: 600;">选择幻灯片</h6>
-                                <div class="slide-selection-grid" id="slideSelectionGrid">
-                                    <!-- Will be populated by JavaScript -->
-                                </div>
+                            <div id="multiSlideSelection" class="speech-section" style="display: none;">
+                                <h6 class="speech-section-title">选择幻灯片</h6>
+                                <div class="slide-selection-grid" id="slideSelectionGrid"></div>
                             </div>
 
                             <!-- Customization Options -->
                             <div class="speech-section">
                                 <h6 class="speech-section-title">自定义选项</h6>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="speech-form-label">语调风格</label>
-                                        <select class="speech-form-select" id="speechTone" onchange="toggleCustomToneInput()">
-                                            <option value="conversational">对话式</option>
-                                            <option value="formal">正式</option>
-                                            <option value="casual">轻松</option>
-                                            <option value="persuasive">说服性</option>
-                                            <option value="educational">教学式</option>
-                                            <option value="authoritative">权威式</option>
-                                            <option value="storytelling">叙事性</option>
-                                            <option value="custom">自定义</option>
-                                        </select>
-                                        <div id="customToneContainer" style="display: none; margin-top: 8px;">
-                                            <input type="text" class="speech-form-input" id="customTone"
-                                                   placeholder="请描述您希望的语调风格，例如：幽默风趣、严肃专业、温和亲切等...">
+                                <div class="speech-config-grid">
+                                    <div class="speech-config-card">
+                                        <div class="speech-config-title">语调风格</div>
+                                        <div class="speech-config-control">
+                                            <select class="speech-form-select" id="speechTone" onchange="toggleCustomToneInput()">
+                                                <option value="conversational">对话式</option>
+                                                <option value="formal">正式</option>
+                                                <option value="casual">轻松</option>
+                                                <option value="persuasive">说服性</option>
+                                                <option value="educational">教学式</option>
+                                                <option value="authoritative">权威式</option>
+                                                <option value="storytelling">叙事性</option>
+                                                <option value="custom">自定义</option>
+                                            </select>
+                                            <div id="customToneContainer" class="speech-config-extra" style="display: none;">
+                                                <input type="text" class="speech-form-input" id="customTone"
+                                                       placeholder="请描述您希望的语调风格，例如：幽默风趣、严肃专业、温和亲切等...">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
-                                        <label class="speech-form-label">目标受众</label>
-                                        <select class="speech-form-select" id="targetAudience" onchange="toggleCustomAudienceInput()">
-                                            <option value="general_public">普通大众</option>
-                                            <option value="executives">企业高管</option>
-                                            <option value="students">学生</option>
-                                            <option value="technical_experts">技术专家</option>
-                                            <option value="colleagues">同事</option>
-                                            <option value="clients">客户</option>
-                                            <option value="investors">投资者</option>
-                                            <option value="custom">自定义</option>
-                                        </select>
-                                        <div id="customAudienceContainer" style="display: none; margin-top: 8px;">
-                                            <input type="text" class="speech-form-input" id="customAudience"
-                                                   placeholder="请描述您的目标受众，例如：中小企业主、医疗从业者、教育工作者等...">
+                                    <div class="speech-config-card">
+                                        <div class="speech-config-title">目标受众</div>
+                                        <div class="speech-config-control">
+                                            <select class="speech-form-select" id="targetAudience" onchange="toggleCustomAudienceInput()">
+                                                <option value="general_public">普通大众</option>
+                                                <option value="executives">企业高管</option>
+                                                <option value="students">学生</option>
+                                                <option value="technical_experts">技术专家</option>
+                                                <option value="colleagues">同事</option>
+                                                <option value="clients">客户</option>
+                                                <option value="investors">投资者</option>
+                                                <option value="custom">自定义</option>
+                                            </select>
+                                            <div id="customAudienceContainer" class="speech-config-extra" style="display: none;">
+                                                <input type="text" class="speech-form-input" id="customAudience"
+                                                       placeholder="请描述您的目标受众，例如：中小企业主、医疗从业者、教育工作者等...">
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="speech-form-label">语言复杂度</label>
-                                        <select class="speech-form-select" id="languageComplexity">
-                                            <option value="moderate">适中</option>
-                                            <option value="simple">简单</option>
-                                            <option value="advanced">高级</option>
-                                        </select>
+                                    <div class="speech-config-card">
+                                        <div class="speech-config-title">语言复杂度</div>
+                                        <div class="speech-config-control">
+                                            <select class="speech-form-select" id="languageComplexity">
+                                                <option value="moderate">适中</option>
+                                                <option value="simple">简单</option>
+                                                <option value="advanced">高级</option>
+                                            </select>
+                                        </div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
-                                        <label class="speech-form-label">演讲节奏</label>
-                                        <select class="speech-form-select" id="speakingPace">
-                                            <option value="normal">正常</option>
-                                            <option value="slow">缓慢</option>
-                                            <option value="fast">快速</option>
-                                        </select>
+                                    <div class="speech-config-card">
+                                        <div class="speech-config-title">演讲节奏</div>
+                                        <div class="speech-config-control">
+                                            <select class="speech-form-select" id="speakingPace">
+                                                <option value="normal">正常</option>
+                                                <option value="slow">缓慢</option>
+                                                <option value="fast">快速</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div class="mb-3">
-                                    <div class="speech-form-check">
-                                        <input type="checkbox" id="includeTransitions" checked>
-                                        <label for="includeTransitions" class="speech-checkbox-label">
-                                            <span class="speech-checkbox-custom"></span>
-                                            包含过渡语句
-                                        </label>
+                                    <div class="speech-config-card">
+                                        <div class="speech-config-title">过渡语句</div>
+                                        <div class="speech-config-description">生成内容时自动添加段落衔接提示。</div>
+                                        <div class="speech-form-check">
+                                            <input type="checkbox" id="includeTransitions" checked>
+                                            <label for="includeTransitions" class="speech-checkbox-label">
+                                                <span class="speech-checkbox-custom"></span>
+                                                包含过渡语句
+                                            </label>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div class="mb-3">
-                                    <label class="speech-form-label">自定义风格要求（可选）</label>
-                                    <textarea class="speech-form-textarea" id="customStylePrompt" rows="3"
-                                              placeholder="例如：使用更多的数据支撑，增加互动问题，保持幽默感等..."></textarea>
+                                    <div class="speech-config-card speech-config-card-full">
+                                        <div class="speech-config-title">自定义风格要求（可选）</div>
+                                        <div class="speech-config-control">
+                                            <textarea class="speech-form-textarea" id="customStylePrompt" rows="3"
+                                                      placeholder="例如：使用更多的数据支撑，增加互动问题，保持幽默感等..."></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -12737,6 +12733,7 @@
                                 生成演讲稿
                             </button>
                         </div>
+                    </div>
                 </div>
             `;
 
@@ -12788,12 +12785,14 @@
                 const slideItem = document.createElement('div');
                 slideItem.className = 'slide-selection-item';
                 slideItem.innerHTML = `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="slide_${index}" value="${index}">
-                        <label class="form-check-label" for="slide_${index}">
-                            第${index + 1}页: ${slide.title || '无标题'}
-                        </label>
-                    </div>
+                    <input class="slide-selection-checkbox" type="checkbox" id="slide_${index}" value="${index}">
+                    <label class="slide-selection-card" for="slide_${index}">
+                        <span class="slide-selection-indicator" aria-hidden="true"></span>
+                        <div class="slide-selection-meta">
+                            <span class="slide-selection-title">第${index + 1}页</span>
+                            <span class="slide-selection-subtitle">${slide.title || '无标题'}</span>
+                        </div>
+                    </label>
                 `;
                 grid.appendChild(slideItem);
             });
@@ -13778,7 +13777,7 @@
                 modal.className = 'ai-optimize-modal';
                 modal.style.cssText = `
                     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                    background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+                    background: var(--surface-contrast);
                     z-index: 10002; display: flex; align-items: center; justify-content: center;
                     padding: 20px; animation: fadeIn 0.3s ease;
                 `;
@@ -13786,9 +13785,10 @@
                 // 创建弹窗内容
                 const content = document.createElement('div');
                 content.style.cssText = `
-                    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+                    background: var(--surface);
                     border-radius: 20px; padding: 0; max-width: 600px; width: 100%;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                    border: 1px solid var(--glass-border);
+                    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
                     animation: slideIn 0.3s ease; max-height: 90vh; overflow: hidden;
                     display: flex; flex-direction: column;
                 `;
@@ -13812,64 +13812,221 @@
                             from { transform: translateY(-50px); opacity: 0; }
                             to { transform: translateY(0); opacity: 1; }
                         }
-                        .ai-optimize-modal .suggestion-tag {
-                            display: inline-block;
-                            padding: 6px 12px;
-                            background: linear-gradient(135deg, #667eea, #764ba2);
-                            color: white;
-                            border-radius: 20px;
-                            font-size: 12px;
-                            margin: 4px;
+                        .ai-optimize-modal__header {
+                            background: var(--surface-contrast);
+                            color: var(--surface);
+                            padding: 24px 32px;
+                        }
+                        .ai-optimize-modal__header-content {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            gap: 16px;
+                        }
+                        .ai-optimize-modal__title {
+                            margin: 0 0 6px 0;
+                            font-size: 1.3rem;
+                            font-weight: 700;
+                            letter-spacing: -0.01em;
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                        }
+                        .ai-optimize-modal__subtitle {
+                            margin: 0;
+                            font-size: 0.95rem;
+                            color: rgba(255, 255, 255, 0.72);
+                        }
+                        .ai-optimize-modal__close {
+                            border: none;
+                            background: var(--surface);
+                            color: var(--surface-contrast);
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            font-size: 1.2rem;
                             cursor: pointer;
-                            transition: all 0.3s ease;
-                            border: 2px solid transparent;
+                            transition: background 0.2s ease, transform 0.2s ease;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
                         }
-                        .ai-optimize-modal .suggestion-tag:hover {
-                            transform: translateY(-2px);
-                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                            border-color: #667eea;
-                            background: linear-gradient(135deg, #764ba2, #667eea);
+                        .ai-optimize-modal__close:hover {
+                            background: var(--surface-subtle);
+                            transform: scale(1.05);
                         }
-                        .ai-optimize-modal textarea:focus {
+                        .ai-optimize-modal__body {
+                            padding: 30px 32px;
+                            flex: 1;
+                            overflow-y: auto;
+                            background: var(--surface);
+                            display: flex;
+                            flex-direction: column;
+                            gap: 20px;
+                        }
+                        .ai-optimize-modal__body .current-info {
+                            background: var(--surface-subtle);
+                            border-left: 3px solid var(--surface-contrast);
+                            padding: 16px 18px;
+                            border-radius: 12px;
+                            color: var(--text-secondary);
+                            font-size: 0.95rem;
+                            line-height: 1.7;
+                        }
+                        .ai-optimize-modal__body .current-info strong {
+                            color: var(--surface-contrast);
+                            font-weight: 600;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        .input-group {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 10px;
+                        }
+                        .input-label {
+                            display: block;
+                            color: var(--text-primary);
+                            font-weight: 600;
+                            font-size: 0.95rem;
+                            letter-spacing: 0.01em;
+                        }
+                        .input-textarea {
+                            width: 100%;
+                            min-height: 120px;
+                            padding: 16px 18px;
+                            border: 1px solid var(--glass-border);
+                            border-radius: 12px;
+                            font-size: 0.95rem;
+                            resize: vertical;
+                            font-family: inherit;
+                            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                            color: var(--text-primary);
+                            background: var(--surface);
+                        }
+                        .input-textarea::placeholder {
+                            color: var(--text-muted);
+                            opacity: 0.9;
+                        }
+                        .input-textarea:focus {
                             outline: none;
-                            border-color: #667eea;
-                            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                            border-color: var(--surface-contrast);
+                            box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+                        }
+                        .suggestions {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                        }
+                        .suggestion-label {
+                            display: block;
+                            color: var(--text-secondary);
+                            font-size: 0.85rem;
+                            font-weight: 500;
+                            letter-spacing: 0.02em;
+                        }
+                        .suggestion-list {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                        }
+                        .suggestion-tag {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 6px 14px;
+                            background: var(--surface-subtle);
+                            border: 1px solid var(--glass-border);
+                            border-radius: 999px;
+                            font-size: 0.8rem;
+                            color: var(--text-primary);
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        }
+                        .suggestion-tag:hover {
+                            transform: translateY(-2px);
+                            background: var(--surface-contrast);
+                            border-color: var(--surface-contrast);
+                            color: var(--surface);
+                            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+                        }
+                        .ai-optimize-modal__footer {
+                            padding: 20px 32px;
+                            background: var(--surface);
+                            border-top: 1px solid var(--glass-border);
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            gap: 16px;
+                        }
+                        .footer-hint {
+                            color: var(--text-secondary);
+                            font-size: 0.85rem;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+                        .footer-actions {
+                            display: flex;
+                            gap: 12px;
+                        }
+                        .footer-actions .btn {
+                            min-width: 110px;
+                            justify-content: center;
+                        }
+                        .modal-cancel {
+                            background: var(--surface-subtle);
+                            border-color: var(--border-color);
+                            color: var(--text-primary);
+                        }
+                        .modal-cancel:hover {
+                            background: var(--surface);
+                        }
+                        @media (max-width: 520px) {
+                            .ai-optimize-modal__header,
+                            .ai-optimize-modal__body,
+                            .ai-optimize-modal__footer {
+                                padding-left: 20px;
+                                padding-right: 20px;
+                            }
+                            .footer-actions {
+                                width: 100%;
+                                flex-direction: column;
+                            }
+                            .footer-actions .btn {
+                                width: 100%;
+                            }
                         }
                     </style>
                     
-                    <!-- 头部 -->
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 20px 20px 0 0; position: relative;">
-                        <div style="position: relative; z-index: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3 style="margin: 0 0 8px 0; font-size: 1.3em; font-weight: 700;">
-                                        <i class="fas fa-magic" style="margin-right: 10px;"></i>${config.title}
-                                    </h3>
-                                    <p style="margin: 0; opacity: 0.9; font-size: 0.9em;">${config.subtitle}</p>
-                                </div>
-                                <button onclick="this.closest('.ai-optimize-modal').remove()" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                                    ×
-                                </button>
+                    <div class="ai-optimize-modal__header">
+                        <div class="ai-optimize-modal__header-content">
+                            <div>
+                                <h3 class="ai-optimize-modal__title">
+                                    <i class="fas fa-magic"></i>${config.title}
+                                </h3>
+                                <p class="ai-optimize-modal__subtitle">${config.subtitle}</p>
                             </div>
+                            <button type="button" class="ai-optimize-modal__close" onclick="this.closest('.ai-optimize-modal').remove()" aria-label="关闭">
+                                <span aria-hidden="true">×</span>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 内容区域 -->
-                    <div style="padding: 30px; flex: 1; overflow-y: auto;">
-                        <!-- 当前信息展示 -->
-                        <div style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <div style="color: #2c3e50; font-size: 0.9em; line-height: 1.6;">
-                                <strong style="color: #3498db;"><i class="fas fa-info-circle"></i> 当前内容</strong><br>
+                    <div class="ai-optimize-modal__body">
+                        <div class="current-info">
+                            <div>
+                                <strong><i class="fas fa-info-circle"></i> 当前内容</strong><br>
                                 ${config.currentInfo}
                             </div>
                         </div>
 
-                        <!-- 输入框 -->
-                        <div style="margin-bottom: 20px;">
-                            <label style="display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 0.95em;">
+                        <div class="input-group">
+                            <label class="input-label" for="aiOptimizeInput">
                                 <i class="fas fa-edit"></i> 请描述您的优化需求
                             </label>
-                            <textarea id="aiOptimizeInput" style="width: 100%; min-height: 120px; padding: 15px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 14px; resize: vertical; font-family: inherit; transition: all 0.3s ease;" placeholder="详细描述您希望如何优化此内容...
+                            <textarea id="aiOptimizeInput" class="input-textarea" placeholder="详细描述您希望如何优化此内容...
 
 例如：
 - 增加更多技术细节
@@ -13877,28 +14034,26 @@
 - 添加案例分析"></textarea>
                         </div>
 
-                        <!-- 快捷建议 -->
-                        <div style="margin-bottom: 10px;">
-                            <label style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 0.85em;">
+                        <div class="suggestions">
+                            <label class="suggestion-label">
                                 <i class="fas fa-lightbulb"></i> 点击快捷建议快速填充
                             </label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <div class="suggestion-list">
                                 ${suggestions.map(s => `<span class="suggestion-tag" onclick="document.getElementById('aiOptimizeInput').value = '${s}'">${s}</span>`).join('')}
                             </div>
                         </div>
                     </div>
 
-                    <!-- 底部按钮 -->
-                    <div style="padding: 20px 30px; background: #f8f9fa; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e9ecef;">
-                        <div style="color: #7f8c8d; font-size: 0.85em;">
+                    <div class="ai-optimize-modal__footer">
+                        <div class="footer-hint">
                             <i class="fas fa-robot"></i> AI将根据您的需求智能优化内容
                         </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="this.closest('.ai-optimize-modal').remove()" class="btn btn-sm" style="background: #95a5a6; color: white; padding: 10px 20px;">
-                                <i class="fas fa-times"></i> 取消
+                        <div class="footer-actions">
+                            <button type="button" class="btn btn-sm modal-cancel" onclick="this.closest('.ai-optimize-modal').remove()">
+                                取消
                             </button>
-                            <button id="confirmOptimizeBtn" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px;">
-                                <i class="fas fa-magic"></i> 开始优化
+                            <button type="button" id="confirmOptimizeBtn" class="btn btn-sm btn-primary">
+                                开始优化
                             </button>
                         </div>
                     </div>

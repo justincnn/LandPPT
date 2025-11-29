@@ -15,8 +15,8 @@
 }
 
 .slide-number {
-    background: #3498db;
-    color: white;
+    background: var(--surface-contrast);
+    color: var(--surface);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -34,17 +34,18 @@
 }
 
 .slide-type-tag {
-    background: #e8f4fd;
-    color: #3498db;
+    background: var(--surface);
+    color: var(--text-secondary);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.8em;
+    border: 1px solid var(--border-color);
 }
 
 .content-points {
     margin: 0;
     padding-left: 20px;
-    color: #555;
+    color: var(--text-secondary);
     line-height: 1.6;
 }
 
@@ -130,19 +131,18 @@
 .loading-container {
     text-align: center;
     padding: 30px 20px;
-    background: linear-gradient(-45deg, #f8f9fa, #e9ecef, #f8f9fa, #e9ecef);
-    background-size: 400% 400%;
-    animation: gradientShift 4s ease infinite;
+    background: var(--surface);
     border-radius: 15px;
     margin: 15px 0;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     max-height: 500px;
     overflow: hidden;
+    border: 1px solid var(--glass-border);
 }
 
 .loading-icon {
     font-size: 2.5em;
-    color: #3498db;
+    color: var(--text-primary);
     margin-bottom: 15px;
     animation: pulse 2s ease-in-out infinite;
 }
@@ -150,7 +150,7 @@
 .loading-title {
     font-size: 1.2em;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--text-primary);
     margin-bottom: 10px;
 }
 
@@ -185,9 +185,9 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background: var(--ink-strong);
     border-radius: 50%;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     overflow: hidden;
 }
 
@@ -198,7 +198,7 @@
     left: 20%;
     width: 60%;
     height: 60%;
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
     border-radius: 50%;
     animation: brainPulse 2s ease-in-out infinite;
 }
@@ -219,8 +219,11 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 48px;
+    font-size: 21px;
     color: white;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
     text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     animation: iconGlow 3s ease-in-out infinite;
 }
@@ -246,7 +249,7 @@
 
 .neural-line {
     position: absolute;
-    background: linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.6) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(17, 17, 17, 0.3) 50%, transparent 100%);
     border-radius: 2px;
     opacity: 0;
     animation: neuralPulse 3s ease-in-out infinite;
@@ -372,7 +375,7 @@
 
 .progress-ring-circle {
     fill: none;
-    stroke: rgba(102, 126, 234, 0.3);
+    stroke: rgba(17, 17, 17, 0.25);
     stroke-width: 3;
     stroke-linecap: round;
     transform-origin: 50% 50%;
@@ -382,7 +385,7 @@
 
 .progress-ring-progress {
     fill: none;
-    stroke: #667eea;
+    stroke: #1f2937;
     stroke-width: 3;
     stroke-linecap: round;
     stroke-dasharray: 440;
@@ -421,7 +424,7 @@
 }
 
 .generating-text {
-    color: #667eea;
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
@@ -430,7 +433,7 @@
 }
 
 .generating-dots {
-    color: #667eea;
+    color: var(--text-secondary);
     font-size: 16px;
     letter-spacing: 2px;
     animation: dotsAnimation 2s ease-in-out infinite;
@@ -469,7 +472,7 @@
 }
 
 .ai-brain.completed .brain-core {
-    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 50%, #58d68d 100%);
+    background: #1f2937;
     animation: completionGlow 1.5s ease-out;
 }
 
@@ -526,7 +529,7 @@
 .progress-container {
     width: 100%;
     height: 6px;
-    background: #e9ecef;
+    background: var(--surface-subtle);
     border-radius: 3px;
     margin: 20px 0;
     overflow: hidden;
@@ -534,7 +537,7 @@
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #3498db, #2ecc71);
+    background: var(--ink);
     border-radius: 3px;
     animation: progressBar 15s ease-in-out infinite;
 }
@@ -542,9 +545,9 @@
 .loading-tips {
     margin-top: 20px;
     padding: 12px;
-    background: rgba(52, 152, 219, 0.1);
+    background: rgba(17, 17, 17, 0.05);
     border-radius: 8px;
-    border-left: 4px solid #3498db;
+    border-left: 4px solid rgba(17, 17, 17, 0.4);
 }
 
 .loading-tips h5 {
@@ -583,19 +586,19 @@
 .form-group textarea {
     width: 100%;
     padding: 12px 16px;
-    border: 2px solid #e9ecef;
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     font-size: 14px;
     transition: all 0.3s ease;
-    background: white;
+    background: var(--surface);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: rgba(17, 17, 17, 0.65);
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
     transform: translateY(-1px);
 }
 
@@ -609,40 +612,43 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     text-decoration: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: none;
+    background: var(--surface-contrast);
+    color: var(--surface);
 }
 
 .btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-soft);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--surface-contrast);
+    color: var(--surface);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
+    background: #1f2a37;
+    color: var(--surface);
 }
 
 .btn-outline-primary {
     background: transparent;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: var(--ink);
+    border: 1px solid var(--border-color);
 }
 
 .btn-outline-primary:hover {
-    background: #667eea;
-    color: white;
+    background: var(--surface-contrast);
+    color: var(--surface);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-    color: white;
+    background: #3f3f3f;
+    color: var(--surface);
 }
 
 /* 小尺寸按钮 */
@@ -661,18 +667,18 @@
 /* 大纲相关按钮样式 */
 .btn-outline-warning {
     background: transparent;
-    color: #f39c12;
-    border: 2px solid #f39c12;
+    color: var(--ink);
+    border: 1px solid var(--border-color);
 }
 
 .btn-outline-warning:hover {
-    background: #f39c12;
-    color: white;
+    background: var(--surface-contrast);
+    color: var(--surface);
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-    color: white;
+    background: #2d2d2d;
+    color: var(--surface);
 }
 
 /* 响应式设计 */
@@ -707,20 +713,20 @@
 {% block content %}
 <!-- 页面头部美化 -->
 
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 0; margin: -20px -20px 30px -20px; text-align: center; position: relative; overflow: hidden;">
+<div style="background: var(--glass-bg); color: var(--text-primary); padding: 40px 0; margin: -20px -20px 30px -20px; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid var(--glass-border);">
     <div style="position: relative; z-index: 1;">
-        <h2 style="font-size: 2em; font-weight: 700; margin-bottom: 12px; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">📋 {{ todo_board.title }}</h2>
-        <p style="opacity: 0.9; font-size: 1em;">项目ID: <code style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9em;">{{ todo_board.task_id }}</code></p>
+        <h2 style="font-size: 2em; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.01em;">{{ todo_board.title }}</h2>
+        <p style="opacity: 0.9; font-size: 1em;">项目ID: <code style="background: var(--surface); padding: 4px 10px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.9em; border: 1px solid var(--border-color);">{{ todo_board.task_id }}</code></p>
     </div>
 </div>
 
     <!-- Requirements Confirmation Section -->
     {% set requirements_stage = todo_board.stages | selectattr('id', 'equalto', 'requirements_confirmation') | first %}
     {% if not requirements_stage or requirements_stage.status == 'pending' %}
-    <div id="requirements-section" style="max-width: 900px; margin: 15px auto; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid rgba(102, 126, 234, 0.15);">
+    <div id="requirements-section" style="max-width: 900px; margin: 15px auto; background: var(--surface); border-radius: 16px; padding: 30px; box-shadow: var(--shadow-soft); border: 1px solid var(--glass-border);">
         <div style="text-align: center; margin-bottom: 25px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; border-radius: 40px; margin-bottom: 15px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);">
-                <h3 style="margin: 0; font-weight: 600; font-size: 1.1em;">📝 需求确认</h3>
+            <div style="display: inline-block; background: var(--surface-contrast); color: var(--surface); padding: 12px 20px; border-radius: 40px; margin-bottom: 15px; box-shadow: none;">
+                <h3 style="margin: 0; font-weight: 600; font-size: 1.1em;">需求确认</h3>
             </div>
             <p style="color: #7f8c8d; margin-bottom: 0; font-size: 1em; line-height: 1.5;">请确认以下信息，AI将根据您的确认生成定制化的PPT内容</p>
         </div>
@@ -744,18 +750,18 @@
             </div>
 
             <!-- File Upload Section (hidden by default) -->
-            <div id="file-upload-section-todo" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">📁 上传文件 (支持多文件)</label>
+            <div id="file-upload-section-todo" style="display: none; margin-bottom: 20px; padding: 15px; background: var(--surface-subtle); border-radius: 8px; border: 1px solid var(--glass-border);">
+                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">上传文件 (支持多文件)</label>
                 <input type="file" id="file_upload_todo" name="file_upload" accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.xlsx,.csv"
                        multiple
-                       style="width: 100%; padding: 8px; border: 2px dashed #3498db; background: #f8f9fa; border-radius: 6px;">
+                       style="width: 100%; padding: 8px; border: 1px dashed var(--border-color); background: var(--surface); border-radius: 6px;">
                 <small style="color: #7f8c8d; display: block; margin-top: 5px;">
-                    📌 支持同时选择多个文件 | 支持 PDF、DOCX、TXT、MD 等格式 | 单个文件最大 100MB
+                    支持同时选择多个文件 | 支持 PDF、DOCX、TXT、MD 等格式 | 单个文件最大 100MB
                 </small>
 
                 <!-- Multiple Files List Display -->
                 <div id="selected-files-list-todo" style="margin-top: 10px; display: none;">
-                    <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                    <div style="background: var(--surface); padding: 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <strong style="color: #2c3e50;">已选择的文件：</strong>
                             <button type="button" onclick="clearAllFiles()"
@@ -840,13 +846,11 @@
                 <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">PPT页数设置 (Page Count)</label>
                 <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 15px;">选择PPT的页数生成方式：</p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div class="page-count-option active" data-mode="ai_decide" style="border: 2px solid #3498db; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🤖</div>
+                    <div class="page-count-option active" data-mode="ai_decide" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
                         <h5 style="color: #2c3e50; margin-bottom: 5px;">AI智能决定</h5>
                         <p style="font-size: 12px; color: #7f8c8d;">AI根据内容深度和逻辑结构自主决定最合适的页数</p>
                     </div>
-                    <div class="page-count-option" data-mode="custom_range" style="border: 2px solid #ddd; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                    <div class="page-count-option" data-mode="custom_range" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
                         <h5 style="color: #2c3e50; margin-bottom: 5px;">自定义范围</h5>
                         <p style="font-size: 12px; color: #7f8c8d;">在指定范围内生成PPT页数</p>
                     </div>
@@ -854,17 +858,17 @@
                 <input type="hidden" id="page_count_mode" name="page_count_mode" value="ai_decide">
 
                 <!-- Custom range section (hidden by default) -->
-                <div id="custom-range-section" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                <div id="custom-range-section" style="display: none; margin-top: 15px; padding: 15px; background: var(--surface-subtle); border-radius: 8px; border: 1px solid var(--glass-border);">
                     <div style="display: flex; gap: 15px; align-items: center;">
                         <div style="flex: 1;">
                             <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: bold;">最少页数</label>
                             <input type="number" id="min_pages" name="min_pages" value="8" min="5" max="50"
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                   style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
                         </div>
                         <div style="flex: 1;">
                             <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: bold;">最多页数</label>
                             <input type="number" id="max_pages" name="max_pages" value="15" min="5" max="50"
-                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                                   style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
                         </div>
                     </div>
                     <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px; margin-bottom: 0;">
@@ -877,18 +881,15 @@
                 <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">PPT风格 (Style)</label>
                 <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 15px;">选择适合您内容的PPT风格：</p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div class="style-option" data-style="general" style="border: 2px solid #ddd; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📋</div>
+                    <div class="style-option" data-style="general" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
                         <h5 style="color: #2c3e50; margin-bottom: 5px;">通用场景</h5>
                         <p style="font-size: 12px; color: #7f8c8d;">适用于商务汇报、学术演讲等通用场景</p>
                     </div>
-                    <div class="style-option" data-style="keynote" style="border: 2px solid #ddd; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
+                    <div class="style-option" data-style="keynote" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
                         <h5 style="color: #2c3e50; margin-bottom: 5px;">发布会</h5>
                         <p style="font-size: 12px; color: #7f8c8d;">Apple风格发布会，卡片式布局，科技感强</p>
                     </div>
-                    <div class="style-option" data-style="custom" style="border: 2px solid #ddd; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🎨</div>
+                    <div class="style-option" data-style="custom" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: all 0.3s ease;">
                         <h5 style="color: #2c3e50; margin-bottom: 5px;">自定义风格</h5>
                         <p style="font-size: 12px; color: #7f8c8d;">使用自定义提示词定制独特风格</p>
                     </div>
@@ -896,18 +897,18 @@
                 <input type="hidden" id="ppt_style" name="ppt_style" value="general" required>
 
                 <!-- Custom style prompt input (hidden by default) -->
-                <div id="custom-style-section" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold;">自定义风格提示词</label>
+                <div id="custom-style-section" style="display: none; margin-top: 15px; padding: 15px; background: #f7f7f7; border-radius: 8px; border: 1px solid #ddd;">
+                    <label style="display: block; margin-bottom: 8px; color: #333; font-weight: bold;">Custom Style Prompt</label>
                     <textarea id="custom_style_prompt" name="custom_style_prompt"
-                              style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"
-                              placeholder="请输入您希望的PPT风格描述，例如：简约现代风格，使用蓝色主题，卡片式布局..."></textarea>
-                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">详细描述您期望的PPT风格，AI将根据您的描述生成相应的设计</p>
+                              style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical; background: #f7f7f7;"
+                              placeholder="Enter your desired PPT style description, e.g. modern minimalist style, blue theme, card layout..."></textarea>
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">Describe your expected PPT style in detail, AI will generate the corresponding design based on your description</p>
                 </div>
             </div>
 
             <div style="text-align: center;">
                 <button type="submit" id="confirm-requirements-btn"
-                        style="background: #27ae60; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;">
+                        style="background: var(--surface-contrast); color: var(--surface); border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;">
                     开始生成大纲
                 </button>
             </div>
@@ -917,22 +918,22 @@
 
 <!-- Project Actions -->
 <div style="text-align: center; margin-bottom: 40px;">
-    <div style="display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.08);">
-        <a href="/projects/{{ todo_board.task_id }}" style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(52, 152, 219, 0.25); display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(52, 152, 219, 0.35)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(52, 152, 219, 0.25)'">
-            📊 项目详情
+    <div style="display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; background: var(--surface); padding: 20px; border-radius: 16px; box-shadow: var(--shadow-soft);">
+        <a href="/projects/{{ todo_board.task_id }}" style="background: var(--surface-contrast); color: var(--surface); text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            查看项目详情
         </a>
 
         {% if todo_board.overall_progress >= 100 %}
-        <a href="/projects/{{ todo_board.task_id }}/preview" target="_blank" style="background: linear-gradient(135deg, #27ae60, #229954); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(39, 174, 96, 0.25); display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(39, 174, 96, 0.35)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(39, 174, 96, 0.25)'">
-            🔍 预览 PPT
+        <a href="/projects/{{ todo_board.task_id }}/preview" target="_blank" style="background: #1f2a37; color: var(--surface); text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            预览 PPT
         </a>
-        <a href="/projects/{{ todo_board.task_id }}/edit" target="_blank" style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(231, 76, 60, 0.25); display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(231, 76, 60, 0.35)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(231, 76, 60, 0.25)'">
-            ✏️ 编辑 PPT
+        <a href="/projects/{{ todo_board.task_id }}/edit" target="_blank" style="background: #3f3f3f; color: var(--surface); text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            编辑 PPT
         </a>
         {% endif %}
 
-        <a href="/projects" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(149, 165, 166, 0.25); display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(149, 165, 166, 0.35)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(149, 165, 166, 0.25)'">
-            📋 返回项目列表
+        <a href="/projects" style="background: #2d2d2d; color: var(--surface); text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; font-size: 0.9em;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            返回项目列表
         </a>
     </div>
 </div>
@@ -968,7 +969,8 @@
 }
 
 .btn-stream:hover {
-    background: #2980b9 !important;
+    background: var(--surface-contrast) !important;
+    color: var(--surface) !important;
     transform: scale(1.05);
 }
 
@@ -977,8 +979,8 @@
 }
 
 .task-item.active {
-    background: #e8f4fd !important;
-    border-left: 4px solid #3498db;
+    background: var(--surface-subtle) !important;
+    border-left: 4px solid var(--surface-contrast);
 }
 
 .output-cursor {
@@ -994,16 +996,16 @@
 }
 
 .style-option:hover {
-    border-color: #3498db !important;
+    border-color: var(--surface-contrast) !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
 }
 
 .style-option.selected {
-    border-color: #3498db !important;
-    background: #e8f4fd !important;
+    border-color: var(--surface-contrast) !important;
+    background: var(--surface-subtle) !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
 
 .page-count-option {
@@ -1011,16 +1013,16 @@
 }
 
 .page-count-option:hover {
-    border-color: #3498db !important;
+    border-color: var(--surface-contrast) !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
 }
 
 .page-count-option.active {
-    border-color: #3498db !important;
-    background: #e8f4fd !important;
+    border-color: var(--surface-contrast) !important;
+    background: var(--surface-subtle) !important;
     transform: translateY(-1px);
-    box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
 </style>
 {% endblock %}
@@ -1174,11 +1176,11 @@ function updatePageCountStyles() {
     const pageCountOptions = document.querySelectorAll('.page-count-option');
     pageCountOptions.forEach(option => {
         if (option.classList.contains('active')) {
-            option.style.borderColor = '#3498db';
-            option.style.background = '#e8f4fd';
+            option.style.borderColor = '#111';
+            option.style.background = '#f5f5f5';
         } else {
-            option.style.borderColor = '#ddd';
-            option.style.background = 'white';
+            option.style.borderColor = '#d9d9d9';
+            option.style.background = '#fff';
         }
     });
 }
@@ -1517,29 +1519,29 @@ function showOutlineSection() {
 
         outlineSection.innerHTML = `
             <div style="text-align: center; margin-bottom: 30px;">
-                <h3 style="color: #2c3e50; margin-bottom: 10px;">
+                <h3 style="color: #111; margin-bottom: 10px;">
                     <i class="fas fa-brain"></i> PPT 大纲生成
                 </h3>
-                <p style="color: #7f8c8d;">AI正在为您生成专业的PPT大纲，您可以实时查看并编辑</p>
+                <p style="color: #555;">AI正在为您生成专业的PPT大纲，您可以实时查看并编辑</p>
             </div>
 
             <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; border: 2px solid #e9ecef;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h5 style="color: #2c3e50; margin: 0;">
+                    <h5 style="color: #111; margin: 0;">
                         <i class="fas fa-list-alt"></i> 大纲内容
-                        <span id="outline-status" style="color: #f39c12; font-size: 0.8em; margin-left: 10px; display: none;">
+                        <span id="outline-status" style="color: #111; font-size: 0.8em; margin-left: 10px; display: none;">
                         </span>
                     </h5>
 
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <!-- View Toggle Buttons - Always show -->
-                        <div style="display: flex; background: #e9ecef; border-radius: 5px; padding: 2px;">
+                        <div style="display: flex; background: #f0f0f0; border-radius: 5px; padding: 2px; gap: 4px;">
                             <button id="json-view-btn-new" onclick="switchOutlineViewNew('json')"
-                                    style="background: transparent; color: #6c757d; border: none; padding: 5px 10px; border-radius: 3px; font-size: 11px; cursor: pointer; transition: all 0.3s ease;">
+                                    style="background: #fff; color: #111; border: 1px solid #111; padding: 5px 10px; border-radius: 3px; font-size: 11px; cursor: pointer; transition: all 0.3s ease;">
                                 <i class="fas fa-code"></i> JSON
                             </button>
                             <button id="outline-view-btn-new" onclick="switchOutlineViewNew('outline')"
-                                    style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; font-size: 11px; cursor: pointer; transition: all 0.3s ease;">
+                                    style="background: #111; color: #fff; border: 1px solid #111; padding: 5px 10px; border-radius: 3px; font-size: 11px; cursor: pointer; transition: all 0.3s ease;">
                                 <i class="fas fa-list-ul"></i> 大纲视图
                             </button>
                         </div>
@@ -1598,7 +1600,7 @@ function showOutlineSection() {
                     </div>
 
                     <!-- 光标元素移到内容容器内部，使用绝对定位，默认隐藏 -->
-                    <div id="outline-cursor" style="position: absolute; bottom: 20px; right: 20px; display: none; width: 2px; height: 16px; background: #3498db; animation: blink 1s infinite; pointer-events: none;"></div>
+                    <div id="outline-cursor" style="position: absolute; bottom: 20px; right: 20px; display: none; width: 2px; height: 16px; background: #111; animation: blink 1s infinite; pointer-events: none;"></div>
                 </div>
 
                 <!-- Outline View (默认显示) -->
@@ -1612,15 +1614,11 @@ function showOutlineSection() {
                             <span style="color: #7f8c8d; font-size: 12px;">支持简洁视图和详细视图切换</span>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button onclick="regenerateOutlineNew()" class="btn btn-xs btn-outline-warning" title="重新生成大纲">
-                                <i class="fas fa-sync"></i> 重新生成
-                            </button>
+
                             <button onclick="toggleOutlineViewModeNew()" class="btn btn-xs btn-info" title="切换视图模式">
                                 <i class="fas fa-eye"></i> <span id="viewToggleTextNew">详细视图</span>
                             </button>
-                            <button onclick="editOutlineNew()" class="btn btn-xs btn-primary" title="修改大纲">
-                                <i class="fas fa-edit"></i> 修改大纲
-                            </button>
+
                             <button onclick="exportOutlineJSONNew()" class="btn btn-xs btn-success" title="导出JSON">
                                 <i class="fas fa-download"></i> 导出JSON
                             </button>
@@ -1866,12 +1864,12 @@ function populateRadioOptions(containerId, options, name) {
 // Update checkbox visual style
 function updateCheckboxStyle(div, checked) {
     if (checked) {
-        div.style.background = '#e8f4fd';
-        div.style.borderColor = '#3498db';
+        div.style.background = '#f5f5f5';
+        div.style.borderColor = '#111';
         div.style.transform = 'scale(1.02)';
     } else {
-        div.style.background = 'white';
-        div.style.borderColor = '#ddd';
+        div.style.background = '#fff';
+        div.style.borderColor = '#d9d9d9';
         div.style.transform = 'scale(1)';
     }
 }
@@ -1882,12 +1880,12 @@ function updateRadioStyles(name) {
     radios.forEach(radio => {
         const div = radio.parentElement;
         if (radio.checked) {
-            div.style.background = '#e8f4fd';
-            div.style.borderColor = '#3498db';
+            div.style.background = '#f5f5f5';
+            div.style.borderColor = '#111';
             div.style.transform = 'scale(1.02)';
         } else {
-            div.style.background = 'white';
-            div.style.borderColor = '#ddd';
+            div.style.background = '#fff';
+            div.style.borderColor = '#d9d9d9';
             div.style.transform = 'scale(1)';
         }
     });
@@ -2370,7 +2368,7 @@ async function startFileOutlineGeneration() {
             <div class="brain-container">
                 <div class="ai-brain" id="loading-brain-file">
                     <div class="brain-core">
-                        <div class="brain-icon">📄</div>
+                        <div class="brain-icon">AI</div>
                     </div>
                     <svg class="progress-ring" width="140" height="140">
                         <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
@@ -2565,20 +2563,21 @@ function showCustomRequirementsModal() {
         // 创建弹窗
         const modal = document.createElement('div');
         modal.style.cssText = `
-            background: white;
-            border-radius: 8px;
+            background: #fff;
+            border-radius: 12px;
             padding: 24px;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            border: 1px solid #111;
         `;
         
         modal.innerHTML = `
-            <h4 style="margin-top: 0; margin-bottom: 16px; color: #333;">
-                <i class="fas fa-magic" style="color: #3498db; margin-right: 8px;"></i>
+            <h4 style="margin-top: 0; margin-bottom: 16px; color: #111;">
+                <i class="fas fa-magic" style="color: #111; margin-right: 8px;"></i>
                 重新生成大纲
             </h4>
-            <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+            <p style="margin-bottom: 16px; color: #555; font-size: 14px;">
                 您可以输入额外的自定义需求，或者直接点击“生成”使用原有设置。
             </p>
             <textarea 
@@ -2588,12 +2587,14 @@ function showCustomRequirementsModal() {
                     width: 100%;
                     height: 120px;
                     padding: 12px;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
+                    border: 1px solid #d9d9d9;
+                    border-radius: 6px;
                     font-size: 14px;
                     resize: vertical;
                     font-family: inherit;
                     box-sizing: border-box;
+                    color: #111;
+                    background: #fff;
                 "
             ></textarea>
             <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
@@ -2601,10 +2602,10 @@ function showCustomRequirementsModal() {
                     id="modal-cancel-btn"
                     style="
                         padding: 10px 20px;
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        background: white;
-                        color: #666;
+                        border: 1px solid #111;
+                        border-radius: 6px;
+                        background: #fff;
+                        color: #111;
                         cursor: pointer;
                         font-size: 14px;
                     "
@@ -2615,10 +2616,10 @@ function showCustomRequirementsModal() {
                     id="modal-confirm-btn"
                     style="
                         padding: 10px 20px;
-                        border: none;
-                        border-radius: 4px;
-                        background: #3498db;
-                        color: white;
+                        border: 1px solid #111;
+                        border-radius: 6px;
+                        background: #111;
+                        color: #fff;
                         cursor: pointer;
                         font-size: 14px;
                     "
@@ -3132,10 +3133,10 @@ function showStartPPTButton() {
         if (outlineSection) {
             startPPTButton = document.createElement('div');
             startPPTButton.id = 'start-ppt-button';
-            startPPTButton.style.cssText = 'text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-radius: 10px; border: 2px solid #27ae60;';
+            startPPTButton.style.cssText = 'text-align: center; margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 10px; border: 1px solid #111;';
 
             startPPTButton.innerHTML = `
-                <button onclick="startPPTGenerationFromOutline()" class="btn btn-success btn-lg" style="padding: 15px 30px; font-size: 18px;">
+                <button onclick="startPPTGenerationFromOutline()" class="btn btn-lg" style="padding: 15px 30px; font-size: 18px; background: #111; color: #fff; border: 1px solid #111;">
                     <i class="fas fa-rocket"></i> 开始生成PPT
                 </button>
             `;
@@ -4081,10 +4082,10 @@ function renderCompactView(outlineData) {
     outlineData.slides.forEach((slide, index) => {
         const slideCard = document.createElement('div');
         slideCard.style.cssText = `
-            padding: 15px; background: white; border-radius: 8px;
-            border-left: 4px solid #3498db; transition: all 0.3s ease;
+            padding: 15px; background: #f8f9fa; border-radius: 8px;
+            border-left: 4px solid #6c757d; transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;
-            cursor: pointer;
+            cursor: pointer; color: #333;
         `;
 
         slideCard.onmouseover = function() {
@@ -4102,15 +4103,15 @@ function renderCompactView(outlineData) {
 
         slideCard.innerHTML = `
             <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <span style="background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
+                <span style="background: #111; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
                     ${slide.page_number || index + 1}
                 </span>
-                <strong style="color: #2c3e50; font-size: 0.9em;">${slide.title || '未命名幻灯片'}</strong>
+                <strong style="color: #111; font-size: 0.9em;">${slide.title || '未命名幻灯片'}</strong>
             </div>
-            ${slide.subtitle ? `<p style="color: #7f8c8d; font-size: 0.8em; margin: 5px 0; font-style: italic;">${slide.subtitle}</p>` : ''}
-            <div style="color: #666; font-size: 0.8em; line-height: 1.4;">
-                ${firstPoint ? (typeof firstPoint === 'string' ? firstPoint.substring(0, 80) + (firstPoint.length > 80 ? '...' : '') : JSON.stringify(firstPoint).substring(0, 80) + '...') : '<span style="color: #95a5a6;">暂无内容</span>'}
-                ${remainingCount > 0 ? `<br><span style="color: #95a5a6;">+${remainingCount} 个要点</span>` : ''}
+            ${slide.subtitle ? `<p style="color: #555; font-size: 0.8em; margin: 5px 0; font-style: italic;">${slide.subtitle}</p>` : ''}
+            <div style="color: #444; font-size: 0.8em; line-height: 1.4;">
+                ${firstPoint ? (typeof firstPoint === 'string' ? firstPoint.substring(0, 80) + (firstPoint.length > 80 ? '...' : '') : JSON.stringify(firstPoint).substring(0, 80) + '...') : '<span style="color: #888;">暂无内容</span>'}
+                ${remainingCount > 0 ? `<br><span style="color: #888;">+${remainingCount} 个要点</span>` : ''}
             </div>
         `;
 
@@ -4130,7 +4131,7 @@ function renderDetailView(outlineData) {
         const slideDiv = document.createElement('div');
         slideDiv.style.cssText = `
             padding: 20px; margin-bottom: 15px; background: #f8f9fa;
-            border-radius: 10px; border-left: 4px solid #3498db; position: relative;
+            border-radius: 10px; border-left: 4px solid #111; position: relative;
         `;
 
         const contentPoints = slide.content_points || slide.content || [];
@@ -4156,16 +4157,16 @@ function renderDetailView(outlineData) {
 
         slideDiv.innerHTML = `
             <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                <span style="background: #3498db; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
+                <span style="background: #111; color: #fff; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
                     ${slide.page_number || index + 1}
                 </span>
                 <div style="flex: 1;">
-                    <strong style="color: #2c3e50; font-size: 1.1em;">${slide.title || '未命名幻灯片'}</strong>
-                    ${slide.subtitle ? `<br><em style="color: #7f8c8d; font-size: 0.9em;">${slide.subtitle}</em>` : ''}
+                    <strong style="color: #111; font-size: 1.1em;">${slide.title || '未命名幻灯片'}</strong>
+                    ${slide.subtitle ? `<br><em style="color: #555; font-size: 0.9em;">${slide.subtitle}</em>` : ''}
                 </div>
             </div>
             ${contentHtml}
-            ${slide.slide_type ? `<div style="margin-top: 10px;"><span style="background: #e8f4fd; color: #3498db; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">类型: ${slide.slide_type}</span></div>` : ''}
+            ${slide.slide_type ? `<div style="margin-top: 10px;"><span style="background: #f5f5f5; color: #111; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">类型: ${slide.slide_type}</span></div>` : ''}
         `;
 
         container.appendChild(slideDiv);
@@ -4212,13 +4213,13 @@ function viewSlideDetail(slideIndex) {
 
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="color: #2c3e50; margin: 0;">第${slide.page_number || slideIndex + 1}页详情</h3>
-            <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+            <h3 style="color: #111; margin: 0;">第${slide.page_number || slideIndex + 1}页详情</h3>
+            <button onclick="this.closest('.modal').remove()" style="background: transparent; color: #111; border: 1px solid #111; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
         </div>
-        <h4 style="color: #3498db; margin-bottom: 10px;">${slide.title || '未命名幻灯片'}</h4>
-        ${slide.subtitle ? `<p style="color: #7f8c8d; font-style: italic; margin-bottom: 15px;">${slide.subtitle}</p>` : ''}
+        <h4 style="color: #111; margin-bottom: 10px;">${slide.title || '未命名幻灯片'}</h4>
+        ${slide.subtitle ? `<p style="color: #555; font-style: italic; margin-bottom: 15px;">${slide.subtitle}</p>` : ''}
         ${contentHtml}
-        ${slide.slide_type ? `<div style="margin-top: 15px;"><span style="background: #e8f4fd; color: #3498db; padding: 6px 12px; border-radius: 6px; font-size: 0.9em;">类型: ${slide.slide_type}</span></div>` : ''}
+        ${slide.slide_type ? `<div style="margin-top: 15px;"><span style="background: #f5f5f5; color: #111; padding: 6px 12px; border-radius: 6px; font-size: 0.9em;">类型: ${slide.slide_type}</span></div>` : ''}
     `;
 
     modal.className = 'modal';
@@ -4555,10 +4556,12 @@ function switchOutlineViewNew(view) {
         }
 
         // Update button styles
-        jsonViewBtn.style.background = '#3498db';
-        jsonViewBtn.style.color = 'white';
-        outlineViewBtn.style.background = 'transparent';
-        outlineViewBtn.style.color = '#6c757d';
+        jsonViewBtn.style.background = '#111';
+        jsonViewBtn.style.color = '#fff';
+        jsonViewBtn.style.border = '1px solid #111';
+        outlineViewBtn.style.background = '#fff';
+        outlineViewBtn.style.color = '#111';
+        outlineViewBtn.style.border = '1px solid #111';
     } else if (view === 'outline') {
         // Show outline view
         jsonView.style.display = 'none';
@@ -4574,10 +4577,12 @@ function switchOutlineViewNew(view) {
         }
 
         // Update button styles
-        outlineViewBtn.style.background = '#3498db';
-        outlineViewBtn.style.color = 'white';
-        jsonViewBtn.style.background = 'transparent';
-        jsonViewBtn.style.color = '#6c757d';
+        outlineViewBtn.style.background = '#111';
+        outlineViewBtn.style.color = '#fff';
+        outlineViewBtn.style.border = '1px solid #111';
+        jsonViewBtn.style.background = '#fff';
+        jsonViewBtn.style.color = '#111';
+        jsonViewBtn.style.border = '1px solid #111';
 
         // Generate outline view if content exists
         renderOutlineViewNew();
@@ -5008,18 +5013,18 @@ function editOutlineNew() {
 
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="color: #2c3e50; margin: 0;">编辑PPT大纲</h3>
-            <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+            <h3 style="color: #111; margin: 0;">编辑PPT大纲</h3>
+            <button onclick="this.closest('.modal').remove()" style="background: transparent; color: #111; border: 1px solid #111; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column;">
-            <textarea id="outlineEditorNew" style="flex: 1; border: 2px solid #ecf0f1; border-radius: 8px; padding: 15px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: none;" placeholder="编辑大纲JSON...">${outlineContent}</textarea>
+            <textarea id="outlineEditorNew" style="flex: 1; border: 2px solid #d9d9d9; border-radius: 8px; padding: 15px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: none; background: #fff; color: #111;" placeholder="编辑大纲JSON...">${outlineContent}</textarea>
             <div style="display: flex; gap: 8px; margin-top: 15px; justify-content: space-between;">
-                <button onclick="aiOptimizeJSONOutlineInModal()" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none;">
+                <button onclick="aiOptimizeJSONOutlineInModal()" class="btn btn-sm" style="background: #111; color: #fff; border: 1px solid #111;">
                     <i class="fas fa-magic"></i> 优化大纲
                 </button>
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="this.closest('.modal').remove()" class="btn btn-sm" style="background: #95a5a6; color: white;">取消</button>
-                    <button onclick="saveOutlineChangesNew()" class="btn btn-sm btn-primary">保存修改</button>
+                    <button onclick="this.closest('.modal').remove()" class="btn btn-sm" style="background: #fff; color: #111; border: 1px solid #111;">取消</button>
+                    <button onclick="saveOutlineChangesNew()" class="btn btn-sm btn-primary" style="background: #111; color: #fff; border: 1px solid #111;">保存修改</button>
                 </div>
             </div>
         </div>
@@ -5149,9 +5154,10 @@ function editSingleSlideNew(slideIndex) {
 
         const content = document.createElement('div');
         content.style.cssText = `
-            background: white; border-radius: 15px; padding: 30px;
+            background: #fff; border-radius: 15px; padding: 30px;
             width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid #111;
         `;
 
         // 构建内容要点的编辑界面 - 使用占位符，稍后用JavaScript创建
@@ -5162,9 +5168,9 @@ function editSingleSlideNew(slideIndex) {
                     <div class="content-point-item" data-point-index="${index}" style="display: flex; align-items: center; margin-bottom: 10px;">
                         <input type="text" class="content-point-input" data-index="${index}"
                                value="${point.replace(/"/g, '&quot;')}"
-                               style="flex: 1; padding: 8px 12px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;">
+                               style="flex: 1; padding: 8px 12px; border: 2px solid #d9d9d9; border-radius: 6px; font-size: 14px; background: #fff; color: #111;">
                         <button class="remove-point-btn" data-remove-index="${index}"
-                                style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer;">
+                                style="background: #fff; color: #111; border: 1px solid #111; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -5174,30 +5180,30 @@ function editSingleSlideNew(slideIndex) {
 
         content.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h3 style="color: #2c3e50; margin: 0;">编辑第${slide.page_number || slideIndex + 1}页</h3>
+                <h3 style="color: #111; margin: 0;">编辑第${slide.page_number || slideIndex + 1}页</h3>
                 <button onclick="this.closest('.modal').remove()"
-                        style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+                        style="background: transparent; color: #111; border: 1px solid #111; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
             </div>
 
             <form id="singleSlideEditForm" style="display: flex; flex-direction: column; gap: 20px;">
                 <!-- 页面标题 -->
                 <div>
-                    <label style="display: block; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">页面标题</label>
+                    <label style="display: block; color: #111; font-weight: bold; margin-bottom: 8px;">页面标题</label>
                     <input type="text" id="slideTitle" value="${(slide.title || '').replace(/"/g, '&quot;')}"
-                           style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 16px;">
+                           style="width: 100%; padding: 12px; border: 2px solid #d9d9d9; border-radius: 8px; font-size: 16px; background: #fff; color: #111;">
                 </div>
 
                 <!-- 页面副标题 -->
                 <div>
-                    <label style="display: block; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">副标题（可选）</label>
+                    <label style="display: block; color: #111; font-weight: bold; margin-bottom: 8px;">副标题（可选）</label>
                     <input type="text" id="slideSubtitle" value="${(slide.subtitle || '').replace(/"/g, '&quot;')}"
-                           style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 14px;">
+                           style="width: 100%; padding: 12px; border: 2px solid #d9d9d9; border-radius: 8px; font-size: 14px; background: #fff; color: #111;">
                 </div>
 
                 <!-- 幻灯片类型 -->
                 <div>
-                    <label style="display: block; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">幻灯片类型</label>
-                    <select id="slideType" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 14px;">
+                    <label style="display: block; color: #111; font-weight: bold; margin-bottom: 8px;">幻灯片类型</label>
+                    <select id="slideType" style="width: 100%; padding: 12px; border: 2px solid #d9d9d9; border-radius: 8px; font-size: 14px; background: #fff; color: #111;">
                         <option value="title" ${slide.slide_type === 'title' ? 'selected' : ''}>标题页</option>
                         <option value="content" ${slide.slide_type === 'content' ? 'selected' : ''}>内容页</option>
                         <option value="conclusion" ${slide.slide_type === 'conclusion' ? 'selected' : ''}>结论页</option>
@@ -5207,34 +5213,34 @@ function editSingleSlideNew(slideIndex) {
 
                 <!-- 内容要点 -->
                 <div>
-                    <label style="display: block; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">内容要点</label>
+                    <label style="display: block; color: #111; font-weight: bold; margin-bottom: 8px;">内容要点</label>
                     <div id="contentPointsContainer" style="margin-bottom: 10px;">
                         ${contentPointsHtml}
                     </div>
                     <button type="button" onclick="addSingleContentPoint()"
-                            style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer;">
+                            style="background: #111; color: #fff; border: 1px solid #111; border-radius: 6px; padding: 8px 16px; cursor: pointer;">
                         <i class="fas fa-plus"></i> 添加要点
                     </button>
                 </div>
 
                 <!-- 页面描述 -->
                 <div>
-                    <label style="display: block; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">页面描述（可选）</label>
+                    <label style="display: block; color: #111; font-weight: bold; margin-bottom: 8px;">页面描述（可选）</label>
                     <textarea id="slideDescription" rows="3"
-                              style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 14px; resize: vertical;">${slide.description || ''}</textarea>
+                              style="width: 100%; padding: 12px; border: 2px solid #d9d9d9; border-radius: 8px; font-size: 14px; resize: vertical; background: #fff; color: #111;">${slide.description || ''}</textarea>
                 </div>
 
                 <!-- 操作按钮 -->
                 <div style="display: flex; gap: 10px; justify-content: space-between; margin-top: 20px;">
                     <button type="button" onclick="aiOptimizeSingleSlideInModal(${slideIndex})"
-                            class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 24px; border: none;">
-                            <i class="fas fa-magic"></i> AI优化此页
+                            class="btn" style="background: #111; color: #fff; padding: 12px 24px; border: 1px solid #111;">
+                        <i class="fas fa-magic"></i> AI优化此页
                     </button>
                     <div style="display: flex; gap: 10px;">
                         <button type="button" onclick="this.closest('.modal').remove()"
-                                class="btn" style="background: #95a5a6; color: white; padding: 12px 24px;">取消</button>
+                                class="btn" style="background: #fff; color: #111; padding: 12px 24px; border: 1px solid #111;">取消</button>
                         <button type="button" onclick="saveSingleSlideEdit(${slideIndex})"
-                                class="btn btn-primary" style="padding: 12px 24px;">保存修改</button>
+                                class="btn btn-primary" style="padding: 12px 24px; background: #111; color: #fff; border: 1px solid #111;">保存修改</button>
                     </div>
                 </div>
             </form>
@@ -5284,7 +5290,7 @@ function addSingleContentPoint() {
     input.className = 'content-point-input';
     input.setAttribute('data-index', newIndex);
     input.placeholder = '输入新的内容要点...';
-    input.style.cssText = 'flex: 1; padding: 8px 12px; border: 2px solid #ecf0f1; border-radius: 6px; font-size: 14px;';
+    input.style.cssText = 'flex: 1; padding: 8px 12px; border: 2px solid #d9d9d9; border-radius: 6px; font-size: 14px; background: #fff; color: #111;';
 
     // 创建删除按钮
     const button = document.createElement('button');
@@ -5293,7 +5299,7 @@ function addSingleContentPoint() {
     button.addEventListener('click', function() {
         removeSingleContentPointByElement(this.parentElement);
     });
-    button.style.cssText = 'background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer;';
+    button.style.cssText = 'background: #fff; color: #111; border: 1px solid #111; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;';
     button.innerHTML = '<i class="fas fa-trash"></i>';
 
     pointDiv.appendChild(input);
@@ -5341,7 +5347,7 @@ function removeSingleContentPointByElement(element) {
                 // 重新创建按钮以更新事件处理
                 const newButton = document.createElement('button');
                 newButton.onclick = () => removeSingleContentPoint(newIndex);
-                newButton.style.cssText = 'background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer;';
+                newButton.style.cssText = 'background: #fff; color: #111; border: 1px solid #111; border-radius: 4px; padding: 6px 10px; margin-left: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;';
                 newButton.innerHTML = '<i class="fas fa-trash"></i>';
                 button.parentNode.replaceChild(newButton, button);
             }
@@ -5939,11 +5945,12 @@ function showAIOptimizeModal(config) {
         // 创建弹窗内容
         const content = document.createElement('div');
         content.style.cssText = `
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            background: #fff;
             border-radius: 20px; padding: 0; max-width: 600px; width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: slideIn 0.3s ease; max-height: 90vh; overflow: hidden;
             display: flex; flex-direction: column;
+            border: 1px solid #111;
         `;
 
         // 建议示例
@@ -5968,31 +5975,29 @@ function showAIOptimizeModal(config) {
                 .ai-optimize-modal .suggestion-tag {
                     display: inline-block;
                     padding: 6px 12px;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
-                    color: white;
+                    background: #111;
+                    color: #fff;
                     border-radius: 20px;
                     font-size: 12px;
                     margin: 4px;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                    border: 2px solid transparent;
+                    border: 1px solid #111;
                 }
                 .ai-optimize-modal .suggestion-tag:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                    border-color: #667eea;
-                    background: linear-gradient(135deg, #764ba2, #667eea);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+                    background: #000;
                 }
                 .ai-optimize-modal textarea:focus {
                     outline: none;
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    border-color: #111;
+                    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
                 }
             </style>
             
             <!-- 头部 -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 20px 20px 0 0; position: relative;">
-                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><pattern id=\"dots\" width=\"20\" height=\"20\" patternUnits=\"userSpaceOnUse\"><circle cx=\"10\" cy=\"10\" r=\"1\" fill=\"white\" opacity=\"0.1\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23dots)\"/></svg></div>
+            <div style="background: #111; color: #fff; padding: 25px 30px; border-radius: 20px 20px 0 0; position: relative;">
                 <div style="position: relative; z-index: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
@@ -6001,7 +6006,7 @@ function showAIOptimizeModal(config) {
                             </h3>
                             <p style="margin: 0; opacity: 0.9; font-size: 0.9em;">${config.subtitle}</p>
                         </div>
-                        <button onclick="this.closest('.ai-optimize-modal').remove()" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                        <button onclick="this.closest('.ai-optimize-modal').remove()" style="background: transparent; color: #fff; border: 1px solid #fff; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 20px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'" onmouseout="this.style.background='transparent'">
                             ×
                         </button>
                     </div>
@@ -6011,24 +6016,24 @@ function showAIOptimizeModal(config) {
             <!-- 内容区域 -->
             <div style="padding: 30px; flex: 1; overflow-y: auto;">
                 <!-- 当前信息展示 -->
-                <div style="background: #e8f4fd; border-left: 4px solid #3498db; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <div style="color: #2c3e50; font-size: 0.9em; line-height: 1.6;">
-                        <strong style="color: #3498db;"><i class="fas fa-info-circle"></i> 当前内容</strong><br>
+                <div style="background: #f5f5f5; border-left: 4px solid #111; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="color: #111; font-size: 0.9em; line-height: 1.6;">
+                        <strong style="color: #111;"><i class="fas fa-info-circle"></i> 当前内容</strong><br>
                         ${config.currentInfo}
                     </div>
                 </div>
 
                 <!-- 输入框 -->
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 0.95em;">
+                    <label style="display: block; margin-bottom: 10px; color: #111; font-weight: 600; font-size: 0.95em;">
                         <i class="fas fa-edit"></i> 请描述您的优化需求
                     </label>
-                    <textarea id="aiOptimizeInput" style="width: 100%; min-height: 120px; padding: 15px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 14px; resize: vertical; font-family: inherit; transition: all 0.3s ease;" placeholder="详细描述您希望如何优化此内容...\n\n例如：\n- 增加更多技术细节\n- 重新组织逻辑结构\n- 添加案例分析"></textarea>
+                    <textarea id="aiOptimizeInput" style="width: 100%; min-height: 120px; padding: 15px; border: 2px solid #d9d9d9; border-radius: 10px; font-size: 14px; resize: vertical; font-family: inherit; transition: all 0.3s ease; background: #fff; color: #111;" placeholder="详细描述您希望如何优化此内容...\n\n例如：\n- 增加更多技术细节\n- 重新组织逻辑结构\n- 添加案例分析"></textarea>
                 </div>
 
                 <!-- 快捷建议 -->
                 <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 10px; color: #7f8c8d; font-size: 0.85em;">
+                    <label style="display: block; margin-bottom: 10px; color: #555; font-size: 0.85em;">
                         <i class="fas fa-lightbulb"></i> 点击快捷建议快速填充
                     </label>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -6038,15 +6043,15 @@ function showAIOptimizeModal(config) {
             </div>
 
             <!-- 底部按钮 -->
-            <div style="padding: 20px 30px; background: #f8f9fa; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e9ecef;">
-                <div style="color: #7f8c8d; font-size: 0.85em;">
+            <div style="padding: 20px 30px; background: #fff; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #d9d9d9;">
+                <div style="color: #555; font-size: 0.85em;">
                     <i class="fas fa-robot"></i> AI将根据您的需求智能优化内容
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="this.closest('.ai-optimize-modal').remove()" class="btn btn-sm" style="background: #95a5a6; color: white; padding: 10px 20px;">
+                    <button onclick="this.closest('.ai-optimize-modal').remove()" class="btn btn-sm" style="background: #fff; color: #111; padding: 10px 20px; border: 1px solid #111;">
                         <i class="fas fa-times"></i> 取消
                     </button>
-                    <button id="confirmOptimizeBtn" class="btn btn-sm" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 24px;">
+                    <button id="confirmOptimizeBtn" class="btn btn-sm" style="background: #111; color: #fff; padding: 10px 24px; border: 1px solid #111;">
                         <i class="fas fa-magic"></i> 开始优化
                     </button>
                 </div>

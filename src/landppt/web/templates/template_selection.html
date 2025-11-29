@@ -5,6 +5,7 @@
 {% block extra_css %}
 <style>
 /* 现代化模板选择页面 */
+
 .template-selection-hero {
     background: var(--glass-bg);
     backdrop-filter: blur(30px);
@@ -21,13 +22,10 @@
 .template-selection-hero::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background:
-        radial-gradient(circle at 30% 30%, rgba(67, 233, 123, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 70% 70%, rgba(240, 147, 251, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 30% 30%, rgba(17, 17, 17, 0.08) 0%, transparent 55%),
+        radial-gradient(circle at 70% 70%, rgba(17, 17, 17, 0.06) 0%, transparent 55%);
     animation: templateSelectionFloat 18s ease-in-out infinite;
 }
 
@@ -40,17 +38,14 @@
     font-size: 2.2rem;
     font-weight: 700;
     margin-bottom: var(--spacing-md);
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
     position: relative;
     z-index: 1;
     letter-spacing: -0.02em;
 }
 
 .template-selection-hero p {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: var(--text-secondary);
     margin: 0;
     position: relative;
@@ -65,7 +60,7 @@
     border: 1px solid var(--glass-border);
     padding: var(--spacing-md) var(--spacing-lg);
     border-radius: var(--border-radius-lg);
-    box-shadow: 0 4px 20px rgba(67, 233, 123, 0.2);
+    box-shadow: 0 4px 20px rgba(17, 17, 17, 0.12);
     position: relative;
     z-index: 1;
 }
@@ -1645,27 +1640,44 @@ function generatePageNumbers(current, total) {
 // Load all available tags for filter dropdown
 async function loadAllTags() {
     try {
-        // Get all templates to extract unique tags
-        const response = await fetch('/api/global-master-templates/?active_only=true&page_size=1000');
-        if (!response.ok) return;
-
-        const data = await response.json();
-        const templates = data.templates || data;
-
-        // Extract all unique tags
         const tagSet = new Set();
-        templates.forEach(template => {
-            if (template.tags && Array.isArray(template.tags)) {
-                template.tags.forEach(tag => tagSet.add(tag));
+        const maxPageSize = 100;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        do {
+            const params = new URLSearchParams({
+                active_only: 'true',
+                page: currentPage.toString(),
+                page_size: maxPageSize.toString()
+            });
+
+            const response = await fetch(`/api/global-master-templates/?${params}`);
+
+            if (!response.ok) {
+                throw new Error('Failed to load tags');
             }
-        });
+
+            const data = await response.json();
+            const templatesData = Array.isArray(data.templates) ? data.templates : Array.isArray(data) ? data : [];
+
+            templatesData.forEach(template => {
+                if (Array.isArray(template.tags)) {
+                    template.tags.forEach(tag => {
+                        if (tag && tag.trim()) {
+                            tagSet.add(tag.trim());
+                        }
+                    });
+                }
+            });
+
+            totalPages = data.pagination?.total_pages || 1;
+            currentPage += 1;
+        } while (currentPage <= totalPages);
 
         allTags = Array.from(tagSet).sort();
-
-        // Populate tag filter dropdown
-        const tagFilter = document.getElementById('tagFilter');
-        tagFilter.innerHTML = '<option value="">全部分类</option>' +
-            allTags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
+        populateTagFilter();
+        updateActiveFiltersDisplay();
 
     } catch (error) {
         console.error('Error loading tags:', error);

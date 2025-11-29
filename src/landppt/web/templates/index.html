@@ -2,44 +2,137 @@
 
 {% block title %}LandPPT - AI PPT Generator{% endblock %}
 
+{% block extra_css %}
+<style>
+.hero-section {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(17, 17, 17, 0.08);
+    border-radius: var(--border-radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: 0 22px 48px rgba(15, 23, 42, 0.1);
+}
+
+.hero-section h2 {
+    color: var(--ink-strong);
+    margin-bottom: var(--spacing-sm);
+    font-size: 2.2rem;
+    letter-spacing: -0.02em;
+}
+
+.hero-section p {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.provider-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: rgba(17, 17, 17, 0.05);
+    border: 1px solid rgba(17, 17, 17, 0.12);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.provider-badge span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.action-card h3 {
+    color: var(--ink-strong);
+    font-size: 1.4rem;
+    letter-spacing: -0.01em;
+}
+
+.action-card p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.info-panel {
+    margin-top: var(--spacing-xl);
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid rgba(17, 17, 17, 0.08);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.info-panel h4 {
+    color: var(--ink-strong);
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.2rem;
+}
+
+.info-panel p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+.btn-monochrome,
+.btn.btn-primary {
+    background: var(--surface-contrast) !important;
+    border-color: rgba(17, 17, 17, 0.9) !important;
+    color: var(--surface) !important;
+}
+
+.btn-outline {
+    background: transparent;
+    border-color: rgba(17, 17, 17, 0.18);
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        padding: var(--spacing-lg);
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="text-align: center; margin-bottom: 40px;">
-    <h2 style="color: #2c3e50; margin-bottom: 20px;"><i class="fas fa-rocket" style="color: #3498db;"></i> 欢迎使用 LandPPT</h2>
-    <p style="font-size: 1.2em; color: #7f8c8d; margin-bottom: 20px;">
-        只需输入主题和需求，AI 即可自动生成专业的 PPT 演示文稿
-    </p>
+<div class="hero-section">
+    <h2>欢迎使用 LandPPT</h2>
+    <p>只需输入主题和需求，AI 即可自动生成专业的 PPT 演示文稿</p>
     {% if ai_provider %}
-    <div style="background: linear-gradient(135deg, #3498db22, #3498db11); padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 20px;">
-        <p style="margin: 0; color: #2c3e50;">
-            <strong>🤖 当前 AI 提供者:</strong>
-            <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9em;">
-                {{ ai_provider }}
-            </span>
-            <a href="/ai-config" style="margin-left: 10px; color: #3498db; text-decoration: none;">⚙️ 配置</a>
-        </p>
+    <div class="provider-badge">
+        <span>当前 AI 提供者: <strong>{{ ai_provider }}</strong></span>
+        <a href="/ai-config" class="btn-outline" style="padding: 6px 14px; border-radius: var(--border-radius-sm); text-decoration: none; font-size: 0.9rem;">系统配置</a>
     </div>
     {% endif %}
 </div>
 
 <div class="grid">
-    <div class="card">
-        <h3 style="color: #3498db; margin-bottom: 15px;"><i class="fas fa-bullseye"></i> 快速生成</h3>
-        <p style="margin-bottom: 20px;">选择场景模板，输入主题，一键生成专业PPT</p>
-        <a href="/scenarios" class="btn btn-primary">开始创建 PPT</a>
+    <div class="card action-card">
+        <h3>快速生成</h3>
+        <p>选择场景模板，输入主题，一键生成专业 PPT。</p>
+        <a href="/scenarios" class="btn btn-monochrome">开始创建 PPT</a>
     </div>
     
-    <div class="card">
-        <h3 style="color: #9b59b6; margin-bottom: 15px;"><i class="fas fa-chart-bar"></i> 项目仪表板</h3>
-        <p style="margin-bottom: 20px;">管理项目、查看 TODO 看板和进度跟踪</p>
-        <a href="/dashboard" class="btn" style="background: #9b59b6;">项目仪表板</a>
+    <div class="card action-card">
+        <h3>项目仪表板</h3>
+        <p>管理项目、查看 TODO 看板与进度跟踪，掌握项目全局。</p>
+        <a href="/dashboard" class="btn btn-monochrome">打开仪表板</a>
     </div>
 </div>
 
-<div style="margin-top: 30px; text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 10px;">
-    <h4 style="color: #2c3e50; margin-bottom: 15px;"><i class="fas fa-link" style="color: #3498db;"></i> API 接口支持</h4>
-    <p style="color: #7f8c8d; margin-bottom: 15px;">
-        LandPPT 提供完整的 OpenAI 兼容 API，支持与现有工具和客户端无缝集成
-    </p>
-    <a href="/docs" class="btn btn-primary">查看 API 文档</a>
+<div class="info-panel">
+    <h4>API 接口支持</h4>
+    <p>LandPPT 提供完整的 OpenAI 兼容 API，支持与现有工具和客户端无缝集成。</p>
+    <a href="/docs" class="btn btn-monochrome">查看 API 文档</a>
 </div>
 {% endblock %}

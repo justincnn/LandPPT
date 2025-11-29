@@ -2,135 +2,294 @@
 
 {% block title %}用户资料 - LandPPT{% endblock %}
 
+{% block extra_css %}
+<style>
+.profile-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.profile-header h2 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin-bottom: var(--spacing-sm);
+}
+
+.profile-header p {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+}
+
+.profile-section-title {
+    color: var(--ink-strong);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    letter-spacing: 0.01em;
+}
+
+.profile-info {
+    background: var(--surface-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.profile-info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.profile-info-label {
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.profile-info-value {
+    color: var(--text-secondary);
+}
+
+.status-badge,
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 14px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid var(--border-color);
+    color: var(--ink-strong);
+    background: var(--surface);
+}
+
+.status-active,
+.role-admin {
+    background: var(--surface-contrast);
+    border-color: var(--surface-contrast);
+    color: var(--surface);
+}
+
+.status-disabled {
+    border-style: dashed;
+    color: var(--text-secondary);
+}
+
+.role-standard {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.meta-text {
+    color: var(--text-secondary);
+}
+
+.field-hint {
+    margin-top: var(--spacing-xs);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.profile-form .form-actions {
+    text-align: center;
+}
+
+.profile-form .btn-primary {
+    width: 100%;
+    justify-content: center;
+    background: var(--surface-contrast);
+    border-color: var(--surface-contrast);
+    color: var(--surface);
+}
+
+.profile-form .btn-primary:hover {
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-1px);
+}
+
+.profile-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.profile-action-btn {
+    min-width: 180px;
+    justify-content: center;
+    background: var(--surface-contrast);
+    border-color: var(--surface-contrast);
+    color: var(--surface);
+}
+
+.profile-action-btn:hover {
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-1px);
+}
+
+.profile-page .alert,
+.profile-page .alert-success,
+.profile-page .alert-error {
+    background: var(--surface-subtle);
+    border-color: var(--border-color);
+    color: var(--ink-strong);
+}
+
+.profile-page .alert-error {
+    border-style: dashed;
+}
+
+@media (max-width: 640px) {
+    .profile-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .profile-action-btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="text-align: center; margin-bottom: 40px;">
-    <h2 style="color: #2c3e50; margin-bottom: 20px;">👤 用户资料</h2>
-    <p style="font-size: 1.1em; color: #7f8c8d;">
-        管理您的账户信息和安全设置
-    </p>
-</div>
+<div class="profile-page">
+    <div class="profile-header">
+        <h2>用户资料</h2>
+        <p>管理您的账户信息和安全设置</p>
+    </div>
 
-{% if error %}
-<div class="alert alert-error">
-    {{ error }}
-</div>
-{% endif %}
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
 
-{% if success %}
-<div class="alert alert-success">
-    {{ success }}
-</div>
-{% endif %}
+    {% if success %}
+    <div class="alert alert-success">
+        {{ success }}
+    </div>
+    {% endif %}
 
-<div class="grid">
-    <div class="card">
-        <h3 style="color: #3498db; margin-bottom: 20px;">📋 基本信息</h3>
-        
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-            <div style="margin-bottom: 15px;">
-                <strong>用户名:</strong> 
-                <span style="color: #2c3e50;">{{ user.username }}</span>
-            </div>
-            
-            {% if user.email %}
-            <div style="margin-bottom: 15px;">
-                <strong>邮箱:</strong> 
-                <span style="color: #2c3e50;">{{ user.email }}</span>
-            </div>
-            {% endif %}
-            
-            <div style="margin-bottom: 15px;">
-                <strong>账户状态:</strong> 
-                {% if user.is_active %}
-                    <span style="color: #27ae60;">✅ 活跃</span>
-                {% else %}
-                    <span style="color: #e74c3c;">❌ 已禁用</span>
+    <div class="grid">
+        <div class="card">
+            <h3 class="profile-section-title">基本信息</h3>
+
+            <div class="profile-info">
+                <div class="profile-info-row">
+                    <span class="profile-info-label">用户名</span>
+                    <span class="profile-info-value">{{ user.username }}</span>
+                </div>
+
+                {% if user.email %}
+                <div class="profile-info-row">
+                    <span class="profile-info-label">邮箱</span>
+                    <span class="profile-info-value">{{ user.email }}</span>
+                </div>
+                {% endif %}
+
+                <div class="profile-info-row">
+                    <span class="profile-info-label">账户状态</span>
+                    {% if user.is_active %}
+                    <span class="status-badge status-active">活跃</span>
+                    {% else %}
+                    <span class="status-badge status-disabled">已禁用</span>
+                    {% endif %}
+                </div>
+
+                <div class="profile-info-row">
+                    <span class="profile-info-label">权限级别</span>
+                    {% if user.is_admin %}
+                    <span class="role-badge role-admin">管理员</span>
+                    {% else %}
+                    <span class="role-badge role-standard">普通用户</span>
+                    {% endif %}
+                </div>
+
+                <div class="profile-info-row">
+                    <span class="profile-info-label">注册时间</span>
+                    <span class="profile-info-value meta-text">
+                        <script>
+                            document.write(new Date({{ user.created_at }} * 1000).toLocaleString('zh-CN'));
+                        </script>
+                    </span>
+                </div>
+
+                {% if user.last_login %}
+                <div class="profile-info-row">
+                    <span class="profile-info-label">最后登录</span>
+                    <span class="profile-info-value meta-text">
+                        <script>
+                            document.write(new Date({{ user.last_login }} * 1000).toLocaleString('zh-CN'));
+                        </script>
+                    </span>
+                </div>
                 {% endif %}
             </div>
-            
-            <div style="margin-bottom: 15px;">
-                <strong>权限级别:</strong> 
-                {% if user.is_admin %}
-                    <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
-                        👑 管理员
-                    </span>
-                {% else %}
-                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">
-                        👤 普通用户
-                    </span>
-                {% endif %}
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-                <strong>注册时间:</strong> 
-                <span style="color: #7f8c8d;">
-                    <script>
-                        document.write(new Date({{ user.created_at }} * 1000).toLocaleString('zh-CN'));
-                    </script>
-                </span>
-            </div>
-            
-            {% if user.last_login %}
-            <div>
-                <strong>最后登录:</strong> 
-                <span style="color: #7f8c8d;">
-                    <script>
-                        document.write(new Date({{ user.last_login }} * 1000).toLocaleString('zh-CN'));
-                    </script>
-                </span>
-            </div>
-            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3 class="profile-section-title">修改密码</h3>
+
+            <form method="post" action="/auth/change-password" class="profile-form">
+                <div class="form-group">
+                    <label for="current_password">当前密码:</label>
+                    <input type="password" id="current_password" name="current_password" required
+                           placeholder="请输入当前密码">
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password">新密码:</label>
+                    <input type="password" id="new_password" name="new_password" required
+                           placeholder="请输入新密码" minlength="6">
+                    <p class="field-hint">密码长度至少6位</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">确认新密码:</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required
+                           placeholder="请再次输入新密码">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        修改密码
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-    
-    <div class="card">
-        <h3 style="color: #e74c3c; margin-bottom: 20px;">🔒 修改密码</h3>
-        
-        <form method="post" action="/auth/change-password">
-            <div class="form-group">
-                <label for="current_password">当前密码:</label>
-                <input type="password" id="current_password" name="current_password" required 
-                       placeholder="请输入当前密码">
-            </div>
-            
-            <div class="form-group">
-                <label for="new_password">新密码:</label>
-                <input type="password" id="new_password" name="new_password" required 
-                       placeholder="请输入新密码" minlength="6">
-                <small style="color: #7f8c8d;">密码长度至少6位</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirm_password">确认新密码:</label>
-                <input type="password" id="confirm_password" name="confirm_password" required 
-                       placeholder="请再次输入新密码">
-            </div>
-            
-            <div style="text-align: center;">
-                <button type="submit" class="btn btn-warning">
-                    🔒 修改密码
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 
-<div class="card" style="margin-top: 30px;">
-    <h3 style="color: #27ae60; margin-bottom: 20px;">⚙️ 快速操作</h3>
-    
-    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-        <a href="/dashboard" class="btn btn-primary">
-            📈 项目仪表板
-        </a>
-        
-        <a href="/ai-config" class="btn btn-info">
-            🤖 AI配置
-        </a>
-        
-        <a href="/auth/logout" class="btn btn-secondary" 
-           onclick="return confirm('确定要退出登录吗？')">
-            🚪 退出登录
-        </a>
+    <div class="card">
+        <h3 class="profile-section-title">快速操作</h3>
+
+        <div class="profile-actions">
+            <a href="/dashboard" class="btn profile-action-btn">
+                项目仪表板
+            </a>
+
+            <a href="/ai-config" class="btn profile-action-btn">
+                AI配置
+            </a>
+
+            <a href="/auth/logout" class="btn profile-action-btn"
+               onclick="return confirm('确定要退出登录吗？')">
+                退出登录
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}
