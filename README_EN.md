@@ -45,6 +45,9 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 ### Main Interface
 ![image](https://img.pub/p/7d5c3c1a4b625abeb4c1.png)
 
+### Outline Generation
+![image](https://img.pub/p/a31e4f94c5d2bd577d8d.png)
+
 ### Generation Effect
 ![image](https://img.pub/p/e6cffa89a2b532a8514b.png)
 

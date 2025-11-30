@@ -37,9 +37,14 @@
 - [常见问题](#-常见问题)
 - [许可证](#-许可证)
 
-## 🎯 项目简介
-![image](https://img.pub/p/e810c5680509b4f051a5.png)
-LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿。
+<div align="center">
+  <img src="https://img.pub/p/e810c5680509b4f051a5.png" width="180" alt="LandPPT Logo" />
+  <p>
+    <b>基于大语言模型（LLM）的智能演示文稿生成平台</b>
+  </p>
+</div>
+
+LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿
 
 [文档指南](http://landppt-doc.52yyds.top/docs)
 
@@ -49,7 +54,12 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 
 ![image](https://img.pub/p/7d5c3c1a4b625abeb4c1.png)
 
+### 生成大纲
+
+![image](https://img.pub/p/a31e4f94c5d2bd577d8d.png)
+
 ### 生成效果
+
 ![image](https://img.pub/p/e6cffa89a2b532a8514b.png)
 
 ![image](https://img.pub/p/9a38b57c6f5f470ad59b.png)
@@ -65,6 +75,9 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 
 ### 讲稿生成
 ![image](https://img.pub/p/c53b752e0a6833c0ee87.png)
+
+### 导出效果
+![image](https://img.pub/p/62694101810bfa472db9.png)
 
 ### 模板生成
 ![image](https://img.pub/p/892622b3f3cc0d6ad843.png)
