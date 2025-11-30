@@ -78,6 +78,29 @@ class ImageServiceConfig:
                 'rate_limit_window': 60,  # 时间窗口（秒）
                 'timeout': 300  # 请求超时（秒，增加以适应图片生成时间）
             },
+
+            # Gemini图片生成配置
+            'gemini': {
+                'api_key': '',
+                'api_base': 'https://generativelanguage.googleapis.com/v1beta',
+                'model': 'gemini-2.0-flash-exp-image-generation',
+                'default_size': '1024x1024',
+                'rate_limit_requests': 60,  # 每分钟请求数
+                'rate_limit_window': 60,  # 时间窗口（秒）
+                'timeout': 180  # 请求超时（秒）
+            },
+
+            # OpenAI图片生成配置（支持自定义端点）
+            'openai_image': {
+                'api_key': '',
+                'api_base': 'https://api.openai.com/v1',
+                'model': 'gpt-image-1',
+                'default_size': '1024x1024',
+                'default_quality': 'auto',  # auto, low, medium, high
+                'rate_limit_requests': 50,  # 每分钟请求数
+                'rate_limit_window': 60,  # 时间窗口（秒）
+                'timeout': 180  # 请求超时（秒）
+            },
             
             # Unsplash配置（网络搜索）
             'unsplash': {
@@ -231,6 +254,61 @@ class ImageServiceConfig:
         if os.getenv('POLLINATIONS_MODEL'):
             self._config['pollinations']['model'] = os.getenv('POLLINATIONS_MODEL')
 
+        # Gemini图片生成配置（环境变量）- 使用独立的配置，不与文本生成共用
+        if os.getenv('GEMINI_IMAGE_API_KEY'):
+            self._config['gemini']['api_key'] = os.getenv('GEMINI_IMAGE_API_KEY')
+        if os.getenv('GEMINI_IMAGE_API_BASE'):
+            self._config['gemini']['api_base'] = os.getenv('GEMINI_IMAGE_API_BASE')
+        if os.getenv('GEMINI_IMAGE_MODEL'):
+            self._config['gemini']['model'] = os.getenv('GEMINI_IMAGE_MODEL')
+
+        # OpenAI图片生成配置（环境变量）- 使用独立的配置，不与文本生成共用
+        if os.getenv('OPENAI_IMAGE_API_KEY'):
+            self._config['openai_image']['api_key'] = os.getenv('OPENAI_IMAGE_API_KEY')
+        if os.getenv('OPENAI_IMAGE_API_BASE'):
+            self._config['openai_image']['api_base'] = os.getenv('OPENAI_IMAGE_API_BASE')
+        if os.getenv('OPENAI_IMAGE_MODEL'):
+            self._config['openai_image']['model'] = os.getenv('OPENAI_IMAGE_MODEL')
+
+        # 从配置服务加载Gemini和OpenAI图片生成配置
+        try:
+            from ...config_service import get_config_service
+            config_service = get_config_service()
+            all_config = config_service.get_all_config()
+
+            # 加载Gemini图片生成配置 - 使用独立配置，不与文本生成共用
+            gemini_api_key = all_config.get('gemini_image_api_key')
+            if gemini_api_key:
+                self._config['gemini']['api_key'] = gemini_api_key
+
+            gemini_api_base = all_config.get('gemini_image_api_base')
+            if gemini_api_base:
+                self._config['gemini']['api_base'] = gemini_api_base
+
+            gemini_model = all_config.get('gemini_image_model')
+            if gemini_model:
+                self._config['gemini']['model'] = gemini_model
+
+            # 加载OpenAI图片生成配置 - 使用独立配置，不与文本生成共用
+            openai_image_api_key = all_config.get('openai_image_api_key')
+            if openai_image_api_key:
+                self._config['openai_image']['api_key'] = openai_image_api_key
+
+            openai_image_api_base = all_config.get('openai_image_api_base')
+            if openai_image_api_base:
+                self._config['openai_image']['api_base'] = openai_image_api_base
+
+            openai_image_model = all_config.get('openai_image_model')
+            if openai_image_model:
+                self._config['openai_image']['model'] = openai_image_model
+
+            openai_image_quality = all_config.get('openai_image_quality')
+            if openai_image_quality:
+                self._config['openai_image']['default_quality'] = openai_image_quality
+
+        except Exception as e:
+            logger.debug(f"Could not load Gemini/OpenAI image config from config service: {e}")
+
         # 从配置服务加载Pollinations配置
         try:
             from ...config_service import config_service
@@ -353,7 +431,7 @@ class ImageServiceConfig:
         """获取已配置的提供者列表"""
         providers = []
 
-        for provider in ['dalle', 'stable_diffusion', 'siliconflow', 'pollinations', 'unsplash', 'pixabay', 'searxng']:
+        for provider in ['dalle', 'stable_diffusion', 'siliconflow', 'pollinations', 'gemini', 'openai_image', 'unsplash', 'pixabay', 'searxng']:
             if self.is_provider_configured(provider):
                 providers.append(provider)
 

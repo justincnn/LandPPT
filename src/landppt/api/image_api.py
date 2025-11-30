@@ -56,7 +56,7 @@ async def get_image_service_status(
         
         # 检查可用的提供者
         available_providers = []
-        
+
         # 检查DALL-E
         if config.get('dalle', {}).get('api_key'):
             available_providers.append('dalle')
@@ -68,6 +68,14 @@ async def get_image_service_status(
         # 检查SiliconFlow
         if config.get('siliconflow', {}).get('api_key'):
             available_providers.append('siliconflow')
+
+        # 检查Gemini图片生成
+        if config.get('gemini', {}).get('api_key'):
+            available_providers.append('gemini')
+
+        # 检查OpenAI图片生成（自定义端点）
+        if config.get('openai_image', {}).get('api_key'):
+            available_providers.append('openai_image')
 
         # 检查Pollinations（免费服务，总是可用）
         available_providers.append('pollinations')

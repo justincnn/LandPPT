@@ -23,6 +23,8 @@ class ImageProvider(str, Enum):
     STABLE_DIFFUSION = "stable_diffusion"
     SILICONFLOW = "siliconflow"
     POLLINATIONS = "pollinations"
+    GEMINI = "gemini"  # Google Gemini 图片生成
+    OPENAI_IMAGE = "openai_image"  # OpenAI 图片生成 (支持自定义端点)
 
     # 网络搜索
     UNSPLASH = "unsplash"

@@ -169,6 +169,17 @@ class ConfigService:
             "pollinations_private": {"type": "boolean", "category": "image_service", "default": "false"},
             "pollinations_transparent": {"type": "boolean", "category": "image_service", "default": "false"},
 
+            # Gemini Image Generation Configuration
+            "gemini_image_api_key": {"type": "password", "category": "image_service"},
+            "gemini_image_api_base": {"type": "url", "category": "image_service", "default": "https://generativelanguage.googleapis.com/v1beta"},
+            "gemini_image_model": {"type": "text", "category": "image_service", "default": "gemini-2.0-flash-exp-image-generation"},
+
+            # OpenAI Image Generation Configuration (supports custom endpoints)
+            "openai_image_api_key": {"type": "password", "category": "image_service"},
+            "openai_image_api_base": {"type": "url", "category": "image_service", "default": "https://api.openai.com/v1"},
+            "openai_image_model": {"type": "text", "category": "image_service", "default": "gpt-image-1"},
+            "openai_image_quality": {"type": "select", "category": "image_service", "default": "auto"},
+
             # Image Search Providers
             "unsplash_access_key": {"type": "password", "category": "image_service"},
             "pixabay_api_key": {"type": "password", "category": "image_service"},
@@ -360,6 +371,32 @@ class ConfigService:
             # 如果有Pollinations配置更新，应用它们
             if pollinations_updates:
                 image_config.update_config({'pollinations': pollinations_updates})
+
+            # 更新Gemini图片生成配置
+            gemini_updates = {}
+            if 'gemini_image_api_key' in current_config and current_config['gemini_image_api_key']:
+                gemini_updates['api_key'] = current_config['gemini_image_api_key']
+            if 'gemini_image_api_base' in current_config and current_config['gemini_image_api_base']:
+                gemini_updates['api_base'] = current_config['gemini_image_api_base']
+            if 'gemini_image_model' in current_config and current_config['gemini_image_model']:
+                gemini_updates['model'] = current_config['gemini_image_model']
+
+            if gemini_updates:
+                image_config.update_config({'gemini': gemini_updates})
+
+            # 更新OpenAI图片生成配置
+            openai_image_updates = {}
+            if 'openai_image_api_key' in current_config and current_config['openai_image_api_key']:
+                openai_image_updates['api_key'] = current_config['openai_image_api_key']
+            if 'openai_image_api_base' in current_config and current_config['openai_image_api_base']:
+                openai_image_updates['api_base'] = current_config['openai_image_api_base']
+            if 'openai_image_model' in current_config and current_config['openai_image_model']:
+                openai_image_updates['model'] = current_config['openai_image_model']
+            if 'openai_image_quality' in current_config and current_config['openai_image_quality']:
+                openai_image_updates['default_quality'] = current_config['openai_image_quality']
+
+            if openai_image_updates:
+                image_config.update_config({'openai_image': openai_image_updates})
 
             logger.info("Image service configuration reloaded")
         except Exception as e:

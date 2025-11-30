@@ -275,6 +275,19 @@ async def web_ai_config(
         "user": user.to_dict()
     })
 
+
+@router.get("/image-generation-test", response_class=HTMLResponse)
+async def web_image_generation_test(
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """AI图片生成测试页面"""
+    return templates.TemplateResponse("image_generation_test.html", {
+        "request": request,
+        "user": user.to_dict()
+    })
+
+
 @router.post("/api/ai/providers/openai/models")
 async def get_openai_models(
     request: Request,

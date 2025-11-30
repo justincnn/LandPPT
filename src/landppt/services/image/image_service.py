@@ -130,6 +130,26 @@ class ImageService:
             else:
                 logger.debug("Pollinations provider not configured, skipping provider registration")
 
+            # 注册Gemini图片生成提供者
+            if is_provider_configured('gemini'):
+                from .providers.gemini_provider import GeminiImageProvider
+                gemini_config = self.config.get('gemini', {})
+                gemini_provider = GeminiImageProvider(gemini_config)
+                provider_registry.register(gemini_provider)
+                logger.debug("Gemini image provider registered")
+            else:
+                logger.debug("Gemini API key not configured, skipping provider registration")
+
+            # 注册OpenAI图片生成提供者
+            if is_provider_configured('openai_image'):
+                from .providers.openai_image_provider import OpenAIImageProvider
+                openai_image_config = self.config.get('openai_image', {})
+                openai_image_provider = OpenAIImageProvider(openai_image_config)
+                provider_registry.register(openai_image_provider)
+                logger.debug("OpenAI image provider registered")
+            else:
+                logger.debug("OpenAI Image API key not configured, skipping provider registration")
+
             # 初始化网络搜索提供者
             from .config.image_config import ImageServiceConfig
             config_manager = ImageServiceConfig()
