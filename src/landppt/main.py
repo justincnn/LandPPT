@@ -10,7 +10,7 @@ import uvicorn
 import asyncio
 import logging
 import os
-
+import sys
 from .api.openai_compat import router as openai_router
 from .api.landppt_api import router as landppt_router
 from .api.database_api import router as database_router

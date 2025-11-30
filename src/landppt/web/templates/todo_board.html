@@ -129,316 +129,227 @@
 
 /* 等待动画容器样式 */
 .loading-container {
-    text-align: center;
-    padding: 30px 20px;
-    background: var(--surface);
-    border-radius: 15px;
+    position: relative;
+    text-align: left;
+    padding: 28px;
+    background: linear-gradient(135deg, rgba(17, 17, 17, 0.06), rgba(17, 17, 17, 0.02));
+    border-radius: 18px;
     margin: 15px 0;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    max-height: 500px;
+    box-shadow: var(--shadow-soft);
+    max-height: 520px;
     overflow: hidden;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border-color);
 }
 
-.loading-icon {
-    font-size: 2.5em;
-    color: var(--text-primary);
-    margin-bottom: 15px;
-    animation: pulse 2s ease-in-out infinite;
+.loading-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(17, 17, 17, 0.08), transparent 40%),
+        radial-gradient(circle at 78% 12%, rgba(15, 23, 42, 0.08), transparent 36%);
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.loading-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 42%);
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.outline-loading {
+    position: relative;
+    z-index: 1;
+}
+
+.loading-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.loading-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    background: var(--surface-contrast);
+    color: var(--surface);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.loading-chip i {
+    font-size: 12px;
 }
 
 .loading-title {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 10px;
+    font-size: 1.3em;
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin-bottom: 4px;
 }
 
-/* 创意AI大脑思考动画 */
-.brain-container {
-    display: flex;
-    justify-content: center;
+.loading-subtitle {
+    font-size: 0.95em;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.loading-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
     align-items: center;
-    margin: 20px 0;
-    height: 180px;
-    perspective: 1000px;
-    position: relative;
+    justify-items: center;
+}
+
+@media (max-width: 1080px) {
+    .loading-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.loading-visual {
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: none;
+    max-width: 520px;
+    width: 100%;
 }
 
 .ai-brain {
     position: relative;
-    width: 120px;
-    height: 120px;
-    animation: brainFloat 4s ease-in-out infinite;
-}
-
-@keyframes brainFloat {
-    0%, 100% {
-        transform: translateY(0px) scale(1);
-    }
-    50% {
-        transform: translateY(-10px) scale(1.05);
-    }
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
 }
 
 .brain-core {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background: var(--ink-strong);
+    inset: 30px;
+    background: var(--primary-gradient);
     border-radius: 50%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--surface);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    animation: brainPulse 4s ease-in-out infinite;
 }
 
-.brain-core::before {
+.brain-core::after {
     content: '';
     position: absolute;
-    top: 20%;
-    left: 20%;
-    width: 60%;
-    height: 60%;
-    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+    inset: -10px;
     border-radius: 50%;
-    animation: brainPulse 2s ease-in-out infinite;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    opacity: 0.5;
 }
 
-@keyframes brainPulse {
-    0%, 100% {
-        opacity: 0.3;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.7;
-        transform: scale(1.1);
-    }
-}
-
-.brain-icon {
+.brain-orbit {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 21px;
-    color: white;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 700;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    animation: iconGlow 3s ease-in-out infinite;
-}
-
-@keyframes iconGlow {
-    0%, 100% {
-        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-    50% {
-        text-shadow: 0 2px 20px rgba(255,255,255,0.5), 0 0 30px rgba(102, 126, 234, 0.8);
-    }
-}
-
-/* 思维连接线动画 */
-.neural-network {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.neural-line {
-    position: absolute;
-    background: linear-gradient(90deg, transparent 0%, rgba(17, 17, 17, 0.3) 50%, transparent 100%);
-    border-radius: 2px;
-    opacity: 0;
-    animation: neuralPulse 3s ease-in-out infinite;
-}
-
-.neural-line:nth-child(1) {
-    top: 30%;
-    left: -20%;
-    width: 60px;
-    height: 2px;
-    transform: rotate(45deg);
-    animation-delay: 0s;
-}
-
-.neural-line:nth-child(2) {
-    top: 60%;
-    right: -20%;
-    width: 50px;
-    height: 2px;
-    transform: rotate(-30deg);
-    animation-delay: 0.5s;
-}
-
-.neural-line:nth-child(3) {
-    bottom: 20%;
-    left: -15%;
-    width: 45px;
-    height: 2px;
-    transform: rotate(-45deg);
-    animation-delay: 1s;
-}
-
-.neural-line:nth-child(4) {
-    top: 20%;
-    right: -15%;
-    width: 55px;
-    height: 2px;
-    transform: rotate(60deg);
-    animation-delay: 1.5s;
-}
-
-@keyframes neuralPulse {
-    0%, 70% {
-        opacity: 0;
-        transform: scale(0.5) rotate(var(--rotation, 0deg));
-    }
-    10%, 60% {
-        opacity: 1;
-        transform: scale(1) rotate(var(--rotation, 0deg));
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.5) rotate(var(--rotation, 0deg));
-    }
-}
-
-/* 思考气泡动画 */
-.thought-bubbles {
-    position: absolute;
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    height: 60px;
-}
-
-.thought-bubble {
-    position: absolute;
-    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(17, 17, 17, 0.12);
     border-radius: 50%;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    opacity: 0;
-    animation: bubbleFloat 4s ease-in-out infinite;
+    inset: 10px;
+    animation: ringSpin 12s linear infinite;
 }
 
-.thought-bubble:nth-child(1) {
+.brain-orbit.ring-2 {
+    inset: 22px;
+    opacity: 0.55;
+    animation-duration: 9s;
+}
+
+.brain-orbit.ring-3 {
+    inset: 32px;
+    opacity: 0.35;
+    animation-duration: 7s;
+}
+
+.orbit-dot {
+    position: absolute;
     width: 12px;
     height: 12px;
-    bottom: 0;
-    left: 45%;
-    animation-delay: 0s;
-}
-
-.thought-bubble:nth-child(2) {
-    width: 18px;
-    height: 18px;
-    bottom: 15px;
-    left: 35%;
-    animation-delay: 0.3s;
-}
-
-.thought-bubble:nth-child(3) {
-    width: 24px;
-    height: 24px;
-    bottom: 35px;
-    left: 25%;
-    animation-delay: 0.6s;
-}
-
-@keyframes bubbleFloat {
-    0%, 80% {
-        opacity: 0;
-        transform: translateY(20px) scale(0.5);
-    }
-    10%, 70% {
-        opacity: 1;
-        transform: translateY(0px) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-10px) scale(0.8);
-    }
-}
-
-/* 进度环动画 */
-.progress-ring {
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    width: 140px;
-    height: 140px;
-}
-
-.progress-ring-circle {
-    fill: none;
-    stroke: rgba(17, 17, 17, 0.25);
-    stroke-width: 3;
-    stroke-linecap: round;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-    animation: progressRotate 8s linear infinite;
-}
-
-.progress-ring-progress {
-    fill: none;
-    stroke: #1f2937;
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-dasharray: 440;
-    stroke-dashoffset: 440;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-    animation: progressFill 8s ease-in-out infinite;
-}
-
-@keyframes progressRotate {
-    0% {
-        transform: rotate(-90deg);
-    }
-    100% {
-        transform: rotate(270deg);
-    }
-}
-
-@keyframes progressFill {
-    0%, 20% {
-        stroke-dashoffset: 440;
-    }
-    80%, 100% {
-        stroke-dashoffset: 0;
-    }
-}
-
-/* 文字生成效果 */
-.text-generation {
-    position: absolute;
-    bottom: -40px;
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    text-align: center;
+    transform-origin: center;
+    animation: orbit 8s linear infinite;
+}
+
+.orbit-dot.dot-2 {
+    animation-duration: 10s;
+    animation-delay: -2s;
+}
+
+.orbit-dot.dot-3 {
+    animation-duration: 11s;
+    animation-delay: -1s;
+}
+
+.orbit-dot.dot-4 {
+    animation-duration: 9s;
+    animation-delay: -3s;
 }
 
 .generating-text {
-    color: var(--text-primary);
+    text-align: center;
+    color: var(--ink-strong);
+    font-weight: 700;
     font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    opacity: 0;
+    margin-top: 16px;
     animation: textFade 4s ease-in-out infinite;
 }
 
 .generating-dots {
+    display: inline-block;
+    margin-left: 6px;
     color: var(--text-secondary);
-    font-size: 16px;
     letter-spacing: 2px;
-    animation: dotsAnimation 2s ease-in-out infinite;
+    animation: dotsAnimation 1.8s ease-in-out infinite;
 }
 
+@keyframes orbit {
+    0% {
+        transform: rotate(0deg) translateX(90px) rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg) translateX(90px) rotate(-360deg);
+    }
+}
+
+@keyframes ringSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes brainPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 14px 50px rgba(0, 0, 0, 0.15), 0 0 0 6px rgba(17, 17, 17, 0.05);
+    }
+}
+
+/* 文字生成效果 */
 @keyframes textFade {
     0%, 20% {
         opacity: 0;
@@ -456,118 +367,219 @@
 
 @keyframes dotsAnimation {
     0%, 20% {
-        opacity: 0.3;
+        opacity: 0.35;
     }
     50% {
         opacity: 1;
     }
     100% {
-        opacity: 0.3;
+        opacity: 0.35;
     }
 }
 
 /* 完成状态动画 */
-.ai-brain.completed {
-    animation: brainComplete 2s ease-out forwards;
-}
-
 .ai-brain.completed .brain-core {
-    background: #1f2937;
-    animation: completionGlow 1.5s ease-out;
+    box-shadow: 0 14px 40px rgba(22, 163, 74, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-.ai-brain.completed .brain-icon::before {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 32px;
-    color: white;
-    animation: checkmarkAppear 1s ease-out;
+.ai-brain.completed .generating-text {
+    color: #16a34a;
 }
 
-@keyframes brainComplete {
-    0% {
-        transform: translateY(0px) scale(1);
-    }
-    50% {
-        transform: translateY(-20px) scale(1.2);
-    }
-    100% {
-        transform: translateY(-5px) scale(1.1);
-    }
-}
-
-@keyframes completionGlow {
-    0% {
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-    }
-    50% {
-        box-shadow: 0 12px 48px rgba(39, 174, 96, 0.6);
-    }
-    100% {
-        box-shadow: 0 10px 40px rgba(39, 174, 96, 0.4);
-    }
-}
-
-@keyframes checkmarkAppear {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.3);
-    }
-    50% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.3);
-    }
-    100% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-.progress-container {
-    width: 100%;
-    height: 6px;
-    background: var(--surface-subtle);
-    border-radius: 3px;
-    margin: 20px 0;
+.tips-marquee {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    border: 1px solid rgba(17, 17, 17, 0.08);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    z-index: 3;
 }
 
-.progress-bar {
-    height: 100%;
-    background: var(--ink);
-    border-radius: 3px;
-    animation: progressBar 15s ease-in-out infinite;
+.tips-marquee i {
+    color: var(--ink-strong);
+}
+
+.tips-marquee .tips-text {
+    display: inline-block;
+    padding-left: 0;
+    color: var(--text-secondary);
+    font-size: 0.92em;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    width: 100%;
 }
 
 .loading-tips {
-    margin-top: 20px;
-    padding: 12px;
-    background: rgba(17, 17, 17, 0.05);
-    border-radius: 8px;
-    border-left: 4px solid rgba(17, 17, 17, 0.4);
+    margin: 12px 0 4px;
+    position: relative;
+    z-index: 4;
+}
+
+.skeleton-wrap {
+    position: relative;
+    width: 100%;
+    height: 280px;
+    background: linear-gradient(180deg, rgba(17, 17, 17, 0.04), rgba(17, 17, 17, 0.02));
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 20px 18px;
+}
+
+.skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.skeleton-line {
+    height: 12px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, rgba(17,17,17,0.08) 25%, rgba(17,17,17,0.12) 37%, rgba(17,17,17,0.08) 63%);
+    background-size: 400% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-line.title {
+    width: 60%;
+    height: 16px;
+    margin-bottom: 6px;
+}
+
+.skeleton-line.long {
+    width: 100%;
+}
+
+.skeleton-line.mid {
+    width: 80%;
+}
+
+.skeleton-line.short {
+    width: 55%;
+}
+
+.skeleton-sheen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.55) 45%, transparent 90%);
+    transform: translateX(-100%);
+    animation: sheenMove 2.4s ease-in-out infinite;
+    opacity: 0.28;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes sheenMove {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(120%); }
+}
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.loading-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(6px);
+    background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.28), rgba(255,255,255,0.08) 50%, transparent 70%);
+    border-radius: 18px;
+}
+
+.overlay-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-strong);
+}
+
+.loading-ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(17, 17, 17, 0.12);
+    border-top-color: var(--ink-strong);
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 0 6px rgba(17, 17, 17, 0.05), 0 0 30px rgba(17,17,17,0.12);
+}
+
+.overlay-text {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-size: 14px;
+}
+
+.overlay-step {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+}
+
+.outline-loading-active #outline-toolbar-new button,
+.outline-loading-active #outline-toolbar-new .btn {
+    pointer-events: none;
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.outline-dim {
+    transition: opacity 0.3s ease;
+}
+
+.micro-progress {
+    width: 180px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(17, 17, 17, 0.1);
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.micro-progress span {
+    display: block;
+    height: 100%;
+    width: 60%;
+    background: linear-gradient(90deg, #0f172a, #111111, #0f172a);
+    animation: microProgress 1.8s ease-in-out infinite;
+    border-radius: 999px;
+}
+
+@keyframes microProgress {
+    0% { transform: translateX(-80%); }
+    50% { transform: translateX(10%); }
+    100% { transform: translateX(120%); }
 }
 
 .loading-tips h5 {
-    color: #2c3e50;
+    color: var(--ink-strong);
     margin-bottom: 8px;
     font-size: 1em;
 }
 
 .loading-tips p {
-    color: #666;
+    color: var(--text-secondary);
     margin: 0;
-    font-size: 0.9em;
-    line-height: 1.4;
+    font-size: 0.95em;
+    line-height: 1.5;
 }
-
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
 /* 表单美化 */
 .form-group {
     margin-bottom: 25px;
@@ -1035,7 +1047,58 @@ let outlineGenerationStarted = false;
 let pendingOutlineData = null;
 const MAX_OUTLINE_RENDER_RETRIES = 5;
 
+function setOutlineLoadingState(isLoading) {
+    const outlineSection = document.getElementById('outline-section');
+    if (outlineSection) {
+        outlineSection.classList.toggle('outline-loading-active', isLoading);
+    }
+    const toolbar = document.getElementById('outline-toolbar-new');
+    if (toolbar) {
+        const btns = toolbar.querySelectorAll('button');
+        btns.forEach(btn => {
+            btn.disabled = isLoading;
+            btn.style.cursor = isLoading ? 'not-allowed' : '';
+        });
+    }
+}
+
+function getOutlineLoadingMarkup({ brainId = 'loading-brain', title = '', subtitle = '', tips = '', icon = 'fa-brain', chipText = '大纲生成' } = {}) {
+    return `
+        <div class="outline-loading">
+            <div class="loading-grid">
+                <div class="loading-visual">
+                    <div class="skeleton-wrap">
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line title"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line mid"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-sheen"></div>
+                    </div>
+                    <div class="loading-overlay">
+                        <div class="overlay-content">
+                            <div class="loading-ring"></div>
+                            <div class="overlay-text">大纲生成中</div>
+                            <div class="overlay-step">正在理解主题...</div>
+                            <div class="micro-progress"><span></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="loading-tips tips-marquee">
+                <i class="fas fa-lightbulb"></i>
+                <span class="tips-text">${tips}</span>
+            </div>
+        </div>
+    `;
+}
+
 function stopOutlineGenerationAnimations(reason = '') {
+    setOutlineLoadingState(false);
+
     const outlineGeneratingDiv = document.getElementById('outline-generating-new');
     if (outlineGeneratingDiv) {
         outlineGeneratingDiv.style.cssText = 'display: none !important;';
@@ -1077,42 +1140,44 @@ function toggleOutlineViewDuringRegeneration(isRegenerating) {
 
     if (outlineToolbar) {
         if (isRegenerating) {
-            if (!outlineToolbar.hasAttribute('data-prev-display')) {
-                outlineToolbar.dataset.prevDisplay = outlineToolbar.style.display || '';
+            if (!outlineToolbar.hasAttribute('data-prev-opacity')) {
+                outlineToolbar.dataset.prevOpacity = outlineToolbar.style.opacity || '';
             }
-            outlineToolbar.style.display = 'none';
-        } else if (outlineToolbar.hasAttribute('data-prev-display')) {
-            outlineToolbar.style.display = outlineToolbar.dataset.prevDisplay;
-            outlineToolbar.removeAttribute('data-prev-display');
+            if (!outlineToolbar.hasAttribute('data-prev-pointer')) {
+                outlineToolbar.dataset.prevPointer = outlineToolbar.style.pointerEvents || '';
+            }
+            outlineToolbar.style.opacity = '0.45';
+            outlineToolbar.style.pointerEvents = 'none';
+        } else {
+            if (outlineToolbar.hasAttribute('data-prev-opacity')) {
+                outlineToolbar.style.opacity = outlineToolbar.dataset.prevOpacity;
+                outlineToolbar.removeAttribute('data-prev-opacity');
+            }
+            if (outlineToolbar.hasAttribute('data-prev-pointer')) {
+                outlineToolbar.style.pointerEvents = outlineToolbar.dataset.prevPointer;
+                outlineToolbar.removeAttribute('data-prev-pointer');
+            }
         }
     }
 
     if (outlineContent) {
         if (isRegenerating) {
-            if (!outlineContent.hasAttribute('data-prev-visibility')) {
-                outlineContent.dataset.prevVisibility = outlineContent.style.visibility || '';
-            }
             if (!outlineContent.hasAttribute('data-prev-opacity')) {
                 outlineContent.dataset.prevOpacity = outlineContent.style.opacity || '';
             }
-            if (!outlineContent.hasAttribute('data-prev-display')) {
-                outlineContent.dataset.prevDisplay = outlineContent.style.display || '';
+            if (!outlineContent.hasAttribute('data-prev-pointer')) {
+                outlineContent.dataset.prevPointer = outlineContent.style.pointerEvents || '';
             }
-            outlineContent.style.visibility = 'hidden';
-            outlineContent.style.opacity = '0';
-            outlineContent.style.display = 'none';
+            outlineContent.style.opacity = '0.4';
+            outlineContent.style.pointerEvents = 'none';
         } else {
-            if (outlineContent.hasAttribute('data-prev-visibility')) {
-                outlineContent.style.visibility = outlineContent.dataset.prevVisibility;
-                outlineContent.removeAttribute('data-prev-visibility');
-            }
             if (outlineContent.hasAttribute('data-prev-opacity')) {
                 outlineContent.style.opacity = outlineContent.dataset.prevOpacity;
                 outlineContent.removeAttribute('data-prev-opacity');
             }
-            if (outlineContent.hasAttribute('data-prev-display')) {
-                outlineContent.style.display = outlineContent.dataset.prevDisplay;
-                outlineContent.removeAttribute('data-prev-display');
+            if (outlineContent.hasAttribute('data-prev-pointer')) {
+                outlineContent.style.pointerEvents = outlineContent.dataset.prevPointer;
+                outlineContent.removeAttribute('data-prev-pointer');
             }
         }
     }
@@ -1123,9 +1188,11 @@ function toggleOutlineViewDuringRegeneration(isRegenerating) {
                 outlineContainer.dataset.prevPointerEvents = outlineContainer.style.pointerEvents || '';
             }
             outlineContainer.style.pointerEvents = 'none';
+            outlineContainer.classList.add('outline-dim');
         } else if (outlineContainer.hasAttribute('data-prev-pointer-events')) {
             outlineContainer.style.pointerEvents = outlineContainer.dataset.prevPointerEvents;
             outlineContainer.removeAttribute('data-prev-pointer-events');
+            outlineContainer.classList.remove('outline-dim');
         }
     }
 }
@@ -1280,7 +1347,7 @@ let activeBrains = new Set();
 
 function startBrainAnimation(prefix = '') {
     const brainId = prefix ? `loading-brain-${prefix}` : 'loading-brain';
-    const brain = document.getElementById(brainId);
+    const brain = document.getElementById(brainId) || document.querySelector('.overlay-content');
 
     if (!brain) return;
 
@@ -1294,18 +1361,26 @@ function startBrainAnimation(prefix = '') {
     function updateThinkingText() {
         if (!activeBrains.has(prefix)) return;
 
-        const textElement = brain.querySelector('.generating-text');
+        const textElement = brain.querySelector('.generating-label') || brain.querySelector('.generating-text') || brain.querySelector('.overlay-step');
         if (textElement) {
             const texts = [
                 '正在分析内容结构',
                 '正在构建逻辑框架',
                 '正在优化大纲层次',
                 '正在完善内容要点',
-                '正在生成PPT大纲'
+                '正在生成PPT大纲',
+                '正在理解主题...',
+                '正在生成章节...',
+                '正在润色要点...'
             ];
 
             const randomText = texts[Math.floor(Math.random() * texts.length)];
             textElement.textContent = randomText;
+        }
+
+        const dotsElement = brain.querySelector('.generating-dots');
+        if (dotsElement) {
+            dotsElement.textContent = '...';
         }
     }
 
@@ -1331,7 +1406,7 @@ function stopBrainAnimation(prefix = '') {
         brain.classList.add('completed');
 
         // 更新完成文字
-        const textElement = brain.querySelector('.generating-text');
+        const textElement = brain.querySelector('.generating-label') || brain.querySelector('.generating-text');
         if (textElement) {
             textElement.textContent = '大纲生成完成';
         }
@@ -1561,42 +1636,12 @@ function showOutlineSection() {
                 <!-- JSON View -->
                 <div id="outline-content-display" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 25px; min-height: 400px; max-height: 600px; overflow-y: auto; font-family: 'Microsoft YaHei', Arial, sans-serif; line-height: 1.8; font-size: 14px; display: none; position: relative;">
                     <div id="outline-placeholder" class="loading-container">
-                        <div class="loading-icon">
-                            <i class="fas fa-brain"></i>
-                        </div>
-                        <div class="loading-title">AI正在生成PPT大纲</div>
-
-                        <div class="brain-container">
-                            <div class="ai-brain" id="loading-brain-dynamic">
-                                <div class="brain-core">
-                                    <div class="brain-icon">🧠</div>
-                                </div>
-                                <svg class="progress-ring" width="140" height="140">
-                                    <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
-                                    <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
-                                </svg>
-                                <div class="neural-network">
-                                    <div class="neural-line" style="--rotation: 45deg;"></div>
-                                    <div class="neural-line" style="--rotation: -30deg;"></div>
-                                    <div class="neural-line" style="--rotation: -45deg;"></div>
-                                    <div class="neural-line" style="--rotation: 60deg;"></div>
-                                </div>
-                                <div class="thought-bubbles">
-                                    <div class="thought-bubble"></div>
-                                    <div class="thought-bubble"></div>
-                                    <div class="thought-bubble"></div>
-                                </div>
-                                <div class="text-generation">
-                                    <div class="generating-text">正在分析内容结构</div>
-                                    <div class="generating-dots">• • •</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="loading-tips">
-                            <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
-                            <p>AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。</p>
-                        </div>
+                        ${getOutlineLoadingMarkup({
+                            brainId: 'loading-brain-dynamic',
+                            title: 'AI 正在生成 PPT 大纲',
+                            subtitle: '根据需求梳理章节、层次与要点',
+                            tips: 'AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。'
+                        })}
                     </div>
 
                     <!-- 光标元素移到内容容器内部，使用绝对定位，默认隐藏 -->
@@ -1632,44 +1677,13 @@ function showOutlineSection() {
                         
                         <!-- 大纲生成中的AI动画 -->
                         <div id="outline-generating-new" class="loading-container" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: none; z-index: 10;">
-                            <div class="loading-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div class="loading-title">AI正在生成PPT大纲</div>
-
-                            <div class="brain-container">
-                                <div class="ai-brain" id="loading-brain-outline-view">
-                                    <div class="brain-core">
-                                        <div class="brain-icon">🧠</div>
-                                    </div>
-                                    <svg class="progress-ring" width="140" height="140">
-                                        <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
-                                        <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
-                                    </svg>
-                                    <div class="neural-network">
-                                        <div class="neural-line" style="--rotation: 45deg;"></div>
-                                        <div class="neural-line" style="--rotation: -30deg;"></div>
-                                        <div class="neural-line" style="--rotation: -45deg;"></div>
-                                        <div class="neural-line" style="--rotation: 60deg;"></div>
-                                    </div>
-                                    <div class="thought-bubbles">
-                                        <div class="thought-bubble"></div>
-                                        <div class="thought-bubble"></div>
-                                        <div class="thought-bubble"></div>
-                                    </div>
-                                    <div class="text-generation">
-                                        <div class="generating-text">正在分析内容结构</div>
-                                        <div class="generating-dots">• • •</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="loading-tips">
-                                <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
-                                <p>AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后将自动显示在大纲视图中。</p>
-                            </div>
+                            ${getOutlineLoadingMarkup({
+                                brainId: 'loading-brain-outline-view',
+                                title: 'AI 正在生成 PPT 大纲',
+                                subtitle: '根据需求梳理章节、层次与要点',
+                                tips: 'AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。'
+                            })}
                         </div>
-                        
                         <div id="outline-loading-new" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #7f8c8d; display: none;">
                             <i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom: 15px;"></i>
                             <p>正在加载大纲...</p>
@@ -1747,6 +1761,7 @@ function showOutlineSection() {
     }
 
     outlineSection.style.display = 'block';
+    setOutlineLoadingState(true);
 
     // 因为默认视图是大纲视图，需要在这里也显示大纲视图的加载动画
     setTimeout(() => {
@@ -1755,6 +1770,7 @@ function showOutlineSection() {
         if (outlineGeneratingDiv) {
             console.log('[SHOW_OUTLINE] 显示大纲视图加载动画');
             outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
+        setOutlineLoadingState(true);
             
             // 隐藏空状态
             const outlineEmptyDiv = document.getElementById('outline-empty-new');
@@ -1967,7 +1983,7 @@ async function startOutlineGenerationNew() {
     if (outlineGeneratingDiv) {
         console.log('[MANUAL] 显示大纲视图动画');
         outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
-        
+        setOutlineLoadingState(true);
         setTimeout(() => {
             startBrainAnimation('outline-view');
             console.log('[MANUAL] 大纲视图AI动画已启动');
@@ -1977,46 +1993,17 @@ async function startOutlineGenerationNew() {
     // 显示增强的加载状态
     if (placeholderDiv) {
         console.log('Setting up placeholder div for outline generation');
-        placeholderDiv.innerHTML = `
-            <div class="loading-icon">
-                <i class="fas fa-brain"></i>
-            </div>
-            <div class="loading-title">AI正在生成PPT大纲</div>
-
-            <div class="brain-container">
-                <div class="ai-brain" id="loading-brain-stream">
-                    <div class="brain-core">
-                        <div class="brain-icon">🧠</div>
-                    </div>
-                    <svg class="progress-ring" width="140" height="140">
-                        <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
-                        <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
-                    </svg>
-                    <div class="neural-network">
-                        <div class="neural-line" style="--rotation: 45deg;"></div>
-                        <div class="neural-line" style="--rotation: -30deg;"></div>
-                        <div class="neural-line" style="--rotation: -45deg;"></div>
-                        <div class="neural-line" style="--rotation: 60deg;"></div>
-                    </div>
-                    <div class="thought-bubbles">
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                    </div>
-                    <div class="text-generation">
-                        <div class="generating-text">正在生成PPT大纲</div>
-                        <div class="generating-dots">• • •</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="loading-tips">
-                <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
-                <p>AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后将一次性显示完整大纲，您可以编辑和调整。</p>
-            </div>
+                                                                placeholderDiv.innerHTML = `
+            ${getOutlineLoadingMarkup({
+                brainId: 'loading-brain-stream',
+                title: 'AI 正在生成 PPT 大纲',
+                subtitle: '根据需求梳理章节、层次与要点',
+                tips: 'AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。'
+            })}
         `;
         placeholderDiv.className = 'loading-container';
         placeholderDiv.style.display = 'block';
+        setOutlineLoadingState(true);
         console.log('Placeholder div set up, starting brain animation');
 
         // 启动动画
@@ -2334,6 +2321,7 @@ async function startFileOutlineGeneration() {
         
         // 强制设置样式，确保动画可见
         outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
+        setOutlineLoadingState(true);
         
         console.log('[FILE] 动画容器样式已设置:', {
             display: outlineGeneratingDiv.style.display,
@@ -2359,46 +2347,17 @@ async function startFileOutlineGeneration() {
 
     // 同时设置JSON视图的加载状态（当用户切换到JSON视图时可见）
     if (placeholderDiv) {
-        placeholderDiv.innerHTML = `
-            <div class="loading-icon">
-                <i class="fas fa-file-alt"></i>
-            </div>
-            <div class="loading-title">正在从文件生成PPT大纲</div>
-
-            <div class="brain-container">
-                <div class="ai-brain" id="loading-brain-file">
-                    <div class="brain-core">
-                        <div class="brain-icon">AI</div>
-                    </div>
-                    <svg class="progress-ring" width="140" height="140">
-                        <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
-                        <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
-                    </svg>
-                    <div class="neural-network">
-                        <div class="neural-line" style="--rotation: 45deg;"></div>
-                        <div class="neural-line" style="--rotation: -30deg;"></div>
-                        <div class="neural-line" style="--rotation: -45deg;"></div>
-                        <div class="neural-line" style="--rotation: 60deg;"></div>
-                    </div>
-                    <div class="thought-bubbles">
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                    </div>
-                    <div class="text-generation">
-                        <div class="generating-text">正在解析文件内容</div>
-                        <div class="generating-dots">• • •</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="loading-tips">
-                <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
-                <p>AI正在智能分析您上传的文件内容，提取关键信息并生成结构化的PPT大纲。</p>
-            </div>
+                placeholderDiv.innerHTML = `
+            ${getOutlineLoadingMarkup({
+                brainId: 'loading-brain-file',
+                title: 'AI 正在生成 PPT 大纲',
+                subtitle: '根据需求梳理章节、层次与要点',
+                tips: 'AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。'
+            })}
         `;
         placeholderDiv.className = 'loading-container';
         placeholderDiv.style.display = 'block';
+        setOutlineLoadingState(true);
 
         // 启动文件处理动画
         startBrainAnimation('file');
@@ -2742,43 +2701,14 @@ async function regenerateOutlineNew() {
 
     if (placeholderDiv) {
         placeholderDiv.style.display = 'block';
-        placeholderDiv.innerHTML = `
-            <div class="loading-icon">
-                <i class="fas fa-brain"></i>
-            </div>
-            <div class="loading-title">正在重新生成大纲</div>
-
-            <div class="brain-container">
-                <div class="ai-brain" id="loading-brain-regenerate">
-                    <div class="brain-core">
-                        <div class="brain-icon">🧠</div>
-                    </div>
-                    <svg class="progress-ring" width="140" height="140">
-                        <circle class="progress-ring-circle" cx="70" cy="70" r="70"></circle>
-                        <circle class="progress-ring-progress" cx="70" cy="70" r="70"></circle>
-                    </svg>
-                    <div class="neural-network">
-                        <div class="neural-line" style="--rotation: 45deg;"></div>
-                        <div class="neural-line" style="--rotation: -30deg;"></div>
-                        <div class="neural-line" style="--rotation: -45deg;"></div>
-                        <div class="neural-line" style="--rotation: 60deg;"></div>
-                    </div>
-                    <div class="thought-bubbles">
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                        <div class="thought-bubble"></div>
-                    </div>
-                    <div class="text-generation">
-                        <div class="generating-text">正在重新分析内容</div>
-                        <div class="generating-dots">• • •</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="loading-tips">
-                <h5><i class="fas fa-lightbulb"></i> 小贴士</h5>
-                <p>AI正在重新分析您的需求并生成全新的PPT大纲，请稍候...</p>
-            </div>
+        setOutlineLoadingState(true);
+                placeholderDiv.innerHTML = `
+            ${getOutlineLoadingMarkup({
+                brainId: 'loading-brain-regenerate',
+                title: 'AI 正在生成 PPT 大纲',
+                subtitle: '根据需求梳理章节、层次与要点',
+                tips: 'AI正在根据您的需求智能生成PPT大纲，包括标题、内容要点和逻辑结构。生成完成后您可以实时编辑和调整。'
+            })}
         `;
 
         // 启动重新生成动画
@@ -3011,11 +2941,11 @@ function validateJSON() {
         // Format and update editor content
         editor.value = JSON.stringify(jsonData, null, 2);
 
-        alert('✅ JSON格式验证通过！');
+        alert('✓ JSON格式验证通过！');
         return true;
 
     } catch (error) {
-        alert('❌ JSON格式错误: ' + error.message);
+        alert('✕ JSON格式错误: ' + error.message);
         return false;
     }
 }
@@ -3054,7 +2984,7 @@ async function saveOutlineEditNew() {
             cancelEditOutlineNew();
 
             // Show success message
-            alert('✅ 大纲已更新');
+            alert('✓ 大纲已更新');
 
             // 立即更新大纲视图，确保使用最新的数据
             setTimeout(() => {
@@ -3084,11 +3014,11 @@ async function saveOutlineEditNew() {
                 }
             }, 100); // 减少延迟，立即更新
         } else {
-            alert('❌ 保存失败，请重试');
+            alert('✕ 保存失败，请重试');
         }
     } catch (error) {
         console.error('Error saving outline:', error);
-        alert('❌ 保存失败: ' + error.message);
+        alert('✕ 保存失败: ' + error.message);
     }
 }
 
@@ -3246,7 +3176,7 @@ async function startOutlineGeneration() {
                             cursorDiv.style.display = 'none';
                             if (stageElement) {
                                 const statusIcon = stageElement.querySelector('.stage-status-icon');
-                                if (statusIcon) statusIcon.textContent = '❌';
+                                if (statusIcon) statusIcon.textContent = '✕';
                             }
                             return;
                         }
@@ -3295,7 +3225,7 @@ async function startOutlineGeneration() {
                                     const badge = document.createElement('span');
                                     badge.className = 'completion-badge';
                                     badge.style.cssText = 'color: #27ae60; font-size: 0.8em; margin-left: 10px;';
-                                    badge.textContent = '✅ 生成完成';
+                                    badge.textContent = '✓ 生成完成';
                                     header.appendChild(badge);
                                 }
                             }
@@ -3328,7 +3258,7 @@ async function startOutlineGeneration() {
         cursorDiv.style.display = 'none';
         if (stageElement) {
             const statusIcon = stageElement.querySelector('.stage-status-icon');
-            if (statusIcon) statusIcon.textContent = '❌';
+            if (statusIcon) statusIcon.textContent = '✕';
         }
     }
 }
@@ -3418,7 +3348,7 @@ async function startStageExecution(stageId) {
 
                         if (data.error) {
                             outputContent.textContent = `错误: ${data.error}`;
-                            statusIcon.textContent = '❌';
+                            statusIcon.textContent = '✕';
                             streamBtn.disabled = false;
                             streamBtn.textContent = '重试';
 
@@ -3438,7 +3368,7 @@ async function startStageExecution(stageId) {
 
                         if (data.done) {
                             outputCursor.classList.add('hidden');
-                            statusIcon.textContent = '✅';
+                            statusIcon.textContent = '✓';
                             streamBtn.textContent = '完成';
                             streamBtn.style.display = 'none';
 
@@ -3492,7 +3422,7 @@ async function startStageExecution(stageId) {
     } catch (error) {
         console.error('Error streaming stage:', error);
         outputContent.textContent = `连接错误: ${error.message}`;
-        statusIcon.textContent = '❌';
+        statusIcon.textContent = '✕';
     } finally {
         streamBtn.disabled = false;
         if (streamBtn.textContent === '处理中...') {
@@ -3662,7 +3592,7 @@ setInterval(async function() {
                 if (stage.status === 'completed') {
                     icon.textContent = '✓';
                     icon.parentElement.style.background = '#27ae60';
-                    if (taskStatus) taskStatus.textContent = '✅';
+                    if (taskStatus) taskStatus.textContent = '✓';
 
                     // Auto-start outline generation when requirements confirmation is completed
                     if (stage.id === 'requirements_confirmation') {
@@ -3690,7 +3620,7 @@ setInterval(async function() {
                 } else if (stage.status === 'failed') {
                     icon.textContent = '✗';
                     icon.parentElement.style.background = '#e74c3c';
-                    if (taskStatus) taskStatus.textContent = '❌';
+                    if (taskStatus) taskStatus.textContent = '✕';
                 }
 
                 // Update progress bar
@@ -3828,7 +3758,7 @@ async function executeStageAndWait(stageId) {
                         if (done) {
                             // Stream completed
                             outputCursor.classList.add('hidden');
-                            statusIcon.textContent = '✅';
+                            statusIcon.textContent = '✓';
                             if (streamBtn) {
                                 streamBtn.textContent = '完成';
                                 streamBtn.disabled = false;
@@ -3852,7 +3782,7 @@ async function executeStageAndWait(stageId) {
 
                                     if (data.error) {
                                         outputContent.textContent = `错误: ${data.error}`;
-                                        statusIcon.textContent = '❌';
+                                        statusIcon.textContent = '✕';
                                         reject(new Error(data.error));
                                         return;
                                     }
@@ -3864,7 +3794,7 @@ async function executeStageAndWait(stageId) {
 
                                     if (data.done) {
                                         outputCursor.classList.add('hidden');
-                                        statusIcon.textContent = '✅';
+                                        statusIcon.textContent = '✓';
                                         if (streamBtn) {
                                             streamBtn.textContent = '完成';
                                             streamBtn.disabled = false;
@@ -3914,7 +3844,7 @@ async function executeStageAndWait(stageId) {
             .catch(error => {
                 console.error('Error streaming subtask:', error);
                 outputContent.textContent = `连接错误: ${error.message}`;
-                statusIcon.textContent = '❌';
+                statusIcon.textContent = '✕';
                 if (streamBtn) {
                     streamBtn.disabled = false;
                     streamBtn.textContent = '重试';
@@ -3934,7 +3864,7 @@ function updateStageVisualStatus(stageElement, status) {
         if (progressBar) progressBar.style.width = '50%';
         stageElement.style.borderLeft = '4px solid #f39c12';
     } else if (status === 'completed') {
-        if (statusIcon) statusIcon.textContent = '✅';
+        if (statusIcon) statusIcon.textContent = '✓';
         if (progressBar) progressBar.style.width = '100%';
         stageElement.style.borderLeft = '4px solid #27ae60';
     }
@@ -4266,7 +4196,7 @@ function editOutlineContent() {
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="color: #2c3e50; margin: 0;">编辑PPT大纲</h3>
-            <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+            <button onclick="this.closest('.modal').remove()" style="background: transparent; color: #111; border: 1px solid #111; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
         </div>
         <div style="flex: 1; display: flex; flex-direction: column;">
             <textarea id="outlineEditor" style="flex: 1; border: 2px solid #ecf0f1; border-radius: 8px; padding: 15px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: none;" placeholder="编辑大纲JSON...">${outlineContent}</textarea>
@@ -4741,7 +4671,7 @@ function renderOutlineContentNew(outline, container) {
     const titleSection = document.createElement('div');
     titleSection.style.cssText = 'text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #ecf0f1;';
     titleSection.innerHTML = `
-        <h4 style="color: #3498db; margin-bottom: 10px;">${outline.title || '未命名大纲'}</h4>
+        <h4 style="color: #111111; font-size: 1.5em; font-weight: bold; margin-bottom: 10px;">${outline.title || '未命名大纲'}</h4>
         <p style="color: #7f8c8d; margin: 0;">
             总共 ${outline.slides.length} 页幻灯片 |
             场景: ${outline.metadata?.scenario || '未指定'} |
@@ -4774,7 +4704,7 @@ function renderCompactOutlineView(slides, container) {
         const slideCard = document.createElement('div');
         slideCard.style.cssText = `
             padding: 15px; background: white; border-radius: 8px;
-            border-left: 4px solid #3498db; transition: all 0.3s ease;
+            border-left: 4px solid #111111; transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; cursor: pointer;
         `;
 
@@ -4808,7 +4738,7 @@ function renderCompactOutlineView(slides, container) {
         const header = document.createElement('div');
         header.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px;';
         header.innerHTML = `
-            <span style="background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
+            <span style="background: #11111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
                 ${slide.page_number || index + 1}
             </span>
             <strong style="color: #2c3e50; font-size: 0.9em;">${slide.title || '未命名幻灯片'}</strong>
@@ -4964,12 +4894,12 @@ function viewSlideDetailNew(slideIndex) {
         content.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="color: #2c3e50; margin: 0;">第${slide.page_number || slideIndex + 1}页详情</h3>
-                <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+                <button onclick="this.closest('.modal').remove()" style="background: transparent; color: #111; border: 1px solid #111; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">×</button>
             </div>
-            <h4 style="color: #3498db; margin-bottom: 10px;">${slide.title || '未命名幻灯片'}</h4>
+            <h4 style="color: #111111; margin-bottom: 10px;">${slide.title || '未命名幻灯片'}</h4>
             ${slide.subtitle ? `<p style="color: #7f8c8d; font-style: italic; margin-bottom: 15px;">${slide.subtitle}</p>` : ''}
             ${contentPoints}
-            ${slide.slide_type ? `<div style="margin-top: 15px;"><span style="background: #e8f4fd; color: #3498db; padding: 6px 12px; border-radius: 6px; font-size: 0.9em;">类型: ${slide.slide_type}</span></div>` : ''}
+            ${slide.slide_type ? `<div style="margin-top: 15px;"><span style="background: #111111; color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.9em;">类型: ${slide.slide_type}</span></div>` : ''}
         `;
 
         modal.className = 'modal';
@@ -5110,12 +5040,13 @@ function exportOutlineJSONNew() {
         // 显示成功提示
         const toast = document.createElement('div');
         toast.style.cssText = `
-            position: fixed; top: 20px; right: 20px; background: #27ae60;
-            color: white; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-            font-size: 14px; font-weight: bold;
+            position: fixed; top: 20px; right: 20px; background: #fff;
+            color: #000; padding: 15px 20px; border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 1001;
+            font-size: 14px; font-weight: 700; border: 1px solid #000;
+            letter-spacing: 0.02em;
         `;
-        toast.textContent = '✅ 大纲JSON文件已导出';
+        toast.textContent = '✓ 大纲JSON文件已导出';
         document.body.appendChild(toast);
 
         setTimeout(() => {
@@ -5439,12 +5370,13 @@ async function saveSingleSlideEdit(slideIndex) {
             // 显示成功消息
             const toast = document.createElement('div');
             toast.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #27ae60;
-                color: white; padding: 15px 20px; border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-                font-size: 14px; font-weight: bold;
+                position: fixed; top: 20px; right: 20px; background: #fff;
+                color: #000; padding: 15px 20px; border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 1001;
+                font-size: 14px; font-weight: 700; border: 1px solid #000;
+                letter-spacing: 0.02em;
             `;
-            toast.textContent = `✅ 第${slideIndex + 1}页已更新`;
+            toast.textContent = `✓ 第${slideIndex + 1}页已更新`;
             document.body.appendChild(toast);
 
             setTimeout(() => {
@@ -5555,9 +5487,9 @@ function debugOutlineContent() {
 
         try {
             JSON.parse(cleanedContent);
-            console.log('✅ 清理后的内容可以正确解析为JSON');
+            console.log('✓ 清理后的内容可以正确解析为JSON');
         } catch (e) {
-            console.log('❌ 清理后仍然无法解析：', e.message);
+            console.log('✕ 清理后仍然无法解析：', e.message);
         }
     }
 
@@ -6162,10 +6094,11 @@ async function aiOptimizeSingleSlideInModal(slideIndex) {
     const loadingToast = document.createElement('div');
     loadingToast.id = 'ai-optimize-loading';
     loadingToast.style.cssText = `
-        position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white; padding: 15px 20px; border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
-        font-size: 14px; font-weight: bold;
+        position: fixed; top: 20px; right: 20px; background: #000;
+        color: #fff; padding: 15px 20px; border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 10001;
+        font-size: 14px; font-weight: 700; border: 1px solid #fff;
+        letter-spacing: 0.02em;
     `;
     loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化第${slideIndex + 1}页...`;
     document.body.appendChild(loadingToast);
@@ -6240,12 +6173,13 @@ async function aiOptimizeSingleSlideInModal(slideIndex) {
             // 显示成功提示
             const successToast = document.createElement('div');
             successToast.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #27ae60;
-                color: white; padding: 15px 20px; border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
-                font-size: 14px; font-weight: bold;
+                position: fixed; top: 20px; right: 20px; background: #fff;
+                color: #000; padding: 15px 20px; border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 10001;
+                font-size: 14px; font-weight: 700; border: 1px solid #000;
+                letter-spacing: 0.02em;
             `;
-            successToast.textContent = `✅ AI优化完成，请检查后保存`;
+            successToast.textContent = `✓ AI优化完成，请检查后保存`;
             document.body.appendChild(successToast);
 
             setTimeout(() => {
@@ -6317,10 +6251,11 @@ async function aiOptimizeJSONOutlineInModal() {
     const loadingToast = document.createElement('div');
     loadingToast.id = 'ai-optimize-loading';
     loadingToast.style.cssText = `
-        position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white; padding: 15px 20px; border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
-        font-size: 14px; font-weight: bold;
+        position: fixed; top: 20px; right: 20px; background: #000;
+        color: #fff; padding: 15px 20px; border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 10001;
+        font-size: 14px; font-weight: 700; border: 1px solid #fff;
+        letter-spacing: 0.02em;
     `;
     loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化整个大纲...`;
     document.body.appendChild(loadingToast);
@@ -6354,12 +6289,13 @@ async function aiOptimizeJSONOutlineInModal() {
             // 显示成功提示
             const successToast = document.createElement('div');
             successToast.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #27ae60;
-                color: white; padding: 15px 20px; border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
-                font-size: 14px; font-weight: bold;
+                position: fixed; top: 20px; right: 20px; background: #fff;
+                color: #000; padding: 15px 20px; border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 10001;
+                font-size: 14px; font-weight: 700; border: 1px solid #000;
+                letter-spacing: 0.02em;
             `;
-            successToast.innerHTML = `✅ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
+            successToast.innerHTML = `✓ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
             document.body.appendChild(successToast);
 
             setTimeout(() => {
@@ -6419,10 +6355,11 @@ async function aiOptimizeSlideNew(slideIndex) {
         const loadingToast = document.createElement('div');
         loadingToast.id = 'ai-optimize-loading';
         loadingToast.style.cssText = `
-            position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-            font-size: 14px; font-weight: bold;
+            position: fixed; top: 20px; right: 20px; background: #000;
+            color: #fff; padding: 15px 20px; border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 1001;
+            font-size: 14px; font-weight: 700; border: 1px solid #fff;
+            letter-spacing: 0.02em;
         `;
         loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化第${slideIndex + 1}页...`;
         document.body.appendChild(loadingToast);
@@ -6482,12 +6419,13 @@ async function aiOptimizeSlideNew(slideIndex) {
                 // 显示成功提示
                 const successToast = document.createElement('div');
                 successToast.style.cssText = `
-                    position: fixed; top: 20px; right: 20px; background: #27ae60;
-                    color: white; padding: 15px 20px; border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-                    font-size: 14px; font-weight: bold;
+                    position: fixed; top: 20px; right: 20px; background: #fff;
+                    color: #000; padding: 15px 20px; border-radius: 8px;
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 1001;
+                    font-size: 14px; font-weight: 700; border: 1px solid #000;
+                    letter-spacing: 0.02em;
                 `;
-                successToast.textContent = `✅ 第${slideIndex + 1}页AI优化完成`;
+                successToast.textContent = `✓ 第${slideIndex + 1}页AI优化完成`;
                 document.body.appendChild(successToast);
 
                 setTimeout(() => {
@@ -6546,10 +6484,11 @@ async function aiOptimizeJSONOutline() {
     const loadingToast = document.createElement('div');
     loadingToast.id = 'ai-optimize-loading';
     loadingToast.style.cssText = `
-        position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white; padding: 15px 20px; border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-        font-size: 14px; font-weight: bold;
+        position: fixed; top: 20px; right: 20px; background: #000;
+        color: #fff; padding: 15px 20px; border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 1001;
+        font-size: 14px; font-weight: 700; border: 1px solid #fff;
+        letter-spacing: 0.02em;
     `;
     loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化整个大纲...`;
     document.body.appendChild(loadingToast);
@@ -6583,12 +6522,13 @@ async function aiOptimizeJSONOutline() {
             // 显示成功提示
             const successToast = document.createElement('div');
             successToast.style.cssText = `
-                position: fixed; top: 20px; right: 20px; background: #27ae60;
-                color: white; padding: 15px 20px; border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
-                font-size: 14px; font-weight: bold;
+                position: fixed; top: 20px; right: 20px; background: #fff;
+                color: #000; padding: 15px 20px; border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 1001;
+                font-size: 14px; font-weight: 700; border: 1px solid #000;
+                letter-spacing: 0.02em;
             `;
-            successToast.innerHTML = `✅ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
+            successToast.innerHTML = `✓ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
             document.body.appendChild(successToast);
 
             setTimeout(() => {

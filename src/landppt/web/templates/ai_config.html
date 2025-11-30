@@ -5,10 +5,25 @@
 {% block content %}
 <div class="ai-config-page">
 <div class="page-hero">
-    <h2 class="page-title">系统配置管理</h2>
-    <p class="page-subtitle">
-        配置和管理 LandPPT 的所有系统参数，包括 AI 提供者、生成参数、应用配置等
-    </p>
+    <div>
+        <p class="hero-eyebrow">配置中心</p>
+        <h2 class="page-title">系统配置管理</h2>
+        <p class="page-subtitle">
+            配置和管理 LandPPT 的所有系统参数，包括 AI 提供者、生成参数、应用配置等。
+        </p>
+        <!-- <div class="hero-meta">
+            <span class="pill pill--solid">当前提供者：{{ current_provider }}</span>
+            <span class="pill">可用提供者：{{ available_providers | length }} 个</span>
+        </div> -->
+    </div>
+    <!-- <div class="hero-actions">
+        <button onclick="testCurrentProvider()" class="btn btn-primary">
+            测试当前提供者
+        </button>
+        <button onclick="refreshProviders()" class="btn btn-secondary">
+            刷新状态
+        </button>
+    </div> -->
 </div>
 
 <!-- 配置导航标签 -->
@@ -53,15 +68,6 @@
                         <span class="status-label status-label--err">配置错误</span>
                     {% endif %}
                 </p>
-            </div>
-
-            <div style="text-align: center;">
-                <button onclick="testCurrentProvider()" class="btn btn-primary" style="margin-right: 10px;">
-                    测试当前提供者
-                </button>
-                <button onclick="refreshProviders()" class="btn btn-primary">
-                    刷新状态
-                </button>
             </div>
         </div>
 
@@ -1081,15 +1087,76 @@
     background: var(--ai-surface);
     border: 1px solid var(--ai-border);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
-    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    border-radius: var(--border-radius-lg, 16px);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-config-page .page-hero::after {
+    content: "";
+    position: absolute;
+    inset: -40px -80px auto auto;
+    width: 240px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(15, 15, 15, 0.08), transparent 55%);
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .ai-config-page .page-title {
     color: var(--ai-contrast);
+    margin: 0 0 8px;
 }
 
 .ai-config-page .page-subtitle {
     color: var(--ai-muted);
+    margin: 0;
+    line-height: 1.6;
+    max-width: 880px;
+}
+
+.ai-config-page .hero-eyebrow {
+    color: var(--ai-muted);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    margin: 0 0 6px;
+}
+
+.ai-config-page .hero-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.ai-config-page .hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ai-config-page .hero-actions .btn {
+    min-width: 140px;
+}
+
+@media (max-width: 900px) {
+    .ai-config-page .page-hero {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+    }
+
+    .ai-config-page .hero-actions {
+        justify-content: flex-start;
+    }
 }
 
 .ai-config-page .card {
