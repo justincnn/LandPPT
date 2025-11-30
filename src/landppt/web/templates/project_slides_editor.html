@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -4755,9 +4755,11 @@
                     <button class="ai-outline-btn" onclick="showSlideOutline()" title="查看当前页大纲">
                         <i class="fas fa-list"></i>
                     </button>
+                    {% if enable_auto_layout_repair %}
                     <button class="ai-outline-btn" onclick="autoRepairSlideLayout()" title="一键修复排版">
                         <i class="fas fa-border-all"></i>
                     </button>
+                    {% endif %}
                     <button class="ai-outline-btn" onclick="autoGenerateSlideImages()" title="一键配图">
                         <i class="fas fa-magic"></i>
                     </button>

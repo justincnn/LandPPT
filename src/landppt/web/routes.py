@@ -1899,7 +1899,8 @@ async def edit_project_ppt(
 
         return templates.TemplateResponse("project_slides_editor.html", {
             "request": request,
-            "project": project
+            "project": project,
+            "enable_auto_layout_repair": ai_config.enable_auto_layout_repair
         })
 
     except Exception as e:
