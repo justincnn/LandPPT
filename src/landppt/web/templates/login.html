@@ -84,6 +84,7 @@
         .brand-logo img {
             width: 64px;
             height: 64px;
+            /* Logo Optimization: White background container */
             background-color: var(--white);
             padding: 8px;
             border-radius: 12px;
@@ -166,7 +167,6 @@
             background: var(--white);
             border: 2px solid var(--gray-200);
             border-radius: 0;
-            /* Sharp edges for distinctive look */
             transition: var(--transition);
             font-family: inherit;
         }
@@ -240,20 +240,25 @@
             color: #166534;
         }
 
-        .back-link {
-            display: inline-block;
+        /* GitHub Link Style */
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             margin-top: 2rem;
             color: var(--gray-800);
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 500;
             transition: var(--transition);
-            border-bottom: 1px solid transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
         }
 
-        .back-link:hover {
+        .github-link:hover {
             color: var(--black);
-            border-bottom-color: var(--black);
+            background-color: var(--gray-100);
+            transform: translateY(-2px);
         }
 
         /* Responsive Design */
@@ -368,8 +373,9 @@
                 </form>
 
                 <div style="text-align: center;">
-                    <a href="/web" class="back-link">
-                        <i class="fas fa-long-arrow-alt-left"></i> 返回首页
+                    <a href="https://github.com/sligter/LandPPT" target="_blank" class="github-link">
+                        <i class="fab fa-github" style="font-size: 1.2em;"></i>
+                        <span>LandPPT</span>
                     </a>
                 </div>
             </div>
@@ -384,12 +390,6 @@
             // Add loading state
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> <span>登录中...</span>';
-
-            // Optional: Restore button if submission fails quickly (though usually page reloads)
-            // setTimeout(() => {
-            //     btn.disabled = false;
-            //     btn.innerHTML = originalContent;
-            // }, 5000);
         });
 
         // Add simple entrance animation

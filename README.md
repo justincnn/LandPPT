@@ -44,6 +44,9 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 [文档指南](http://landppt-doc.52yyds.top/docs)
 
 ### 主界面
+
+![image](https://img.pub/p/3accad83a8b624d7cb19.png)
+
 ![image](https://img.pub/p/7d5c3c1a4b625abeb4c1.png)
 
 ### 生成效果
@@ -98,7 +101,7 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 ### 🎨 智能图像处理系统
 - **多源图像获取**：本地图库、网络搜索、AI生成三合一
 - **网络图像搜索**：支持 Pixabay、Unsplash 等图库
-- **AI图像生成**：集成 DALL-E、SiliconFlow、Pollinations 等服务
+- **AI图像生成**：集成 DALL-E、SiliconFlow、Pollinations、 Openai、Gemini等服务
 - **智能图像选择**：AI自动匹配最适合的图像内容
 - **图像处理优化**：自动尺寸调整、格式转换、质量优化
 
@@ -152,7 +155,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 使用uv同步环境
 uv sync
 
-# 安装额外依赖（可选，用于PPTX导出）
+# 安装额外依赖（可选，用于标准PPTX导出）
 uv pip install apryse-sdk --extra-index-url=https://pypi.apryse.com
 
 # 配置环境变量
