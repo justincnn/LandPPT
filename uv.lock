@@ -247,6 +247,7 @@ name = "apryse-sdk"
 version = "11.6.0"
 source = { registry = "https://pypi.apryse.com/" }
 wheels = [
+    { url = "https://pypi.apryse.com/apryse-sdk/apryse_sdk-11.6.0-cp35-abi3-macosx_10_15_universal2.whl", hash = "sha256:82d39859c60438571f769b78053a0f1747a7093b81624ab4794c716bb0ff9a5a" },
     { url = "https://pypi.apryse.com/apryse-sdk/apryse_sdk-11.6.0-cp35-abi3-manylinux1_i686.whl", hash = "sha256:c9a71925ce00b135ac883c3d77416ea6d4f96804b70623b030f4657f10f3e753" },
     { url = "https://pypi.apryse.com/apryse-sdk/apryse_sdk-11.6.0-cp35-abi3-manylinux1_x86_64.whl", hash = "sha256:db6bc5c48836c598d04564e4bca10895efc3cf7954c49cb819253517b9c49c0b" },
     { url = "https://pypi.apryse.com/apryse-sdk/apryse_sdk-11.6.0-cp35-abi3-manylinux2010_i686.whl", hash = "sha256:9bd6faf7ad55de8de1aa6eb93b7f51180170bcb42ac385ab17fd6062efaedae5" },
@@ -1733,7 +1734,7 @@ wheels = [
 
 [[package]]
 name = "landppt"
-version = "0.1.2"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
