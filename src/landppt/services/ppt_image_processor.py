@@ -659,7 +659,11 @@ class PPTImageProcessor:
                     provider = ImageProvider.STABLE_DIFFUSION
                 elif default_provider == 'pollinations':
                     provider = ImageProvider.POLLINATIONS
-
+                elif default_provider == 'gemini':
+                    provder = ImageProvider.GEMINI
+                elif default_provider == 'openai_image':
+                    provider = ImageProvider.OPENAI_IMAGE
+    
                 generation_request = ImageGenerationRequest(
                     prompt=image_prompt,
                     provider=provider,
