@@ -347,6 +347,9 @@ class PPTImageProcessor:
     def _extract_json_from_response(self, content: str) -> Optional[str]:
         """从AI响应中提取JSON内容"""
         try:
+            # 移除可能的 think 内容
+            content = content.split("</think>")[-1]
+
             # 移除可能的markdown代码块标记
             content = content.strip()
 
