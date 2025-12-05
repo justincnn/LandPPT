@@ -2664,7 +2664,8 @@ async function regenerateOutlineNew() {
         const outlineContentDiv = document.getElementById('outline-content-new');
         toggleOutlineViewDuringRegeneration(true);
         if (outlineGeneratingDiv) {
-            outlineGeneratingDiv.style.display = 'block';
+            // 重新恢复覆盖样式，防止上次停止动画时清空了样式导致未完全遮挡
+            outlineGeneratingDiv.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: block !important; z-index: 9999; overflow-y: auto;';
             setTimeout(() => {
                 startBrainAnimation('outline-view');
             }, 100);
@@ -3607,7 +3608,7 @@ setInterval(async function() {
                     }
                 } else if (stage.status === 'running') {
                     icon.innerHTML = '<div style="width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>';
-                    icon.parentElement.style.background = '#3498db';
+                    icon.parentElement.style.background = '#111111';
                     if (taskStatus) taskStatus.textContent = '🔄';
 
                     // Show editor button for PPT creation stage when it starts running
@@ -3892,7 +3893,7 @@ function switchOutlineView(viewType) {
 
         // 更新按钮样式
         if (jsonBtn) {
-            jsonBtn.style.background = '#3498db';
+            jsonBtn.style.background = '#111111';
             jsonBtn.style.color = 'white';
         }
         if (outlineBtn) {
@@ -3908,7 +3909,7 @@ function switchOutlineView(viewType) {
 
         // 更新按钮样式
         if (outlineBtn) {
-            outlineBtn.style.background = '#3498db';
+            outlineBtn.style.background = '#111111';
             outlineBtn.style.color = 'white';
         }
         if (jsonBtn) {
@@ -4788,13 +4789,13 @@ function renderDetailedOutlineView(slides, container) {
         const slideDetail = document.createElement('div');
         slideDetail.style.cssText = `
             padding: 20px; margin-bottom: 15px; background: white;
-            border-radius: 10px; border-left: 4px solid #3498db; position: relative;
+            border-radius: 10px; border-left: 4px solid #111111; position: relative;
         `;
 
         const header = document.createElement('div');
         header.style.cssText = 'display: flex; align-items: center; margin-bottom: 15px;';
         header.innerHTML = `
-            <span style="background: #3498db; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
+            <span style="background: #111111; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
                 ${slide.page_number || index + 1}
             </span>
             <div style="flex: 1;">
@@ -4839,7 +4840,7 @@ function renderDetailedOutlineView(slides, container) {
             const typeTag = document.createElement('div');
             typeTag.style.cssText = 'margin-top: 10px;';
             typeTag.innerHTML = `
-                <span style="background: #e8f4fd; color: #3498db; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                <span style="background: #e8f4fd; color: #111111; padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
                     类型: ${slide.slide_type}
                 </span>
             `;
@@ -5746,7 +5747,7 @@ function updateFilesList() {
         totalSize += file.size;
 
         html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-bottom: 5px; border-left: 3px solid #3498db;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-bottom: 5px; border-left: 3px solid #111111;">
                 <div style="flex: 1;">
                     <div style="font-weight: 500; color: #2c3e50;">${i + 1}. ${file.name}</div>
                     <div style="font-size: 12px; color: #7f8c8d;">
