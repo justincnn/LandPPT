@@ -1043,6 +1043,8 @@
 <script>
 let currentProjectId = '{{ todo_board.task_id }}';
 let outlineGenerationStarted = false;
+let lastOutlineErrorMessage = '';
+let lastOutlineErrorRetryHandler = 'regenerateOutlineNew';
 
 let pendingOutlineData = null;
 const MAX_OUTLINE_RENDER_RETRIES = 5;
@@ -1196,7 +1198,84 @@ function toggleOutlineViewDuringRegeneration(isRegenerating) {
         }
     }
 }
- // 防止重复调用大纲生成
+
+// 在两个视图中显示大纲生成失败原因
+function showOutlineGenerationError(reason = '未知错误', retryHandler = 'regenerateOutlineNew') {
+    lastOutlineErrorMessage = reason || '未知错误';
+    lastOutlineErrorRetryHandler = retryHandler || 'regenerateOutlineNew';
+    const handlerName = (typeof window !== 'undefined' && typeof window[lastOutlineErrorRetryHandler] === 'function')
+        ? lastOutlineErrorRetryHandler
+        : 'regenerateOutlineNew';
+
+    setOutlineLoadingState(false);
+
+    const outlineGeneratingDiv = document.getElementById('outline-generating-new');
+    if (outlineGeneratingDiv) {
+        outlineGeneratingDiv.style.display = 'none';
+    }
+
+    const loadingDiv = document.getElementById('outline-loading-new');
+    const emptyDiv = document.getElementById('outline-empty-new');
+    const errorDiv = document.getElementById('outline-error-new');
+
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    if (emptyDiv) emptyDiv.style.display = 'none';
+
+    if (errorDiv) {
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle fa-2x" style="margin-bottom: 12px;"></i>
+            <p style="margin: 0 0 8px; font-weight: 600;">大纲生成失败</p>
+            <p class="outline-error-reason" style="margin: 0 0 12px; font-size: 14px; color: #7f8c8d;">原因：${lastOutlineErrorMessage}</p>
+            <button onclick="${handlerName}()" class="btn btn-warning btn-sm">
+                <i class="fas fa-sync"></i> 重新生成大纲
+            </button>
+        `;
+        errorDiv.style.display = 'block';
+    }
+
+    const contentDiv = document.getElementById('outline-content-display');
+    if (contentDiv) {
+        let placeholderDiv = document.getElementById('outline-placeholder');
+        if (!placeholderDiv) {
+            placeholderDiv = document.createElement('div');
+            placeholderDiv.id = 'outline-placeholder';
+            placeholderDiv.className = 'loading-container';
+            contentDiv.appendChild(placeholderDiv);
+        }
+
+        placeholderDiv.style.display = 'none';
+
+        const children = Array.from(contentDiv.children);
+        children.forEach(child => {
+            if (child.id !== 'outline-placeholder') {
+                child.remove();
+            }
+        });
+
+        const errorContainer = document.createElement('div');
+        errorContainer.innerHTML = `
+            <div style="color: #e74c3c; text-align: center; padding: 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                <div style="margin-bottom: 15px;">大纲生成失败</div>
+                <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">原因：${lastOutlineErrorMessage}</div>
+                <button onclick="${handlerName}()" class="btn btn-warning btn-sm">
+                    <i class="fas fa-sync"></i> 重新生成大纲
+                </button>
+            </div>
+        `;
+        contentDiv.insertBefore(errorContainer, placeholderDiv);
+    }
+
+    const actionsDiv = document.getElementById('outline-actions');
+    if (actionsDiv) {
+        actionsDiv.style.display = 'block';
+    }
+
+    toggleOutlineViewDuringRegeneration(false);
+    outlineGenerationStarted = false;
+}
+
+// 防止重复调用大纲生成
 
 // Page count selection functionality
 function initializePageCountSelection() {
@@ -1946,6 +2025,9 @@ async function startOutlineGenerationNew() {
         return;
     }
 
+    lastOutlineErrorMessage = '';
+    lastOutlineErrorRetryHandler = 'regenerateOutlineNew';
+
     // 标记为已开始
     outlineGenerationStarted = true;
 
@@ -2042,45 +2124,8 @@ async function startOutlineGenerationNew() {
             // 停止加载动画
             stopBookAnimation('stream');
             stopOutlineGenerationAnimations('outline generation error');
-
-            // 显示错误信息和重新生成按钮，但保留placeholder div
-            // 先确保placeholder div存在
-            let errorPlaceholderDiv = document.getElementById('outline-placeholder');
-            if (!errorPlaceholderDiv) {
-                errorPlaceholderDiv = document.createElement('div');
-                errorPlaceholderDiv.id = 'outline-placeholder';
-                errorPlaceholderDiv.className = 'loading-container';
-                contentDiv.appendChild(errorPlaceholderDiv);
-            }
-
-            // 隐藏加载状态
-            errorPlaceholderDiv.style.display = 'none';
-
-            // 清除其他内容，只保留placeholder
-            const children = Array.from(contentDiv.children);
-            children.forEach(child => {
-                if (child.id !== 'outline-placeholder') {
-                    child.remove();
-                }
-            });
-
-            // 在placeholder前添加错误信息
-            const errorDiv = document.createElement('div');
-            errorDiv.innerHTML = `
-                <div style="color: #e74c3c; text-align: center; padding: 20px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <div style="margin-bottom: 15px;">大纲生成失败</div>
-                    <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">${result.error || result.message || '未知错误'}</div>
-                    <button onclick="location.reload()" class="btn btn-warning btn-sm">
-                        <i class="fas fa-sync"></i> 重新开始
-                    </button>
-                </div>
-            `;
-            contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
+            showOutlineGenerationError(result.error || result.message || '未知错误', 'regenerateOutlineNew');
             if (cursorDiv) cursorDiv.style.display = 'none';
-
-            // 重置标志，允许重试
-            outlineGenerationStarted = false;
             return;
         }
 
@@ -2144,42 +2189,8 @@ async function startOutlineGenerationNew() {
             placeholderDiv.style.display = 'none';
         }
 
-        // 显示连接错误和重新生成按钮，但保留placeholder div
-        // 先确保placeholder div存在
-        let errorPlaceholderDiv = document.getElementById('outline-placeholder');
-        if (!errorPlaceholderDiv) {
-            errorPlaceholderDiv = document.createElement('div');
-            errorPlaceholderDiv.id = 'outline-placeholder';
-            errorPlaceholderDiv.className = 'loading-container';
-            contentDiv.appendChild(errorPlaceholderDiv);
-        }
-
-        // 清除其他内容，只保留placeholder
-        const children = Array.from(contentDiv.children);
-        children.forEach(child => {
-            if (child.id !== 'outline-placeholder') {
-                child.remove();
-            }
-        });
-
-        // 在placeholder前添加错误信息
-        const errorDiv = document.createElement('div');
-        errorDiv.innerHTML = `
-            <div style="color: #e74c3c; text-align: center; padding: 20px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                <div style="margin-bottom: 15px;">连接失败</div>
-                <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">连接错误: ${error.message}</div>
-                <button onclick="location.reload()" class="btn btn-warning btn-sm">
-                    <i class="fas fa-sync"></i> 重新开始
-                </button>
-            </div>
-        `;
-        contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
+        showOutlineGenerationError(error.message || '连接失败', 'regenerateOutlineNew');
         if (cursorDiv) cursorDiv.style.display = 'none';
-        // Keep status div hidden
-
-        // 重置标志，允许重试
-        outlineGenerationStarted = false;
     }
 }
 
@@ -2262,6 +2273,9 @@ async function startFileOutlineGeneration() {
         console.error('Outline content div not found');
         return;
     }
+
+    lastOutlineErrorMessage = '';
+    lastOutlineErrorRetryHandler = 'retryFileOutlineGeneration';
 
     // 标记为已开始
     outlineGenerationStarted = true;
@@ -2386,36 +2400,7 @@ async function startFileOutlineGeneration() {
         if (result.error || result.status === "error") {
             stopBookAnimation('file');
             stopOutlineGenerationAnimations('file outline generation error');
-
-            let errorPlaceholderDiv = document.getElementById('outline-placeholder');
-            if (!errorPlaceholderDiv) {
-                errorPlaceholderDiv = document.createElement('div');
-                errorPlaceholderDiv.id = 'outline-placeholder';
-                errorPlaceholderDiv.className = 'loading-container';
-                contentDiv.appendChild(errorPlaceholderDiv);
-            }
-
-            errorPlaceholderDiv.style.display = 'none';
-
-            const children = Array.from(contentDiv.children);
-            children.forEach(child => {
-                if (child.id !== 'outline-placeholder') {
-                    child.remove();
-                }
-            });
-
-            const errorDiv = document.createElement('div');
-            errorDiv.innerHTML = `
-                <div style="color: #e74c3c; text-align: center; padding: 20px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                    <div style="margin-bottom: 15px;">生成失败</div>
-                    <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">${result.error || result.message || '未知错误'}</div>
-                    <button onclick="retryFileOutlineGeneration()" class="btn btn-warning btn-sm">
-                        <i class="fas fa-sync"></i> 重新生成
-                    </button>
-                </div>
-            `;
-            contentDiv.insertBefore(errorDiv, errorPlaceholderDiv);
+            showOutlineGenerationError(result.error || result.message || '未知错误', 'retryFileOutlineGeneration');
             if (cursorDiv) cursorDiv.style.display = 'none';
 
             return;
@@ -2456,48 +2441,15 @@ async function startFileOutlineGeneration() {
 
         // 停止加载动画
         stopFunnelAnimation('file');
+        stopOutlineGenerationAnimations('file outline generation error');
 
         // 隐藏加载状态
         if (placeholderDiv) {
             placeholderDiv.style.display = 'none';
         }
 
-        // 显示连接错误和重新生成按钮，但保留placeholder div
-        // 先确保placeholder div存在
-        let placeholderDiv = document.getElementById('outline-placeholder');
-        if (!placeholderDiv) {
-            placeholderDiv = document.createElement('div');
-            placeholderDiv.id = 'outline-placeholder';
-            placeholderDiv.className = 'loading-container';
-            contentDiv.appendChild(placeholderDiv);
-        }
-
-        // 清除其他内容，只保留placeholder
-        const children = Array.from(contentDiv.children);
-        children.forEach(child => {
-            if (child.id !== 'outline-placeholder') {
-                child.remove();
-            }
-        });
-
-        // 在placeholder前添加错误信息
-        const errorDiv = document.createElement('div');
-        errorDiv.innerHTML = `
-            <div style="color: #e74c3c; text-align: center; padding: 20px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 10px;"></i>
-                <div style="margin-bottom: 15px;">连接失败</div>
-                <div style="font-size: 14px; margin-bottom: 20px; color: #7f8c8d;">连接错误: ${error.message}</div>
-                <button onclick="retryOutlineGeneration()" class="btn btn-warning btn-sm">
-                    <i class="fas fa-sync"></i> 重新生成大纲
-                </button>
-            </div>
-        `;
-        contentDiv.insertBefore(errorDiv, placeholderDiv);
+        showOutlineGenerationError(error.message || '连接失败', 'retryFileOutlineGeneration');
         if (cursorDiv) cursorDiv.style.display = 'none';
-        // Keep status div hidden
-
-        // 重置标志，允许重试
-        outlineGenerationStarted = false;
     }
 }
 
@@ -2649,6 +2601,9 @@ async function regenerateOutlineNew() {
         return;
     }
 
+    lastOutlineErrorMessage = '';
+    lastOutlineErrorRetryHandler = 'regenerateOutlineNew';
+
     // 隐藏操作按钮
     const actionsDiv = document.getElementById('outline-actions');
     if (actionsDiv) {
@@ -2749,11 +2704,6 @@ async function regenerateOutlineNew() {
 
         if (result.error || result.status === "error") {
             // 显示错误信息
-            if (contentDiv) {
-                contentDiv.innerHTML = `<div style="color: #e74c3c; text-align: center; padding: 20px;">
-                    <i class="fas fa-exclamation-triangle"></i> 错误: ${result.error || result.message || '未知错误'}
-                </div>`;
-            }
             stopBrainAnimation('regenerate');
             if (placeholderDiv) placeholderDiv.style.display = 'none';
 
@@ -2772,6 +2722,7 @@ async function regenerateOutlineNew() {
             // 重置标志，允许重试
             outlineGenerationStarted = false;
             toggleOutlineViewDuringRegeneration(false);
+            showOutlineGenerationError(result.error || result.message || '未知错误', 'regenerateOutlineNew');
             return;
         }
 
@@ -2832,13 +2783,6 @@ async function regenerateOutlineNew() {
     } catch (error) {
         console.error('Error during outline regeneration:', error);
 
-        // 显示错误信息
-        if (contentDiv) {
-            contentDiv.innerHTML = `<div style="color: #e74c3c; text-align: center; padding: 20px;">
-                <i class="fas fa-exclamation-triangle"></i> 重新生成失败: ${error.message}
-            </div>`;
-        }
-
         stopBrainAnimation('regenerate');
         if (placeholderDiv) {
             placeholderDiv.style.display = 'none';
@@ -2862,6 +2806,7 @@ async function regenerateOutlineNew() {
 
         // 重置标志，允许重试
         outlineGenerationStarted = false;
+        showOutlineGenerationError(error.message || '重新生成失败', 'regenerateOutlineNew');
     }
 }
 
@@ -4540,6 +4485,29 @@ function renderOutlineViewNew() {
         if (loadingDiv) loadingDiv.style.display = 'none';
         if (errorDiv) errorDiv.style.display = 'none';
         if (emptyDiv) emptyDiv.style.display = 'none';
+        return;
+    }
+
+    if (lastOutlineErrorMessage) {
+        if (outlineGeneratingDiv) {
+            outlineGeneratingDiv.style.display = 'none';
+        }
+        if (loadingDiv) loadingDiv.style.display = 'none';
+        if (emptyDiv) emptyDiv.style.display = 'none';
+        if (errorDiv) {
+            const handlerName = (typeof window !== 'undefined' && typeof window[lastOutlineErrorRetryHandler] === 'function')
+                ? lastOutlineErrorRetryHandler
+                : 'regenerateOutlineNew';
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle fa-2x" style="margin-bottom: 12px;"></i>
+                <p style="margin: 0 0 8px; font-weight: 600;">大纲生成失败</p>
+                <p class="outline-error-reason" style="margin: 0 0 12px; font-size: 14px; color: #7f8c8d;">原因：${lastOutlineErrorMessage}</p>
+                <button onclick="${handlerName}()" class="btn btn-warning btn-sm">
+                    <i class="fas fa-sync"></i> 重新生成大纲
+                </button>
+            `;
+            errorDiv.style.display = 'block';
+        }
         return;
     }
 
