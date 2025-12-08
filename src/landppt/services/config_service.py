@@ -148,6 +148,12 @@ class ConfigService:
             "default_ai_image_provider": {"type": "select", "category": "image_service", "default": "dalle"},
             "max_ai_images_per_slide": {"type": "number", "category": "image_service", "default": "1"},
             "ai_image_quality": {"type": "select", "category": "image_service", "default": "standard"},
+            "ai_image_resolution_presets": {
+                "type": "text",
+                "category": "image_service",
+                # provider => list of allowed WxH strings, single-line JSON to keep .env tidy
+                "default": "{\"dalle\":[\"1792x1024\",\"1024x1792\",\"1024x1024\"],\"openai_image\":[\"1536x1024\",\"1024x1536\",\"1024x1024\"],\"siliconflow\":[\"1024x1024\",\"1344x768\",\"768x1344\"],\"gemini\":[\"1024x1024\",\"1344x768\",\"768x1344\"],\"pollinations\":[\"1024x1024\",\"1280x720\",\"720x1280\"]}"
+            },
 
             # Global Image Configuration
             "max_total_images_per_slide": {"type": "number", "category": "image_service", "default": "3"},

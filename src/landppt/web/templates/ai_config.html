@@ -1143,6 +1143,16 @@
                                     <small
                                         style="color: #6c757d; margin-top: 5px; display: block;">更高质量的图片需要更多时间和成本</small>
                                 </div>
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <div style="display: flex; align-items: center; gap: 10px; justify-content: space-between;">
+                                        <label style="font-weight: 500; color: #495057; margin: 0;">自定义分辨率组（JSON，可按提供商配置）</label>
+                                        <button type="button" class="btn btn-secondary btn-sm" title="重置为默认" onclick="resetResolutionPresets()" style="padding: 4px 8px; min-width: 0; width: 32px; text-align: center;">&#8635;</button>
+                                    </div>
+                                    <textarea name="ai_image_resolution_presets" rows="3"
+                                        style="margin-top: 5px; font-family: monospace; font-size: 0.9em;">{{ current_config.get('ai_image_resolution_presets', '') }}</textarea>
+                                    <small style="color: #6c757d; margin-top: 5px; display: block;">示例:
+                                        {"dalle":["1792x1024","1024x1792","1024x1024"],"openai_image":["1536x1024","1024x1536","1024x1024"]}。留空则使用内置默认，AI只会在此列表中选择，避免模型不支持的分辨率。</small>
+                                </div>
                             </div>
 
                             <!-- Pollinations特定配置 -->
@@ -3703,7 +3713,7 @@
         const tab = document.getElementById('image-service');
         if (!tab) return;
 
-        const inputs = tab.querySelectorAll('input, select');
+        const inputs = tab.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             const configKey = input.name;
             if (currentConfig[configKey] !== undefined) {
@@ -3731,6 +3741,14 @@
         setTimeout(() => {
             toggleImageServiceOptions();
         }, 100);
+    }
+
+    const DEFAULT_RESOLUTION_PRESETS = '{"dalle":["1792x1024","1024x1792","1024x1024"],"openai_image":["1536x1024","1024x1536","1024x1024"],"siliconflow":["1024x1024","1344x768","768x1344"],"gemini":["1024x1024","1344x768","768x1344"],"pollinations":["1024x1024","1280x720","720x1280"]}';
+
+    function resetResolutionPresets() {
+        const textarea = document.querySelector('textarea[name="ai_image_resolution_presets"]');
+        if (!textarea) return;
+        textarea.value = DEFAULT_RESOLUTION_PRESETS;
     }
 
     // 设置默认提供者
@@ -4332,15 +4350,26 @@
         if (!tab) return;
 
         const config = {};
-        const inputs = tab.querySelectorAll('input, select');
+        const inputs = tab.querySelectorAll('input, select, textarea');
 
         inputs.forEach(input => {
-            if (input.name) {
-                if (input.type === 'checkbox') {
-                    config[input.name] = input.checked;
-                } else if (input.value) {
-                    config[input.name] = input.value;
-                }
+            if (!input.name) return;
+
+            if (input.type === 'checkbox') {
+                config[input.name] = input.checked;
+                return;
+            }
+
+            const rawValue = input.value;
+            if (!rawValue) return;
+
+            const isTextarea = input.tagName && input.tagName.toLowerCase() === 'textarea';
+            const normalizedValue = isTextarea
+                ? rawValue.trim().replace(/[\r\n]+/g, ' ')
+                : rawValue.trim();
+
+            if (normalizedValue) {
+                config[input.name] = normalizedValue;
             }
         });
 

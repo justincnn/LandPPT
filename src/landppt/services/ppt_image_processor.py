@@ -10,6 +10,7 @@ import aiohttp
 import json
 import asyncio
 from pathlib import Path
+import re
 
 from ..ai import get_role_provider
 from ..core.config import ai_config
@@ -628,12 +629,12 @@ class PPTImageProcessor:
                 return images
 
             # 获取默认AI图片提供商
-            default_provider = image_config.get('default_ai_image_provider', 'dalle')
+            default_provider = (image_config.get('default_ai_image_provider') or 'dalle').lower()
             logger.info(f"使用AI图片提供商: {default_provider}")
 
             # 让AI决定图片尺寸（对于多张图片，使用相同尺寸保持一致性）
             width, height = await self._ai_decide_image_dimensions(
-                slide_title, slide_content, project_topic, project_scenario, requirement
+                slide_title, slide_content, project_topic, project_scenario, requirement, default_provider, image_config
             )
 
             # 为每张图片生成不同的提示词
@@ -660,7 +661,7 @@ class PPTImageProcessor:
                 elif default_provider == 'pollinations':
                     provider = ImageProvider.POLLINATIONS
                 elif default_provider == 'gemini':
-                    provder = ImageProvider.GEMINI
+                    provider = ImageProvider.GEMINI
                 elif default_provider == 'openai_image':
                     provider = ImageProvider.OPENAI_IMAGE
     
@@ -1367,8 +1368,6 @@ class PPTImageProcessor:
 
     def _detect_project_language(self, project_topic: str, slide_title: str, slide_content: str) -> str:
         """检测项目语言"""
-        import re
-
         # 合并所有文本内容
         combined_text = f"{project_topic} {slide_title} {slide_content}"
 
@@ -1379,11 +1378,115 @@ class PPTImageProcessor:
         else:
             return "en"
 
+    def _normalize_resolution_value(self, value: Any) -> Optional[tuple]:
+        """将尺寸值规范化为(width, height)元组"""
+        if isinstance(value, str):
+            match = re.match(r"(\d+)\s*[x×]\s*(\d+)", value.strip())
+            if match:
+                try:
+                    return int(match.group(1)), int(match.group(2))
+                except (TypeError, ValueError):
+                    return None
+
+        if isinstance(value, dict):
+            width = value.get('width') or value.get('w')
+            height = value.get('height') or value.get('h')
+            try:
+                if width and height:
+                    return int(width), int(height)
+            except (TypeError, ValueError):
+                return None
+
+        if isinstance(value, (list, tuple)) and len(value) >= 2:
+            try:
+                return int(value[0]), int(value[1])
+            except (TypeError, ValueError):
+                return None
+
+        return None
+
+    def _get_resolution_options(self, provider: str, image_config: Dict[str, Any]) -> List[tuple]:
+        """获取指定提供商的可用分辨率列表（已去重、按配置优先顺序）"""
+        provider_key = (provider or image_config.get('default_ai_image_provider') or 'dalle').lower()
+
+        default_presets = {
+            'dalle': ["1792x1024", "1024x1792", "1024x1024"],
+            'openai_image': ["1536x1024", "1024x1536", "1024x1024"],
+            'siliconflow': ["1024x1024", "2048x1152", "1152x2048"],
+            'gemini': ["1024x1024", "1344x768", "768x1344"],
+            'pollinations': ["1024x1024", "1280x720", "720x1280"],
+            'default': ["1792x1024", "1024x1792", "1024x1024"]
+        }
+
+        presets = image_config.get('ai_image_resolution_presets')
+        parsed_presets = {}
+        if isinstance(presets, str) and presets.strip():
+            try:
+                parsed_presets = json.loads(presets)
+            except Exception as e:
+                logger.warning(f"Failed to parse ai_image_resolution_presets: {e}")
+        elif isinstance(presets, dict):
+            parsed_presets = presets
+
+        options: List[tuple] = []
+        provider_presets = parsed_presets.get(provider_key) if isinstance(parsed_presets, dict) else None
+        if provider_presets:
+            if not isinstance(provider_presets, list):
+                provider_presets = [provider_presets]
+            for value in provider_presets:
+                normalized = self._normalize_resolution_value(value)
+                if normalized:
+                    options.append(normalized)
+
+        # 允许从单值配置中注入优先尺寸（如dalle_image_size）
+        provider_size_keys = {
+            'dalle': 'dalle_image_size',
+            'siliconflow': 'siliconflow_image_size',
+        }
+        size_key = provider_size_keys.get(provider_key)
+        if size_key and image_config.get(size_key):
+            normalized_size = self._normalize_resolution_value(image_config.get(size_key))
+            if normalized_size:
+                options.insert(0, normalized_size)
+
+        if not options:
+            fallback_presets = default_presets.get(provider_key) or default_presets['default']
+            for value in fallback_presets:
+                normalized = self._normalize_resolution_value(value)
+                if normalized:
+                    options.append(normalized)
+
+        # 去重并保持顺序
+        unique_options = []
+        for opt in options:
+            if opt not in unique_options:
+                unique_options.append(opt)
+
+        return unique_options
+
     async def _ai_decide_image_dimensions(self, slide_title: str, slide_content: str,
                                         project_topic: str, project_scenario: str,
-                                        requirement: ImageRequirement = None) -> tuple:
+                                        requirement: ImageRequirement = None,
+                                        provider: Optional[str] = None,
+                                        image_config: Optional[Dict[str, Any]] = None) -> tuple:
         """使用AI决定图片的最佳尺寸"""
         try:
+            config = image_config or {}
+            provider_key = (provider or config.get('default_ai_image_provider') or 'dalle').lower()
+
+            available_dimensions = self._get_resolution_options(provider_key, config)
+            if not available_dimensions:
+                available_dimensions = [(1792, 1024), (1024, 1792), (1024, 1024)]
+
+            # 限制选项数量，避免提示过长
+            if len(available_dimensions) > 6:
+                available_dimensions = available_dimensions[:6]
+
+            if len(available_dimensions) == 1:
+                selected_dimensions = available_dimensions[0]
+                logger.info(f"仅有一个可用尺寸，直接使用: {selected_dimensions[0]}x{selected_dimensions[1]} (提供商: {provider_key})")
+                return selected_dimensions
+
             # 构建需求信息
             requirement_info = ""
             if requirement:
@@ -1393,6 +1496,20 @@ class PPTImageProcessor:
 - 描述：{requirement.description}
 - 优先级：{requirement.priority}
 """
+
+            option_lines = []
+            for idx, (w, h) in enumerate(available_dimensions, start=1):
+                aspect = w / h
+                if aspect > 1.1:
+                    orientation = "横向"
+                    use_case = "横向展示、背景或宽屏内容"
+                elif aspect < 0.9:
+                    orientation = "竖向"
+                    use_case = "人物肖像、竖版海报或移动端展示"
+                else:
+                    orientation = "正方形"
+                    use_case = "产品展示、图标或社交媒体"
+                option_lines.append(f"{idx}. {w}x{h} ({orientation}，适合{use_case})")
 
             prompt = f"""作为专业的PPT设计师，请根据以下信息为图片选择最佳的尺寸规格。
 
@@ -1407,11 +1524,8 @@ class PPTImageProcessor:
 {requirement_info}
 
 可选尺寸规格：
-1. 2048x1152 (16:9横向) - 适合：横向展示、风景、全屏背景、宽屏演示
-2. 1152x2048 (9:16竖向) - 适合：人物肖像、竖向图表、移动端展示
-3. 2048x2048 (1:1正方形) - 适合：产品展示、图标、对称构图、社交媒体
-4. 1920x1080 (16:9标准) - 适合：标准演示、视频截图、常规横向内容
-5. 1080x1920 (9:16标准) - 适合：手机屏幕、竖向海报、故事模式
+当前图片提供商：{provider_key}
+{chr(10).join(option_lines)}
 
 请根据内容特点、用途和展示效果选择最合适的尺寸。
 
@@ -1419,32 +1533,41 @@ class PPTImageProcessor:
 1. 考虑内容的视觉特点（横向/竖向/方形更适合）
 2. 考虑图片用途（背景/装饰/说明/图标等）
 3. 考虑PPT演示的整体效果
-4. 只回复对应的数字编号（1-5），不要其他内容"""
+4. 只回复对应的数字编号或尺寸值（如 1792x1024），不要其他内容"""
 
             response = await self._text_completion(
                 prompt=prompt,
                 temperature=0.3
             )
 
-            choice = response.content.strip()
+            choice_text = response.content.strip()
 
-            # 解析AI的选择
-            dimensions_map = {
-                "1": (2048, 1152),  # 16:9横向
-                "2": (1152, 2048),  # 9:16竖向
-                "3": (1024, 1024),  # 1:1正方形
-                "4": (1920, 1080),  # 16:9标准
-                "5": (1080, 1920),  # 9:16标准
-            }
+            # 先尝试解析显式的尺寸值
+            selected_dimensions = available_dimensions[0]
+            size_match = re.search(r"(\d+)\s*[x×]\s*(\d+)", choice_text)
+            if size_match:
+                candidate = (int(size_match.group(1)), int(size_match.group(2)))
+                for dims in available_dimensions:
+                    if dims == candidate:
+                        selected_dimensions = dims
+                        break
 
-            selected_dimensions = dimensions_map.get(choice, (2048, 1152))
-            logger.info(f"AI选择图片尺寸: {selected_dimensions[0]}x{selected_dimensions[1]} (选项{choice})")
+            # 如果未匹配到尺寸值，再尝试编号
+            if selected_dimensions == available_dimensions[0]:
+                index_match = re.search(r"(\d+)", choice_text)
+                if index_match:
+                    idx = int(index_match.group(1))
+                    if 1 <= idx <= len(available_dimensions):
+                        selected_dimensions = available_dimensions[idx - 1]
+
+            logger.info(f"AI选择图片尺寸: {selected_dimensions[0]}x{selected_dimensions[1]} (响应: {choice_text}, 提供商: {provider_key})")
 
             return selected_dimensions
 
         except Exception as e:
             logger.error(f"AI决定图片尺寸失败: {e}")
-            return (2048, 1152)  # 默认尺寸
+            fallback = available_dimensions[0] if 'available_dimensions' in locals() and available_dimensions else (1792, 1024)
+            return fallback  # 默认尺寸
 
     async def _ai_generate_image_prompt(self, slide_title: str, slide_content: str, project_topic: str,
                                       project_scenario: str, page_number: int, total_pages: int,
