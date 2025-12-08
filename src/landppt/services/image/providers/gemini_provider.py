@@ -31,6 +31,8 @@ class GeminiImageProvider(ImageGenerationProvider):
         self.api_base = config.get('api_base', 'https://generativelanguage.googleapis.com/v1beta')
         self.model = config.get('model', 'gemini-2.0-flash-exp-image-generation')
         self.default_size = config.get('default_size', '1024x1024')
+        self.default_aspect = "1:1"
+        self.default_image_size = "1K"  # 1K or 2K supported by Gemini image models
 
         # 速率限制
         self.rate_limit_requests = config.get('rate_limit_requests', 60)
@@ -41,6 +43,37 @@ class GeminiImageProvider(ImageGenerationProvider):
 
         if not self.api_key:
             logger.warning("Gemini API key not configured for image generation")
+
+    def _map_aspect_ratio(self, width: Optional[int], height: Optional[int]) -> str:
+        """根据宽高映射到Gemini支持的aspectRatio字符串"""
+        if not width or not height:
+            return self.default_aspect
+
+        ratio = width / height
+        # 定义目标比例及阈值匹配
+        targets = {
+            "1:1": 1.0,
+            "3:4": 0.75,
+            "4:3": 1.3333,
+            "9:16": 0.5625,
+            "16:9": 1.7777,
+        }
+        best = "1:1"
+        best_diff = 10.0
+        for key, target in targets.items():
+            diff = abs(ratio - target)
+            if diff < best_diff:
+                best = key
+                best_diff = diff
+        return best
+
+    def _map_image_size(self, width: Optional[int], height: Optional[int]) -> str:
+        """根据请求尺寸选择1K/2K（仅影响分辨率档位，不是精确像素）"""
+        if not width or not height:
+            return self.default_image_size
+        longest = max(width, height)
+        # 简单规则：>=1400 走 2K，否则 1K
+        return "2K" if longest >= 1400 else "1K"
 
     async def generate(self, request: ImageGenerationRequest) -> ImageOperationResult:
         """生成图片"""
@@ -108,6 +141,10 @@ class GeminiImageProvider(ImageGenerationProvider):
     def _prepare_api_request(self, request: ImageGenerationRequest) -> Dict[str, Any]:
         """准备API请求"""
         # Gemini图片生成使用generateContent API
+        aspect_ratio = self._map_aspect_ratio(request.width, request.height)
+        image_size = self._map_image_size(request.width, request.height)
+        num_images = max(1, min(int(getattr(request, "num_images", 1)), 4))
+
         api_request = {
             "contents": [
                 {
@@ -119,7 +156,11 @@ class GeminiImageProvider(ImageGenerationProvider):
                 }
             ],
             "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"]
+                "responseModalities": ["IMAGE"],
+                "aspectRatio": aspect_ratio,
+                "imageSize": image_size,
+                "numberOfImages": num_images,
+                "personGeneration": "allow_adult"
             }
         }
 
@@ -211,8 +252,19 @@ class GeminiImageProvider(ImageGenerationProvider):
         # 生成图片ID
         image_id = f"gemini_{int(time.time())}_{hash(request.prompt) % 10000}"
 
-        # 使用请求中的尺寸
+        # 使用请求中的尺寸，若缺失则根据aspectRatio提供大致占位
         width, height = request.width, request.height
+        if not width or not height:
+            ratio = self._map_aspect_ratio(width, height)
+            # 默认1K分辨率下的估算像素，便于前端展示
+            presets = {
+                "16:9": (1600, 900),
+                "9:16": (900, 1600),
+                "4:3": (1333, 1000),
+                "3:4": (1000, 1333),
+                "1:1": (1024, 1024),
+            }
+            width, height = presets.get(ratio, (1024, 1024))
 
         # 创建元数据
         metadata = ImageMetadata(
