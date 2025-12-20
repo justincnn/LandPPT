@@ -4395,6 +4395,75 @@ async def confirm_project_free_template(
         logger.error(f"Error confirming free template for project {project_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/api/projects/{project_id}/free-template/adjust")
+async def adjust_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Adjust the generated free-template based on user feedback."""
+    try:
+        data = await request.json()
+        adjustment_request = (data.get("adjustment_request") or "").strip()
+        
+        if not adjustment_request:
+            raise HTTPException(status_code=400, detail="Adjustment request is required")
+        
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+        
+        current_html = metadata.get("free_template_html")
+        if not (isinstance(current_html, str) and current_html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+        
+        template_name = metadata.get("free_template_name") or "自由模板"
+        
+        # Use the global template service to adjust the template
+        adjusted_html = None
+        async for chunk in ppt_service.global_template_service.adjust_template_with_ai_stream(
+            current_html=current_html,
+            adjustment_request=adjustment_request,
+            template_name=template_name
+        ):
+            if chunk.get('type') == 'complete':
+                adjusted_html = chunk.get('html_template')
+                break
+            elif chunk.get('type') == 'error':
+                raise HTTPException(status_code=500, detail=chunk.get('message', 'Template adjustment failed'))
+        
+        if not adjusted_html:
+            raise HTTPException(status_code=500, detail="Failed to adjust template")
+        
+        # Update project metadata with adjusted template
+        metadata["free_template_html"] = adjusted_html
+        metadata["free_template_adjusted_at"] = time.time()
+        metadata["free_template_adjustment_request"] = adjustment_request
+        metadata["free_template_confirmed"] = False  # Reset confirmation after adjustment
+        
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+        
+        return {
+            "success": True,
+            "template": {
+                "template_name": template_name,
+                "html_template": adjusted_html,
+                "description": "AI 根据用户建议调整后的模板"
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adjusting free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/api/projects/{project_id}/slides/{slide_index}/save")
 async def save_single_slide_content(
     project_id: str,

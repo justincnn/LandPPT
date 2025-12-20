@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +42,7 @@
             position: relative;
             overflow-x: hidden;
         }
-        
+
         .main-container {
             background: var(--glass-bg);
             backdrop-filter: blur(30px);
@@ -53,7 +54,7 @@
             position: relative;
             z-index: 1;
         }
-        
+
         .header {
             background: rgba(255, 255, 255, 0.95);
             color: var(--text-primary);
@@ -64,7 +65,7 @@
             border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
         }
 
-        .main-container > .header {
+        .main-container>.header {
             background: var(--glass-bg);
         }
 
@@ -136,7 +137,7 @@
             border-color: var(--surface-contrast) !important;
             color: var(--surface) !important;
         }
-        
+
         .content-area {
             min-height: calc(100vh - 140px);
             display: flex;
@@ -147,9 +148,10 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0; /* 允许子元素收缩 */
+            min-height: 0;
+            /* 允许子元素收缩 */
         }
-        
+
         .editor-toolbar {
             background: var(--surface);
             border-bottom: 1px solid var(--glass-border);
@@ -206,7 +208,7 @@
             position: relative;
             z-index: 1;
         }
-        
+
         .slides-container {
             flex: 1;
             padding: 32px;
@@ -226,9 +228,10 @@
             text-align: center;
             padding: 60px 20px;
             color: var(--text-secondary);
-            grid-column: 1 / -1; /* 占据整个网格宽度 */
-            border: 1px solid black; 
-            border-radius: 8px; 
+            grid-column: 1 / -1;
+            /* 占据整个网格宽度 */
+            border: 1px solid black;
+            border-radius: 8px;
         }
 
 
@@ -242,7 +245,7 @@
             margin-bottom: 15px;
             font-weight: 600;
         }
-        
+
         .slide-card {
             background: var(--surface);
             border-radius: 16px;
@@ -262,7 +265,7 @@
 
         .slide-card:hover {
             transform: translateY(-6px) scale(1.02);
-            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
             border-color: var(--surface-contrast);
         }
 
@@ -270,11 +273,11 @@
             border-color: var(--surface-contrast);
             animation: pulse 2s infinite;
         }
-        
+
         .slide-card.completed {
             border-color: var(--surface-contrast);
         }
-        
+
         .slide-card.error {
             border-color: var(--border-color);
         }
@@ -296,13 +299,21 @@
         .slide-card.height-adjusted {
             transition: height 0.5s ease;
         }
-        
+
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+            }
         }
-        
+
         .slide-header {
             padding: 18px 26px;
             background: var(--surface);
@@ -325,7 +336,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         .slide-header h6 i {
@@ -366,7 +377,7 @@
 
         .fullscreen-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .fullscreen-overlay {
@@ -418,25 +429,26 @@
 
         .close-fullscreen:hover {
             transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         }
-        
+
         .slide-preview {
             width: 100%;
-            height: 225px; /* 400px * 9/16 = 225px，固定高度 */
+            height: 225px;
+            /* 400px * 9/16 = 225px，固定高度 */
             border: none;
             background: var(--surface);
             border-radius: 0 0 16px 16px;
             overflow: hidden;
             position: relative;
             transition: all 0.3s ease;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .slide-preview:hover {
             box-shadow:
-                inset 0 1px 3px rgba(0,0,0,0.1),
-                0 4px 20px rgba(0,0,0,0.12);
+                inset 0 1px 3px rgba(0, 0, 0, 0.1),
+                0 4px 20px rgba(0, 0, 0, 0.12);
         }
 
         .slide-preview iframe {
@@ -456,16 +468,21 @@
 
         /* iframe加载状态 */
         .slide-preview.loading {
-            background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
+            background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.04) 75%);
             background-size: 200% 100%;
             animation: loading 1.5s infinite;
         }
 
         @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
-        
+
         .slide-placeholder {
             aspect-ratio: 16/9;
             display: flex;
@@ -475,7 +492,7 @@
             color: var(--text-secondary);
             font-size: 18px;
         }
-        
+
         .generation-status {
             background: var(--surface-subtle);
             border-left: 4px solid var(--surface-contrast);
@@ -483,7 +500,7 @@
             margin: 20px 0;
             border-radius: 0 5px 5px 0;
         }
-        
+
         .btn-group-custom {
             display: flex;
             gap: 15px;
@@ -508,7 +525,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
         }
 
         .btn-primary,
@@ -540,7 +557,7 @@
             border-color: var(--surface-contrast);
             color: var(--surface);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
         }
 
         .btn-outline-light:active {
@@ -560,7 +577,8 @@
             }
 
             .slide-preview {
-                height: 203px; /* 360px * 9/16 = 202.5px */
+                height: 203px;
+                /* 360px * 9/16 = 202.5px */
             }
 
             .slide-preview iframe {
@@ -581,7 +599,8 @@
             }
 
             .slide-preview {
-                height: 191px; /* 340px * 9/16 = 191.25px */
+                height: 191px;
+                /* 340px * 9/16 = 191.25px */
             }
 
             .slide-preview iframe {
@@ -675,6 +694,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -691,20 +711,21 @@
         }
 
         .slides-container::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.05);
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 4px;
         }
 
         .slides-container::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.2);
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 4px;
         }
 
         .slides-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
+
 <body>
     <div class="main-container">
         <!-- Header -->
@@ -760,7 +781,8 @@
                     <h6><i class="fas fa-cogs"></i> 生成状态</h6>
                     <div id="statusMessage">准备开始生成...</div>
                     <div class="progress mt-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="generationProgress" style="width: 0%"></div>
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="generationProgress"
+                            style="width: 0%"></div>
                     </div>
                     <!-- 连接状态指示器 -->
                     <div class="connection-status-container mt-2">
@@ -787,128 +809,150 @@
                 </div>
 
                 <style>
-                @keyframes rocketFloat {
-                    0%, 100% { transform: translateY(0px) rotate(0deg); }
-                    50% { transform: translateY(-12px) rotate(8deg); }
-                }
+                    @keyframes rocketFloat {
 
-                @keyframes pulseGlow {
-                    0%, 100% {
-                        transform: translate(-50%, -50%) scale(1);
-                        opacity: 0.6;
+                        0%,
+                        100% {
+                            transform: translateY(0px) rotate(0deg);
+                        }
+
+                        50% {
+                            transform: translateY(-12px) rotate(8deg);
+                        }
                     }
-                    50% {
-                        transform: translate(-50%, -50%) scale(1.2);
-                        opacity: 0.3;
+
+                    @keyframes pulseGlow {
+
+                        0%,
+                        100% {
+                            transform: translate(-50%, -50%) scale(1);
+                            opacity: 0.6;
+                        }
+
+                        50% {
+                            transform: translate(-50%, -50%) scale(1.2);
+                            opacity: 0.3;
+                        }
                     }
-                }
 
-                .welcome-message-icon {
-                    position: relative;
-                    display: inline-block;
-                    margin-bottom: 35px;
-                }
+                    .welcome-message-icon {
+                        position: relative;
+                        display: inline-block;
+                        margin-bottom: 35px;
+                    }
 
-                .welcome-message-orbit {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 120px;
-                    height: 120px;
-                    background: radial-gradient(circle, rgba(0,0,0,0.08) 0%, transparent 70%);
-                    border-radius: 50%;
-                    animation: pulseGlow 3s ease-in-out infinite;
-                }
+                    .welcome-message-orbit {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 120px;
+                        height: 120px;
+                        background: radial-gradient(circle, rgba(0, 0, 0, 0.08) 0%, transparent 70%);
+                        border-radius: 50%;
+                        animation: pulseGlow 3s ease-in-out infinite;
+                    }
 
-                .welcome-message-icon i {
-                    color: var(--surface-contrast);
-                    animation: rocketFloat 3s ease-in-out infinite;
-                    position: relative;
-                    z-index: 1;
-                }
+                    .welcome-message-icon i {
+                        color: var(--surface-contrast);
+                        animation: rocketFloat 3s ease-in-out infinite;
+                        position: relative;
+                        z-index: 1;
+                    }
 
-                .welcome-message-title {
-                    color: var(--text-primary);
-                    font-weight: 800;
-                    margin-bottom: 25px;
-                    font-size: 2.2em;
-                    letter-spacing: -0.01em;
-                }
+                    .welcome-message-title {
+                        color: var(--text-primary);
+                        font-weight: 800;
+                        margin-bottom: 25px;
+                        font-size: 2.2em;
+                        letter-spacing: -0.01em;
+                    }
 
-                .welcome-message-subtitle {
-                    color: var(--text-secondary);
-                    font-size: 1.1em;
-                    line-height: 1.6;
-                    margin-bottom: 35px;
-                    font-weight: 500;
-                }
+                    .welcome-message-subtitle {
+                        color: var(--text-secondary);
+                        font-size: 1.1em;
+                        line-height: 1.6;
+                        margin-bottom: 35px;
+                        font-weight: 500;
+                    }
 
-                .welcome-message-features {
-                    display: flex;
-                    gap: 18px;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                }
+                    .welcome-message-features {
+                        display: flex;
+                        gap: 18px;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                    }
 
-                .feature-badge {
-                    background: var(--surface-subtle);
-                    color: var(--text-primary);
-                    padding: 12px 24px;
-                    border-radius: 30px;
-                    font-weight: 700;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    transition: all 0.3s ease;
-                    cursor: default;
-                    border: 1px solid var(--border-color);
-                }
+                    .feature-badge {
+                        background: var(--surface-subtle);
+                        color: var(--text-primary);
+                        padding: 12px 24px;
+                        border-radius: 30px;
+                        font-weight: 700;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        transition: all 0.3s ease;
+                        cursor: default;
+                        border: 1px solid var(--border-color);
+                    }
 
-                .feature-badge:hover {
-                    transform: translateY(-3px) scale(1.02);
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-                }
+                    .feature-badge:hover {
+                        transform: translateY(-3px) scale(1.02);
+                        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+                    }
 
-                /* 进度条美化 */
-                .progress {
-                    height: 8px;
-                    border-radius: 10px;
-                    background: var(--surface-subtle);
-                    overflow: hidden;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
-                }
+                    /* 进度条美化 */
+                    .progress {
+                        height: 8px;
+                        border-radius: 10px;
+                        background: var(--surface-subtle);
+                        overflow: hidden;
+                        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+                    }
 
-                .progress-bar {
-                    background: var(--surface-contrast);
-                    background-size: 200% 100%;
-                    animation: progressShine 2s ease-in-out infinite;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                }
+                    .progress-bar {
+                        background: var(--surface-contrast);
+                        background-size: 200% 100%;
+                        animation: progressShine 2s ease-in-out infinite;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                    }
 
-                @keyframes progressShine {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
-                }
+                    @keyframes progressShine {
+                        0% {
+                            background-position: 200% 0;
+                        }
 
-                /* 连接状态指示器样式 */
-                .connection-status-container {
-                    display: flex;
-                    justify-content: flex-end;
-                    margin-top: 10px;
-                }
+                        100% {
+                            background-position: -200% 0;
+                        }
+                    }
 
-                .connection-status {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                }
+                    /* 连接状态指示器样式 */
+                    .connection-status-container {
+                        display: flex;
+                        justify-content: flex-end;
+                        margin-top: 10px;
+                    }
 
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                }
+                    .connection-status {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+
+                    @keyframes pulse {
+
+                        0%,
+                        100% {
+                            opacity: 1;
+                        }
+
+                        50% {
+                            opacity: 0.5;
+                        }
+                    }
                 </style>
             </div>
         </div>
@@ -932,38 +976,82 @@
                     <h5 class="modal-title" style="margin: 0; font-weight: 700;">
                         <i class="fas fa-wand-magic-sparkles"></i> 自由模板（AI决定）
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body" style="background: #f5f5f5;">
                     <div class="row g-3">
                         <div class="col-lg-7">
-                            <div style="background: #fff; border: 1px solid rgba(17,17,17,0.12); border-radius: 14px; padding: 14px;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px;">
+                            <div
+                                style="background: #fff; border: 1px solid rgba(17,17,17,0.12); border-radius: 14px; padding: 14px;">
+                                <div
+                                    style="display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px;">
                                     <div style="font-weight: 700; color: #111111;">模板预览</div>
-                                    <div id="freeTemplateStatus" style="font-size: 0.9em; color: #6b7280;">准备生成模板…</div>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div id="freeTemplateStatus" style="font-size: 0.9em; color: #6b7280;">准备生成模板…
+                                        </div>
+                                        <button id="freeTemplateFullscreenBtn" type="button"
+                                            class="btn btn-sm btn-outline-dark"
+                                            style="padding: 4px 10px; font-size: 12px;" title="点击全屏预览">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div style="background:#fff; border: 1px solid rgba(17,17,17,0.12); border-radius: 12px; overflow:hidden; height: 420px;">
-                                    <iframe id="freeTemplatePreviewIframe" style="width: 1280px; height: 720px; border: 0; transform: scale(0.56); transform-origin: 0 0; width: 2280px; height: 1280px;"></iframe>
+                                <!-- 预览容器: 固定宽高比16:9，自适应容器宽度 -->
+                                <div id="freeTemplatePreviewContainer"
+                                    style="background:#f0f0f0; border: 1px solid rgba(17,17,17,0.12); border-radius: 12px; overflow:hidden; position: relative; width: 100%; padding-top: 56.25%; cursor: pointer;"
+                                    onclick="openFreeTemplateFullscreen()" title="点击全屏预览">
+                                    <iframe id="freeTemplatePreviewIframe"
+                                        style="position: absolute; top: 0; left: 0; width: 1280px; height: 720px; border: 0; transform-origin: top left; pointer-events: none;"></iframe>
                                 </div>
-                                <div id="freeTemplateError" style="display:none; margin-top: 10px; color: #b91c1c; font-weight: 600;"></div>
+                                <div id="freeTemplateError"
+                                    style="display:none; margin-top: 10px; color: #b91c1c; font-weight: 600;"></div>
+
+                                <!-- 模板信息区域 -->
+                                <div id="freeTemplateInfoArea"
+                                    style="display:none; margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 10px; border: 1px solid rgba(17,17,17,0.08);">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                        <span
+                                            style="background: #111; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">AI生成</span>
+                                        <span id="freeTemplateGeneratedAt"
+                                            style="font-size: 12px; color: #6b7280;"></span>
+                                    </div>
+                                    <div id="freeTemplateDescription"
+                                        style="font-size: 13px; color: #374151; line-height: 1.5;">
+                                        AI 根据项目大纲和场景自动生成的专属模板，风格、配色、装饰元素由 AI 智能决策。
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-lg-5">
-                            <div style="background: #fff; border: 1px solid rgba(17,17,17,0.12); border-radius: 14px; padding: 16px;">
+                            <div
+                                style="background: #fff; border: 1px solid rgba(17,17,17,0.12); border-radius: 14px; padding: 16px;">
                                 <div style="font-weight: 800; color:#111111; margin-bottom: 8px;">确认使用此模板？</div>
                                 <div style="color:#6b7280; font-size: 0.95em; line-height: 1.6; margin-bottom: 14px;">
                                     你可以先让 AI 生成模板并预览效果；不满意可重新生成；满意后确认，才会开始生成 PPT 页面。
                                 </div>
 
+                                <!-- 模板状态指示器 -->
+                                <div id="freeTemplateStatusIndicator"
+                                    style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f3f4f6; border-radius: 8px; margin-bottom: 14px;">
+                                    <div id="freeTemplateStatusIcon"
+                                        style="width: 10px; height: 10px; border-radius: 50%; background: #9ca3af;">
+                                    </div>
+                                    <div id="freeTemplateStatusText"
+                                        style="font-size: 13px; color: #374151; font-weight: 500;">等待生成</div>
+                                </div>
+
                                 <div class="form-check" style="margin-bottom: 10px;">
                                     <input class="form-check-input" type="checkbox" id="saveFreeTemplateToLibrary">
-                                    <label class="form-check-label" for="saveFreeTemplateToLibrary" style="font-weight: 600;">
+                                    <label class="form-check-label" for="saveFreeTemplateToLibrary"
+                                        style="font-weight: 600;">
                                         满意后保存到模板库（可在模板列表中复用）
                                     </label>
                                 </div>
                                 <div id="freeTemplateSaveOptions" style="display:none; margin-bottom: 14px;">
                                     <label class="form-label" style="font-weight: 700; color:#111111;">模板名称</label>
-                                    <input type="text" class="form-control" id="freeTemplateNameInput" placeholder="例如：现代商务蓝（自由模板）">
+                                    <input type="text" class="form-control" id="freeTemplateNameInput"
+                                        placeholder="例如：现代商务蓝（自由模板）">
                                     <div class="form-text">名称需唯一；如冲突会自动加后缀。</div>
                                 </div>
 
@@ -974,6 +1062,34 @@
                                     <button class="btn btn-dark" id="freeTemplateConfirmBtn" type="button" disabled>
                                         <i class="fas fa-check"></i> 确认并开始生成PPT
                                     </button>
+                                </div>
+
+                                <!-- 模板调整区域 -->
+                                <div id="freeTemplateAdjustSection"
+                                    style="display:none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(17,17,17,0.12);">
+                                    <div style="font-weight: 700; color:#111111; margin-bottom: 8px;">
+                                        <i class="fas fa-wand-magic-sparkles" style="margin-right: 6px;"></i>调整模板
+                                    </div>
+                                    <div style="color:#6b7280; font-size: 0.9em; margin-bottom: 10px;">
+                                        不满意当前效果？描述您希望如何调整，AI会帮您修改
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" class="form-control" id="freeTemplateAdjustInput"
+                                            placeholder="例如：改为蓝色主题、添加渐变背景、字体再大一点..." style="flex: 1; font-size: 14px;">
+                                        <button class="btn btn-outline-primary" id="freeTemplateAdjustBtn" type="button"
+                                            disabled>
+                                            <i class="fas fa-magic"></i> 调整
+                                        </button>
+                                    </div>
+                                    <div id="freeTemplateAdjustProgress" style="display:none; margin-top: 10px;">
+                                        <div
+                                            style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em;">
+                                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                                            <span id="freeTemplateAdjustStatus">正在调整模板...</span>
+                                        </div>
+                                    </div>
+                                    <div id="freeTemplateAdjustError"
+                                        style="display:none; margin-top: 10px; color: #b91c1c; font-size: 0.9em;"></div>
                                 </div>
 
                                 <div style="margin-top: 14px; color:#6b7280; font-size: 0.9em;">
@@ -989,6 +1105,25 @@
             </div>
         </div>
     </div>
+
+    <!-- Free Template Fullscreen Overlay -->
+    <div id="freeTemplateFullscreenOverlay"
+        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 10001; display: none; justify-content: center; align-items: center;">
+        <div
+            style="position: relative; width: 90vw; max-width: 1280px; aspect-ratio: 16/9; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <iframe id="freeTemplateFullscreenIframe" style="width: 100%; height: 100%; border: 0;"></iframe>
+        </div>
+        <button onclick="closeFreeTemplateFullscreen()"
+            style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); color: #111; border: none; border-radius: 50%; width: 48px; height: 48px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s ease;">
+            <i class="fas fa-times"></i>
+        </button>
+        <div
+            style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px;">
+            按 <kbd style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">ESC</kbd> 或点击 <kbd
+                style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">×</kbd> 退出全屏
+        </div>
+    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1040,6 +1175,240 @@
             });
         }
 
+        // 自由模板预览自适应缩放
+        function updateFreeTemplatePreviewScale() {
+            const container = document.getElementById('freeTemplatePreviewContainer');
+            const iframe = document.getElementById('freeTemplatePreviewIframe');
+            if (!container || !iframe) return;
+
+            // 获取容器的实际宽度
+            const containerWidth = container.offsetWidth;
+            // 计算缩放比例: 容器宽度 / iframe实际宽度(1280px)
+            const scale = containerWidth / 1280;
+            iframe.style.transform = `scale(${scale})`;
+        }
+
+        // 初始化自由模板预览缩放
+        function initFreeTemplatePreviewResize() {
+            updateFreeTemplatePreviewScale();
+
+            // 监听窗口大小变化
+            window.addEventListener('resize', updateFreeTemplatePreviewScale);
+
+            // 监听modal显示事件来更新缩放
+            const modalEl = document.getElementById('freeTemplateModal');
+            if (modalEl) {
+                modalEl.addEventListener('shown.bs.modal', () => {
+                    setTimeout(updateFreeTemplatePreviewScale, 100);
+                });
+            }
+
+            // 初始化全屏预览按钮事件
+            const fullscreenBtn = document.getElementById('freeTemplateFullscreenBtn');
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openFreeTemplateFullscreen();
+                });
+            }
+        }
+
+        // 打开自由模板全屏预览
+        function openFreeTemplateFullscreen() {
+            const overlay = document.getElementById('freeTemplateFullscreenOverlay');
+            const previewIframe = document.getElementById('freeTemplatePreviewIframe');
+            const fullscreenIframe = document.getElementById('freeTemplateFullscreenIframe');
+
+            if (!overlay || !previewIframe || !fullscreenIframe) return;
+
+            // 复制预览iframe的内容到全屏iframe
+            if (freeTemplateBlobUrl) {
+                fullscreenIframe.src = freeTemplateBlobUrl;
+            } else if (previewIframe.src) {
+                fullscreenIframe.src = previewIframe.src;
+            }
+
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // 添加ESC键关闭功能
+            document.addEventListener('keydown', handleFreeTemplateFullscreenEsc);
+        }
+
+        // 关闭自由模板全屏预览
+        function closeFreeTemplateFullscreen() {
+            const overlay = document.getElementById('freeTemplateFullscreenOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', handleFreeTemplateFullscreenEsc);
+        }
+
+        // ESC键处理
+        function handleFreeTemplateFullscreenEsc(e) {
+            if (e.key === 'Escape') {
+                closeFreeTemplateFullscreen();
+            }
+        }
+
+        // 更新自由模板状态指示器
+        function updateFreeTemplateStatusIndicator(status, message) {
+            const icon = document.getElementById('freeTemplateStatusIcon');
+            const text = document.getElementById('freeTemplateStatusText');
+            const infoArea = document.getElementById('freeTemplateInfoArea');
+            const generatedAt = document.getElementById('freeTemplateGeneratedAt');
+
+            if (!icon || !text) return;
+
+            switch (status) {
+                case 'generating':
+                    icon.style.background = '#f59e0b';
+                    icon.style.animation = 'pulse 1s infinite';
+                    text.textContent = message || '正在生成模板...';
+                    if (infoArea) infoArea.style.display = 'none';
+                    break;
+                case 'success':
+                    icon.style.background = '#10b981';
+                    icon.style.animation = 'none';
+                    text.textContent = message || '模板生成成功';
+                    if (infoArea) {
+                        infoArea.style.display = 'block';
+                        if (generatedAt) {
+                            generatedAt.textContent = `生成于 ${new Date().toLocaleTimeString('zh-CN')}`;
+                        }
+                    }
+                    break;
+                case 'error':
+                    icon.style.background = '#ef4444';
+                    icon.style.animation = 'none';
+                    text.textContent = message || '生成失败';
+                    if (infoArea) infoArea.style.display = 'none';
+                    break;
+                default:
+                    icon.style.background = '#9ca3af';
+                    icon.style.animation = 'none';
+                    text.textContent = message || '等待生成';
+                    if (infoArea) infoArea.style.display = 'none';
+            }
+        }
+
+        // 初始化模板调整功能
+        function initFreeTemplateAdjustment() {
+            const adjustInput = document.getElementById('freeTemplateAdjustInput');
+            const adjustBtn = document.getElementById('freeTemplateAdjustBtn');
+
+            if (adjustInput && adjustBtn) {
+                // 输入框内容变化时启用/禁用调整按钮
+                adjustInput.addEventListener('input', () => {
+                    adjustBtn.disabled = !adjustInput.value.trim();
+                });
+
+                // Enter键提交调整
+                adjustInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && adjustInput.value.trim()) {
+                        e.preventDefault();
+                        adjustFreeTemplate();
+                    }
+                });
+
+                // 点击调整按钮
+                adjustBtn.addEventListener('click', () => {
+                    adjustFreeTemplate();
+                });
+            }
+        }
+
+        // 显示/隐藏调整区域
+        function showFreeTemplateAdjustSection(show = true) {
+            const section = document.getElementById('freeTemplateAdjustSection');
+            if (section) {
+                section.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        // 执行模板调整
+        async function adjustFreeTemplate() {
+            const adjustInput = document.getElementById('freeTemplateAdjustInput');
+            const adjustBtn = document.getElementById('freeTemplateAdjustBtn');
+            const progressDiv = document.getElementById('freeTemplateAdjustProgress');
+            const statusSpan = document.getElementById('freeTemplateAdjustStatus');
+            const errorDiv = document.getElementById('freeTemplateAdjustError');
+            const regenerateBtn = document.getElementById('freeTemplateRegenerateBtn');
+            const confirmBtn = document.getElementById('freeTemplateConfirmBtn');
+
+            const adjustmentRequest = adjustInput?.value?.trim();
+            if (!adjustmentRequest) return;
+
+            try {
+                // 禁用相关按钮
+                if (adjustBtn) adjustBtn.disabled = true;
+                if (regenerateBtn) regenerateBtn.disabled = true;
+                if (confirmBtn) confirmBtn.disabled = true;
+                if (adjustInput) adjustInput.disabled = true;
+                if (progressDiv) progressDiv.style.display = 'block';
+                if (errorDiv) errorDiv.style.display = 'none';
+                if (statusSpan) statusSpan.textContent = '正在调整模板...';
+
+                updateFreeTemplateStatusIndicator('generating', '正在调整模板...');
+
+                const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template/adjust`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adjustment_request: adjustmentRequest })
+                });
+
+                if (!resp.ok) {
+                    const txt = await resp.text();
+                    throw new Error(txt || `HTTP ${resp.status}`);
+                }
+
+                const data = await resp.json();
+                if (!data.success || !data.template?.html_template) {
+                    throw new Error('调整失败，未返回有效模板');
+                }
+
+                // 更新预览
+                setFreeTemplatePreviewHtml(data.template.html_template);
+                setTimeout(updateFreeTemplatePreviewScale, 100);
+
+                // 更新状态
+                updateFreeTemplateStatusIndicator('success', `模板调整完成：${data.template.template_name || '自由模板'}`);
+                setFreeTemplateStatus(`模板调整完成：${data.template.template_name || '自由模板'}`);
+
+                // 清空输入框
+                if (adjustInput) adjustInput.value = '';
+
+                // 启用确认按钮
+                if (confirmBtn) confirmBtn.disabled = false;
+
+            } catch (e) {
+                console.error('调整模板失败:', e);
+                if (errorDiv) {
+                    errorDiv.textContent = `调整失败：${e.message || '未知错误'}`;
+                    errorDiv.style.display = 'block';
+                }
+                updateFreeTemplateStatusIndicator('error', '调整失败');
+            } finally {
+                if (progressDiv) progressDiv.style.display = 'none';
+                if (adjustBtn) adjustBtn.disabled = !adjustInput?.value?.trim();
+                if (adjustInput) adjustInput.disabled = false;
+                if (regenerateBtn) regenerateBtn.disabled = false;
+            }
+        }
+
+        // 添加脉冲动画样式
+        (function () {
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.6; transform: scale(1.1); }
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+
         function setFreeTemplateStatus(text) {
             const el = document.getElementById('freeTemplateStatus');
             if (el) el.textContent = text;
@@ -1081,11 +1450,15 @@
             if (regenerateBtn) regenerateBtn.disabled = true;
             if (confirmBtn) confirmBtn.disabled = true;
             setFreeTemplateError('');
+            updateFreeTemplateStatusIndicator('generating', '正在生成模板...');
 
             let lastErr = null;
             for (let attempt = 1; attempt <= freeTemplateMaxAttempts; attempt++) {
                 try {
-                    setFreeTemplateStatus(`正在生成模板…（尝试 ${attempt}/${freeTemplateMaxAttempts}）`);
+                    const statusMsg = `正在生成模板…（尝试 ${attempt}/${freeTemplateMaxAttempts}）`;
+                    setFreeTemplateStatus(statusMsg);
+                    updateFreeTemplateStatusIndicator('generating', statusMsg);
+
                     const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template/generate`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1098,14 +1471,26 @@
                     const data = await resp.json();
                     const tpl = data.template;
                     if (!tpl || !tpl.html_template) throw new Error('模板数据为空');
+
                     setFreeTemplatePreviewHtml(tpl.html_template);
-                    setFreeTemplateStatus(`模板生成成功：${tpl.template_name || '自由模板'}`);
+                    const successMsg = `模板生成成功：${tpl.template_name || '自由模板'}`;
+                    setFreeTemplateStatus(successMsg);
+                    updateFreeTemplateStatusIndicator('success', successMsg);
+
+                    // 更新缩放
+                    setTimeout(updateFreeTemplatePreviewScale, 100);
+
+                    // 显示调整区域
+                    showFreeTemplateAdjustSection(true);
+
                     if (confirmBtn) confirmBtn.disabled = false;
                     if (regenerateBtn) regenerateBtn.disabled = false;
                     return tpl;
                 } catch (e) {
                     lastErr = e;
-                    setFreeTemplateStatus(`生成失败，准备重试…（${attempt}/${freeTemplateMaxAttempts}）`);
+                    const retryMsg = `生成失败，准备重试…（${attempt}/${freeTemplateMaxAttempts}）`;
+                    setFreeTemplateStatus(retryMsg);
+                    updateFreeTemplateStatusIndicator('generating', retryMsg);
                     if (attempt < freeTemplateMaxAttempts) {
                         const delay = Math.min(8000, 800 * Math.pow(2, attempt - 1));
                         await new Promise(r => setTimeout(r, delay));
@@ -1116,6 +1501,7 @@
 
             setFreeTemplateStatus('模板生成失败');
             setFreeTemplateError(`模板生成失败：${lastErr ? lastErr.message : '未知错误'}`);
+            updateFreeTemplateStatusIndicator('error', '生成失败');
             const regenerateBtn2 = document.getElementById('freeTemplateRegenerateBtn');
             const confirmBtn2 = document.getElementById('freeTemplateConfirmBtn');
             if (regenerateBtn2) regenerateBtn2.disabled = false;
@@ -1153,7 +1539,7 @@
                     regenerateBtn.onclick = async () => {
                         try {
                             await generateFreeTemplateWithRetry(true);
-                        } catch (_) {}
+                        } catch (_) { }
                     };
                 }
 
@@ -1193,7 +1579,7 @@
                 freeTemplateModalInstance.show();
                 try {
                     await generateFreeTemplateWithRetry(false);
-                } catch (_) {}
+                } catch (_) { }
             });
         }
 
@@ -1242,36 +1628,36 @@
                 if (templateMode === 'free') {
                     console.log('Free template mode: skip global template selection check');
                 } else {
-                const templateUrl = `/api/projects/{{ todo_board.task_id }}/selected-global-template`;
-                console.log('请求模板API:', templateUrl);
+                    const templateUrl = `/api/projects/{{ todo_board.task_id }}/selected-global-template`;
+                    console.log('请求模板API:', templateUrl);
 
-                const templateResponse = await fetch(templateUrl);
-                console.log('模板API响应状态:', templateResponse.status);
+                    const templateResponse = await fetch(templateUrl);
+                    console.log('模板API响应状态:', templateResponse.status);
 
-                if (!templateResponse.ok) {
-                    throw new Error(`API请求失败: ${templateResponse.status} ${templateResponse.statusText}`);
-                }
-
-                const templateData = await templateResponse.json();
-                console.log('模板API响应数据:', templateData);
-
-                // 检查是否用户主动选择了模板，而不是使用默认模板
-                if (!templateData.template || !templateData.is_user_selected) {
-                    const templateName = templateData.template ? templateData.template.template_name : '无';
-                    console.log('未检测到用户选择的全局模板，当前使用:', templateName, '是否用户选择:', templateData.is_user_selected);
-
-                    // 未检测到用户选择的全局模板ID，跳转到模板选择页面
-                    if (confirm('检测到您还未选择全局模板，需要先选择模板才能开始生成PPT。是否跳转到模板选择页面？')) {
-                        console.log('用户确认跳转到模板选择页面');
-                        window.location.href = `/projects/{{ todo_board.task_id }}/template-selection`;
-                        return;
-                    } else {
-                        console.log('用户取消跳转，停止生成');
-                        return; // 用户取消，不继续生成
+                    if (!templateResponse.ok) {
+                        throw new Error(`API请求失败: ${templateResponse.status} ${templateResponse.statusText}`);
                     }
-                } else {
-                    console.log('检测到用户已选择的全局模板:', templateData.template.template_name);
-                }
+
+                    const templateData = await templateResponse.json();
+                    console.log('模板API响应数据:', templateData);
+
+                    // 检查是否用户主动选择了模板，而不是使用默认模板
+                    if (!templateData.template || !templateData.is_user_selected) {
+                        const templateName = templateData.template ? templateData.template.template_name : '无';
+                        console.log('未检测到用户选择的全局模板，当前使用:', templateName, '是否用户选择:', templateData.is_user_selected);
+
+                        // 未检测到用户选择的全局模板ID，跳转到模板选择页面
+                        if (confirm('检测到您还未选择全局模板，需要先选择模板才能开始生成PPT。是否跳转到模板选择页面？')) {
+                            console.log('用户确认跳转到模板选择页面');
+                            window.location.href = `/projects/{{ todo_board.task_id }}/template-selection`;
+                            return;
+                        } else {
+                            console.log('用户取消跳转，停止生成');
+                            return; // 用户取消，不继续生成
+                        }
+                    } else {
+                        console.log('检测到用户已选择的全局模板:', templateData.template.template_name);
+                    }
                 }
             } catch (error) {
                 console.error('检查全局模板时出错:', error);
@@ -1351,7 +1737,7 @@
             // Start streaming
             eventSource = new EventSource('/api/projects/{{ todo_board.task_id }}/slides/stream');
 
-            eventSource.onopen = function(event) {
+            eventSource.onopen = function (event) {
                 console.log('EventSource connection opened');
                 clearTimeout(connectionTimeout);
                 reconnectAttempts = 0; // 重置重连计数
@@ -1361,7 +1747,7 @@
                 startHeartbeat();
             };
 
-            eventSource.onmessage = function(event) {
+            eventSource.onmessage = function (event) {
                 try {
                     const data = JSON.parse(event.data);
                     handleStreamData(data);
@@ -1375,7 +1761,7 @@
                 }
             };
 
-            eventSource.onerror = function(event) {
+            eventSource.onerror = function (event) {
                 console.error('Stream error:', event);
                 console.error('EventSource readyState:', eventSource.readyState);
                 console.error('EventSource url:', eventSource.url);
@@ -1437,7 +1823,7 @@
             const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts - 1), maxReconnectDelay);
 
             console.log(`Attempting reconnection ${reconnectAttempts}/${maxReconnectAttempts} in ${delay}ms`);
-            updateConnectionStatus('reconnecting', `第 ${reconnectAttempts} 次重连中... (${Math.ceil(delay/1000)}秒后)`);
+            updateConnectionStatus('reconnecting', `第 ${reconnectAttempts} 次重连中... (${Math.ceil(delay / 1000)}秒后)`);
 
             setTimeout(() => {
                 if (!isManualStop) {
@@ -1527,8 +1913,8 @@
             const statusMessage = document.getElementById('statusMessage');
             const progressBar = document.getElementById('generationProgress');
             const slidesContainer = document.getElementById('slidesContainer');
-            
-            switch(data.type) {
+
+            switch (data.type) {
                 case 'progress':
                     if (typeof data.current === 'number') {
                         currentlyGeneratingPages.add(Number(data.current));
@@ -1536,7 +1922,7 @@
 
                     updateProgressIndicators(data.total);
                     break;
-                    
+
                 case 'slide':
                     if (data.slide_data) {
                         addSlideToContainer(data.slide_data);
@@ -1576,7 +1962,7 @@
 
                     updateProgressIndicators(data.total);
                     break;
-                    
+
                 case 'complete':
                     currentlyGeneratingPages.clear();
                     updateProgressIndicators(data.total);
@@ -1666,10 +2052,10 @@
         function updateStatus(message, type) {
             const statusMessage = document.getElementById('statusMessage');
             statusMessage.innerHTML = message;
-            
+
             const statusDiv = document.getElementById('generationStatus');
             statusDiv.className = 'generation-status';
-            
+
             if (type === 'error') {
                 statusDiv.style.borderLeftColor = 'var(--surface-contrast)';
                 statusDiv.style.background = 'var(--surface-subtle)';
@@ -1825,7 +2211,7 @@
             // 添加全屏按钮事件监听器
             const fullscreenBtn = slideCard.querySelector('.fullscreen-btn');
             if (fullscreenBtn) {
-                fullscreenBtn.addEventListener('click', function() {
+                fullscreenBtn.addEventListener('click', function () {
                     const pageNumber = parseInt(this.getAttribute('data-page-number'));
                     openFullscreen(pageNumber);
                 });
@@ -1837,7 +2223,7 @@
                 const existingPageNum = parseInt(slide.id.replace('slide-', ''));
                 return existingPageNum > slideData.page_number;
             });
-            
+
             if (insertIndex === -1) {
                 // 没有找到更大的页码，添加到末尾
                 slidesContainer.appendChild(slideCard);
@@ -1978,9 +2364,9 @@
         }
 
         // 点击覆盖层背景关闭全屏
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const overlay = document.getElementById('fullscreenOverlay');
-            overlay.addEventListener('click', function(event) {
+            overlay.addEventListener('click', function (event) {
                 if (event.target === overlay) {
                     closeFullscreen();
                 }
@@ -2169,12 +2555,23 @@
         }
 
         // Auto-start when page loads
-        document.addEventListener('DOMContentLoaded', checkAndStartGeneration);
+        document.addEventListener('DOMContentLoaded', function () {
+            checkAndStartGeneration();
+            // 初始化自由模板预览功能
+            initFreeTemplatePreviewResize();
+            // 初始化模板调整功能
+            initFreeTemplateAdjustment();
+        });
         // Also try on window load as fallback
-        window.addEventListener('load', checkAndStartGeneration);
+        window.addEventListener('load', function () {
+            checkAndStartGeneration();
+            initFreeTemplatePreviewResize();
+            initFreeTemplateAdjustment();
+        });
 
         // 定期检查PPT状态（每10秒检查一次）
         setInterval(checkPPTStatus, 10000);
     </script>
 </body>
+
 </html>

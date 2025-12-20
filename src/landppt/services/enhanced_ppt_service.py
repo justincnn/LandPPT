@@ -6853,7 +6853,11 @@ class EnhancedPPTService(PPTService):
             }
 
     async def _ensure_global_master_template_selected(self, project_id: str) -> Optional[Dict[str, Any]]:
-        """确保项目已选择全局母版模板，如果没有则使用默认模板"""
+        """确保项目已选择全局母版模板，如果没有则使用默认模板
+        
+        注意：此方法会优先检查项目是否使用自由模板模式（template_mode='free'），
+        如果是，则返回已生成的自由模板而不是默认模板。
+        """
         try:
             # 检查项目是否已有选择的模板（可以在项目元数据中存储）
             project = await self.project_manager.get_project(project_id)
@@ -6861,10 +6865,21 @@ class EnhancedPPTService(PPTService):
                 logger.error(f"Project {project_id} not found")
                 return None
 
+            project_metadata = project.project_metadata or {}
+            
+            # 优先检查是否使用自由模板模式
+            template_mode = project_metadata.get('template_mode')
+            if template_mode == 'free':
+                # 使用 get_selected_global_template 来获取自由模板（包含生成逻辑）
+                free_template = await self.get_selected_global_template(project_id)
+                if free_template:
+                    logger.info(f"Project {project_id} using free template: {free_template.get('template_name', 'AI自由模板')}")
+                    return free_template
+                else:
+                    logger.warning(f"Project {project_id} is in free template mode but no template available, falling back to default")
+
             # 检查项目元数据中是否已有选择的模板ID
-            selected_template_id = None
-            if hasattr(project, 'project_metadata') and project.project_metadata:
-                selected_template_id = project.project_metadata.get('selected_global_template_id')
+            selected_template_id = project_metadata.get('selected_global_template_id')
 
             # 如果已有选择的模板，获取模板信息
             if selected_template_id:
@@ -7050,17 +7065,45 @@ class EnhancedPPTService(PPTService):
                     custom_style_prompt = confirmed.get('custom_style_prompt') or ''
 
                     prompt_parts = [
-                        "请为下面这份 PPT 大纲生成一个项目专属的 HTML 母版模板（自由模板）。",
-                        "要求：你自行决定最合适的整体风格、配色、字体与装饰元素（完全由你决定，但要与主题/场景/受众匹配）。",
-                        "必须满足：1280x720；完整 HTML 文档；内联 CSS；不允许滚动条；支持占位符 {{ page_title }} / {{ page_content }} / {{ current_page_number }} / {{ total_page_count }}。",
+                        "作为专业的PPT模板设计师，请根据以下PPT大纲生成一个项目专属的HTML母版模板（自由模板）。",
+                        "",
+                        "请按照以下步骤思考并生成：",
+                        "1. 首先分析PPT大纲的主题、场景和受众",
+                        "2. 设计模板的整体风格和布局（你自行决定最合适的风格、配色、字体与装饰元素）",
+                        "3. 确定色彩方案和字体选择",
+                        "4. 编写HTML结构",
+                        "5. 添加CSS样式",
+                        "6. 优化和完善",
+                        "",
+                        "===== 项目信息 =====",
                         f"主题：{topic}" if topic else "",
                         f"场景：{scenario}" if scenario else "",
                         f"受众：{target_audience}" if target_audience else "",
                         f"风格偏好：{ppt_style}" if ppt_style else "",
                         f"自定义风格补充：{custom_style_prompt}" if custom_style_prompt else "",
                         f"页数：{len(slides)}" if slides else "",
-                        "大纲（最多展示前 20 页）：",
+                        "",
+                        "===== PPT大纲（最多展示前20页）=====",
                         "\n".join(slide_lines) if slide_lines else "(无)",
+                        "",
+                        "===== 设计要求 =====",
+                        "1. **严格尺寸控制**：页面尺寸必须为1280x720像素（16:9比例）",
+                        "2. **完整HTML结构**：包含<!DOCTYPE html>、head、body等完整结构",
+                        "3. **内联样式**：所有CSS样式必须内联，确保自包含性",
+                        "4. **响应式设计**：适配不同屏幕尺寸但保持16:9比例",
+                        "5. **占位符支持**：在适当位置使用占位符：",
+                        "   - {{ page_title }} - 页面标题，默认居左",
+                        "   - {{ page_content }} - 页面内容",
+                        "   - {{ current_page_number }} - 当前页码",
+                        "   - {{ total_page_count }} - 总页数",
+                        "6. **技术要求**：",
+                        "   - 使用内联CSS样式（支持Tailwind CSS风格）",
+                        "   - 支持Font Awesome图标",
+                        "   - 支持Chart.js、ECharts.js、D3.js等图表库",
+                        "   - 确保所有内容在720px高度内完全显示",
+                        "   - 绝对不允许出现任何滚动条",
+                        "",
+                        "请详细说明你的设计思路，然后生成完整的HTML模板代码，使用```html代码块格式返回。",
                     ]
                     free_prompt = "\n".join([p for p in prompt_parts if p]).strip()
 
