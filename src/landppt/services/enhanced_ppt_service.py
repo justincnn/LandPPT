@@ -612,19 +612,36 @@ class EnhancedPPTService(PPTService):
 
     def _create_outline_prompt(self, request: PPTGenerationRequest, research_context: str = "", page_count_settings: Dict[str, Any] = None) -> str:
         """Create prompt for AI outline generation - Enhanced with professional templates"""
-        scenario_descriptions = {
-            "general": "通用演示",
-            "tourism": "旅游观光介绍",
-            "education": "儿童科普教育",
-            "analysis": "深入数据分析",
-            "history": "历史文化主题",
-            "technology": "科技技术展示",
-            "business": "方案汇报"
-        }
+        # Get language first to determine which descriptions to use
+        language = getattr(request, 'language', None) or 'zh'
+        
+        # Language-aware scenario descriptions
+        if language == "en":
+            scenario_descriptions = {
+                "general": "General Presentation",
+                "tourism": "Tourism and Travel Introduction",
+                "education": "Educational Science for Children",
+                "analysis": "In-depth Data Analysis",
+                "history": "Historical and Cultural Topics",
+                "technology": "Technology Showcase",
+                "business": "Business Proposal Report"
+            }
+            default_scenario = "General Presentation"
+        else:
+            scenario_descriptions = {
+                "general": "通用演示",
+                "tourism": "旅游观光介绍",
+                "education": "儿童科普教育",
+                "analysis": "深入数据分析",
+                "history": "历史文化主题",
+                "technology": "科技技术展示",
+                "business": "方案汇报"
+            }
+            default_scenario = "通用演示"
 
-        scenario_desc = scenario_descriptions.get(request.scenario, "通用演示")
+        scenario_desc = scenario_descriptions.get(request.scenario, default_scenario)
 
-        # Handle page count requirements
+        # Handle page count requirements - language aware
         page_count_instruction = ""
         expected_page_count = 10  # Default page count
 
@@ -634,48 +651,81 @@ class EnhancedPPTService(PPTService):
             if page_count_mode == 'custom_range':
                 min_pages = page_count_settings.get('min_pages', 8)
                 max_pages = page_count_settings.get('max_pages', 15)
-                page_count_instruction = f"- 页数要求：必须严格生成{min_pages}-{max_pages}页的PPT，确保页数在此范围内"
+                if language == "en":
+                    page_count_instruction = f"- Page Count: Must strictly generate a PPT with {min_pages}-{max_pages} pages"
+                else:
+                    page_count_instruction = f"- 页数要求：必须严格生成{min_pages}-{max_pages}页的PPT，确保页数在此范围内"
                 expected_page_count = max_pages  # Use max for template
             elif page_count_mode == 'fixed':
                 fixed_pages = page_count_settings.get('fixed_pages', 10)
-                page_count_instruction = f"- 页数要求：必须生成恰好{fixed_pages}页的PPT"
+                if language == "en":
+                    page_count_instruction = f"- Page Count: Must generate exactly {fixed_pages} pages"
+                else:
+                    page_count_instruction = f"- 页数要求：必须生成恰好{fixed_pages}页的PPT"
                 expected_page_count = fixed_pages
             else:
-                page_count_instruction = "- 页数要求：根据内容复杂度自主决定合适的页数"
+                if language == "en":
+                    page_count_instruction = "- Page Count: Determine appropriate page count based on content complexity"
+                else:
+                    page_count_instruction = "- 页数要求：根据内容复杂度自主决定合适的页数"
                 expected_page_count = 12  # Default for AI decide
         else:
-            page_count_instruction = "- 页数要求：根据内容复杂度自主决定合适的页数"
+            if language == "en":
+                page_count_instruction = "- Page Count: Determine appropriate page count based on content complexity"
+            else:
+                page_count_instruction = "- 页数要求：根据内容复杂度自主决定合适的页数"
             expected_page_count = 12
         logger.debug(f"Page count instruction: {page_count_instruction}")
 
-        # Add research context if available
+        # Add research context if available - language aware
         research_section = ""
         if research_context:
-            research_section = f"""
+            if language == "en":
+                research_section = f"""
+
+Background information based on in-depth research:
+{research_context}
+
+Please fully utilize the above research information to enrich the PPT content, ensuring accuracy, authority, and depth."""
+            else:
+                research_section = f"""
 
 基于深度研究的背景信息：
 {research_context}
 
 请充分利用以上研究信息来丰富PPT内容，确保信息准确、权威、具有深度。"""
 
-        # Get target audience and style information
-        target_audience = getattr(request, 'target_audience', None) or '普通大众'
+        # Get target audience and style information - language aware defaults
+        if language == "en":
+            default_audience = "General Public"
+        else:
+            default_audience = "普通大众"
+        
+        target_audience = getattr(request, 'target_audience', None) or default_audience
         ppt_style = getattr(request, 'ppt_style', None) or 'general'
         custom_style_prompt = getattr(request, 'custom_style_prompt', None)
         description = getattr(request, 'description', None)
-        language = getattr(request, 'language', None)
 
-        # Create style description
-        style_descriptions = {
-            "general": "通用风格，详细专业",
-            "conference": "学术会议风格，严谨正式",
-            "custom": custom_style_prompt or "自定义风格"
-        }
-        style_desc = style_descriptions.get(ppt_style, "通用风格")
+        # Create style description - language aware
+        if language == "en":
+            style_descriptions = {
+                "general": "General style, detailed and professional",
+                "conference": "Academic conference style, rigorous and formal",
+                "custom": custom_style_prompt or "Custom style"
+            }
+            default_style = "General style"
+        else:
+            style_descriptions = {
+                "general": "通用风格，详细专业",
+                "conference": "学术会议风格，严谨正式",
+                "custom": custom_style_prompt or "自定义风格"
+            }
+            default_style = "通用风格"
+        style_desc = style_descriptions.get(ppt_style, default_style)
 
         # Add custom style prompt if provided (regardless of ppt_style)
         if custom_style_prompt and ppt_style != "custom":
-            style_desc += f"，{custom_style_prompt}"
+            style_desc += f"，{custom_style_prompt}" if language == "zh" else f", {custom_style_prompt}"
 
         # Use the new prompts module
         if request.language == "zh":

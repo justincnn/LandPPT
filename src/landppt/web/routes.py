@@ -1123,13 +1123,18 @@ async def start_project_workflow(
         if project.project_metadata and isinstance(project.project_metadata, dict):
             network_mode = project.project_metadata.get("network_mode", False)
 
+        # Extract language from project metadata (set during project creation)
+        language = "zh"  # Default language
+        if project.project_metadata and isinstance(project.project_metadata, dict):
+            language = project.project_metadata.get("language", "zh")
+
         # Create project request from project data
         confirmed_requirements = project.confirmed_requirements or {}
         project_request = PPTGenerationRequest(
             scenario=project.scenario,
             topic=project.topic,
             requirements=project.requirements,
-            language="zh",  # Default language
+            language=language,
             network_mode=network_mode,
             target_audience=confirmed_requirements.get('target_audience', '普通大众'),
             ppt_style=confirmed_requirements.get('ppt_style', 'general'),
@@ -1232,16 +1237,18 @@ async def generate_outline(
         # Create PPTGenerationRequest from project data
         confirmed_requirements = project.confirmed_requirements
 
-        # Extract network_mode from project metadata
+        # Extract network_mode and language from project metadata
         network_mode = False
+        language = "zh"  # Default language
         if project.project_metadata and isinstance(project.project_metadata, dict):
             network_mode = project.project_metadata.get("network_mode", False)
+            language = project.project_metadata.get("language", "zh")
 
         project_request = PPTGenerationRequest(
             scenario=project.scenario,
             topic=confirmed_requirements.get('topic', project.topic),
             requirements=project.requirements,
-            language="zh",  # Default language
+            language=language,
             network_mode=network_mode,
             target_audience=confirmed_requirements.get('target_audience', '普通大众'),
             ppt_style=confirmed_requirements.get('ppt_style', 'general'),
@@ -1313,6 +1320,11 @@ async def regenerate_outline(
         # Create project request from confirmed requirements
         confirmed_requirements = project.confirmed_requirements
         
+        # Extract language from project metadata (set during project creation)
+        language = "zh"  # Default language
+        if project.project_metadata and isinstance(project.project_metadata, dict):
+            language = project.project_metadata.get("language", "zh")
+        
         # 如果提供了自定义需求，将其追加或覆盖原有需求
         final_requirements = confirmed_requirements.get('requirements', project.requirements)
         if custom_requirements:
@@ -1326,7 +1338,7 @@ async def regenerate_outline(
             scenario=confirmed_requirements.get('scenario', 'general'),
             topic=confirmed_requirements.get('topic', project.topic),
             requirements=final_requirements,
-            language="zh",  # Default language
+            language=language,
             network_mode=confirmed_requirements.get('network_mode', False),
             target_audience=confirmed_requirements.get('target_audience', '普通大众'),
             ppt_style=confirmed_requirements.get('ppt_style', 'general'),
@@ -1688,18 +1700,23 @@ async def confirm_project_requirements(
         if audience_type == "自定义" and custom_audience:
             target_audience = custom_audience
 
+        # Extract language from project metadata (set during project creation)
+        language = "zh"  # Default language
+        if project.project_metadata and isinstance(project.project_metadata, dict):
+            language = project.project_metadata.get("language", "zh")
+
         # Handle file upload if content source is file
         file_outline = None
         if content_source == "file" and file_upload:
             # Process uploaded files (support multiple files) and generate outline
-            # 使用项目创建时的 network_mode 参数
+            # 使用项目创建时的 network_mode 和 language 参数
             file_outline = await _process_uploaded_files_for_outline(
                 file_upload, topic, target_audience, page_count_mode, min_pages, max_pages,
                 fixed_pages, ppt_style, custom_style_prompt,
                 file_processing_mode, content_analysis_depth, project.requirements,
                 enable_web_search=network_mode,  # 使用项目的 network_mode
                 scenario=project.scenario,  # 传递场景参数
-                language="zh"  # 传递语言参数
+                language=language  # 传递用户选择的语言参数
             )
 
             # Update topic if it was extracted from file
