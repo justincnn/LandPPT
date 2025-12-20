@@ -896,9 +896,12 @@ async def select_global_template_for_project(project_id: str, request: TemplateS
             raise HTTPException(status_code=400, detail="Project ID mismatch")
 
         # 选择模板
-        result = await ppt_service.select_global_template_for_project(
-            project_id, request.selected_template_id
-        )
+        if request.template_mode == "free":
+            result = await ppt_service.select_free_template_for_project(project_id)
+        else:
+            # "default" 和未指定都等价于 selected_template_id=None（由后端选择默认模板）
+            template_id = None if request.template_mode == "default" else request.selected_template_id
+            result = await ppt_service.select_global_template_for_project(project_id, template_id)
 
         if not result['success']:
             raise HTTPException(status_code=400, detail=result['message'])

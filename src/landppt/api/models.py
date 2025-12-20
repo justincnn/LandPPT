@@ -276,6 +276,10 @@ class TemplateSelectionRequest(BaseModel):
     """Request model for template selection during PPT generation"""
     project_id: str = Field(..., description="Project ID")
     selected_template_id: Optional[int] = Field(None, description="Selected template ID (None for default)")
+    template_mode: Optional[Literal["global", "default", "free"]] = Field(
+        None,
+        description="Template mode: global (selected template), default (system default), free (AI decides)"
+    )
 
 
 class TemplateSelectionResponse(BaseModel):

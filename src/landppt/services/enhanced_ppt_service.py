@@ -96,6 +96,9 @@ class EnhancedPPTService(PPTService):
         self.image_service = None
         self._initialize_image_service()
 
+        # Per-project lock to avoid duplicate free-template generation under parallel slide generation
+        self._free_template_generation_locks: Dict[str, asyncio.Lock] = {}
+
     def _get_auto_layout_debug_dir(self) -> Path:
         """Directory to persist auto layout repair debug artifacts (HTML & screenshots)."""
         project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -6893,9 +6896,15 @@ class EnhancedPPTService(PPTService):
                 # 更新项目元数据
                 project_metadata = project.project_metadata or {}
                 project_metadata['selected_global_template_id'] = template_id
+                project_metadata['template_mode'] = 'global'
+                project_metadata.pop('free_template_html', None)
+                project_metadata.pop('free_template_name', None)
+                project_metadata.pop('free_template_generated_at', None)
+                project_metadata.pop('free_template_prompt', None)
 
                 # 保存更新的元数据
                 await self.project_manager.update_project_metadata(project_id, project_metadata)
+                self.clear_cached_style_genes(project_id)
                 logger.info(f"Saved selected template {template_id} to project {project_id}")
 
         except Exception as e:
@@ -6938,6 +6947,38 @@ class EnhancedPPTService(PPTService):
                 "selected_template": None
             }
 
+    async def select_free_template_for_project(self, project_id: str) -> Dict[str, Any]:
+        """为项目选择“自由模板”（由 AI 根据大纲自动生成模板）"""
+        try:
+            project = await self.project_manager.get_project(project_id)
+            if not project:
+                raise ValueError(f"Project {project_id} not found")
+
+            project_metadata = project.project_metadata or {}
+            project_metadata['template_mode'] = 'free'
+            project_metadata.pop('selected_global_template_id', None)
+            project_metadata.pop('free_template_html', None)
+            project_metadata.pop('free_template_name', None)
+            project_metadata.pop('free_template_generated_at', None)
+            project_metadata.pop('free_template_prompt', None)
+            project_metadata['free_template_status'] = 'pending'
+
+            await self.project_manager.update_project_metadata(project_id, project_metadata)
+            self.clear_cached_style_genes(project_id)
+
+            return {
+                "success": True,
+                "message": "Free template selected (AI will generate a template from the outline when PPT creation starts)",
+                "selected_template": None
+            }
+        except Exception as e:
+            logger.error(f"Error selecting free template for project {project_id}: {e}")
+            return {
+                "success": False,
+                "message": str(e),
+                "selected_template": None
+            }
+
     async def get_selected_global_template(self, project_id: str) -> Optional[Dict[str, Any]]:
         """获取项目选择的全局母版模板"""
         try:
@@ -6945,11 +6986,114 @@ class EnhancedPPTService(PPTService):
             if not project:
                 return None
 
-            # 从项目元数据中获取选择的模板ID
-            selected_template_id = None
-            if hasattr(project, 'project_metadata') and project.project_metadata:
-                selected_template_id = project.project_metadata.get('selected_global_template_id')
+            project_metadata = project.project_metadata or {}
+            template_mode = project_metadata.get('template_mode')
 
+            # Free template: generate & cache a per-project master template in project_metadata
+            if template_mode == 'free':
+                free_html = project_metadata.get('free_template_html')
+                free_name = project_metadata.get('free_template_name') or '自由模板（AI决定）'
+
+                if free_html and isinstance(free_html, str) and free_html.strip():
+                    return {
+                        "template_name": free_name,
+                        "description": "AI 根据大纲自动生成的项目专属模板",
+                        "html_template": free_html,
+                        "tags": ["自由模板", "AI生成", "项目专属"],
+                        "created_by": "ai_free"
+                    }
+
+                lock = self._free_template_generation_locks.setdefault(project_id, asyncio.Lock())
+                async with lock:
+                    # Double-check after acquiring lock (parallel slide generation)
+                    project = await self.project_manager.get_project(project_id)
+                    if not project:
+                        return None
+                    project_metadata = project.project_metadata or {}
+                    if project_metadata.get('template_mode') != 'free':
+                        return None
+
+                    free_html = project_metadata.get('free_template_html')
+                    free_name = project_metadata.get('free_template_name') or '自由模板（AI决定）'
+                    if free_html and isinstance(free_html, str) and free_html.strip():
+                        return {
+                            "template_name": free_name,
+                            "description": "AI 根据大纲自动生成的项目专属模板",
+                            "html_template": free_html,
+                            "tags": ["自由模板", "AI生成", "项目专属"],
+                            "created_by": "ai_free"
+                        }
+
+                    outline = project.outline or {}
+                    slides = outline.get('slides', []) if isinstance(outline, dict) else []
+                    confirmed = project.confirmed_requirements or {}
+
+                    slide_lines: List[str] = []
+                    for idx, s in enumerate(slides[:20], start=1):
+                        if not isinstance(s, dict):
+                            continue
+                        t = s.get('title') or f"第{idx}页"
+                        st = s.get('slide_type') or s.get('type') or ''
+                        pts = s.get('content_points') or s.get('content') or []
+                        if isinstance(pts, list):
+                            pts = [str(x) for x in pts[:4]]
+                            pts_str = "；".join([p for p in pts if p])
+                        else:
+                            pts_str = str(pts)[:120]
+                        extra = f"（{st}）" if st else ""
+                        slide_lines.append(f"{idx}. {t}{extra}：{pts_str}".strip("："))
+
+                    topic = getattr(project, 'topic', '') or outline.get('title') or ''
+                    scenario = getattr(project, 'scenario', '') or confirmed.get('scenario', '')
+                    target_audience = confirmed.get('target_audience') or ''
+                    ppt_style = confirmed.get('ppt_style') or ''
+                    custom_style_prompt = confirmed.get('custom_style_prompt') or ''
+
+                    prompt_parts = [
+                        "请为下面这份 PPT 大纲生成一个项目专属的 HTML 母版模板（自由模板）。",
+                        "要求：你自行决定最合适的整体风格、配色、字体与装饰元素（完全由你决定，但要与主题/场景/受众匹配）。",
+                        "必须满足：1280x720；完整 HTML 文档；内联 CSS；不允许滚动条；支持占位符 {{ page_title }} / {{ page_content }} / {{ current_page_number }} / {{ total_page_count }}。",
+                        f"主题：{topic}" if topic else "",
+                        f"场景：{scenario}" if scenario else "",
+                        f"受众：{target_audience}" if target_audience else "",
+                        f"风格偏好：{ppt_style}" if ppt_style else "",
+                        f"自定义风格补充：{custom_style_prompt}" if custom_style_prompt else "",
+                        f"页数：{len(slides)}" if slides else "",
+                        "大纲（最多展示前 20 页）：",
+                        "\n".join(slide_lines) if slide_lines else "(无)",
+                    ]
+                    free_prompt = "\n".join([p for p in prompt_parts if p]).strip()
+
+                    generated = await self.global_template_service.generate_template_with_ai(
+                        prompt=free_prompt,
+                        template_name=f"自由模板-{project_id[:8]}",
+                        description="AI 根据大纲自动生成的项目专属模板",
+                        tags=["自由模板", "AI生成", "项目专属"],
+                        generation_mode="text_only"
+                    )
+
+                    free_html = generated.get('html_template', '')
+                    free_name = generated.get('template_name', free_name)
+
+                    project_metadata['template_mode'] = 'free'
+                    project_metadata['free_template_html'] = free_html
+                    project_metadata['free_template_name'] = free_name
+                    project_metadata['free_template_prompt'] = free_prompt
+                    project_metadata['free_template_generated_at'] = time.time()
+                    project_metadata['free_template_status'] = 'ready'
+                    await self.project_manager.update_project_metadata(project_id, project_metadata)
+                    self.clear_cached_style_genes(project_id)
+
+                    return {
+                        "template_name": free_name,
+                        "description": "AI 根据大纲自动生成的项目专属模板",
+                        "html_template": free_html,
+                        "tags": ["自由模板", "AI生成", "项目专属"],
+                        "created_by": "ai_free"
+                    }
+
+            # Global template selection (by ID)
+            selected_template_id = project_metadata.get('selected_global_template_id')
             if selected_template_id:
                 return await self.global_template_service.get_template_by_id(selected_template_id)
 

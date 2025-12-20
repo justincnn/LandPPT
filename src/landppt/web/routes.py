@@ -4212,6 +4212,189 @@ async def get_selected_global_template(
         logger.error(f"Error getting selected global template for project {project_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/api/projects/{project_id}/free-template")
+async def get_project_free_template(
+    project_id: str,
+    user: User = Depends(get_current_user_required)
+):
+    """Get project's free-template status and current generated template (if any)."""
+    try:
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            return {
+                "success": True,
+                "enabled": False,
+                "message": "Project is not using free template mode",
+                "status": None,
+                "confirmed": False,
+                "template": None
+            }
+
+        html = metadata.get("free_template_html")
+        name = metadata.get("free_template_name") or "自由模板（AI决定）"
+
+        template = None
+        if isinstance(html, str) and html.strip():
+            template = {
+                "template_name": name,
+                "description": "AI 根据大纲自动生成的项目专属模板",
+                "html_template": html,
+                "tags": ["自由模板", "AI生成", "项目专属"],
+                "created_by": "ai_free"
+            }
+
+        return {
+            "success": True,
+            "enabled": True,
+            "status": metadata.get("free_template_status"),
+            "confirmed": bool(metadata.get("free_template_confirmed")),
+            "saved_template_id": metadata.get("saved_global_template_id"),
+            "template": template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/generate")
+async def generate_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Generate (or regenerate) a project's free-template via AI."""
+    try:
+        payload = {}
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+
+        force = bool(payload.get("force", False))
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        if force:
+            metadata.pop("free_template_html", None)
+            metadata.pop("free_template_name", None)
+            metadata.pop("free_template_generated_at", None)
+            metadata.pop("free_template_prompt", None)
+            metadata["free_template_status"] = "pending"
+            metadata["free_template_confirmed"] = False
+            metadata.pop("free_template_confirmed_at", None)
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+            ppt_service.clear_cached_style_genes(project_id)
+
+        template = await ppt_service.get_selected_global_template(project_id)
+        if not template:
+            raise HTTPException(status_code=500, detail="Failed to generate free template")
+
+        # Mark status ready (generation is synchronous here)
+        project = await ppt_service.project_manager.get_project(project_id)
+        if project and project.project_metadata:
+            metadata = project.project_metadata
+            metadata["free_template_status"] = "ready"
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+
+        return {
+            "success": True,
+            "template": template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/confirm")
+async def confirm_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Confirm using the generated free-template; optionally save it into global template list."""
+    try:
+        data = await request.json()
+        save_to_library = bool(data.get("save_to_library", False))
+        requested_name = (data.get("template_name") or "").strip()
+        requested_description = (data.get("description") or "").strip()
+        requested_tags = data.get("tags") or []
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        html = metadata.get("free_template_html")
+        if not (isinstance(html, str) and html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+
+        metadata["free_template_confirmed"] = True
+        metadata["free_template_confirmed_at"] = time.time()
+        metadata["free_template_status"] = "ready"
+
+        saved_template = None
+        if save_to_library:
+            base_name = requested_name or f"自由模板-{(project.topic or 'PPT')[:20]}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            description = requested_description or "由自由模板功能生成并确认的模板"
+            tags: List[str] = []
+            if isinstance(requested_tags, list):
+                tags = [str(t).strip() for t in requested_tags if str(t).strip()]
+            tags = tags or ["自由模板", "AI生成"]
+
+            # Ensure unique name
+            final_name = base_name
+            for i in range(1, 6):
+                try:
+                    saved_template = await ppt_service.global_template_service.create_template({
+                        "template_name": final_name,
+                        "description": description,
+                        "html_template": html,
+                        "tags": tags,
+                        "is_default": False,
+                        "is_active": True,
+                        "created_by": f"free_template:{project_id}"
+                    })
+                    break
+                except ValueError:
+                    final_name = f"{base_name}-{i}"
+
+            if not saved_template:
+                raise HTTPException(status_code=409, detail="Failed to save template to library (name conflict)")
+
+            metadata["saved_global_template_id"] = saved_template.get("id")
+            metadata["saved_global_template_name"] = saved_template.get("template_name")
+
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+
+        return {
+            "success": True,
+            "saved_template": saved_template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error confirming free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/api/projects/{project_id}/slides/{slide_index}/save")
 async def save_single_slide_content(
     project_id: str,
@@ -4328,6 +4511,28 @@ async def save_single_slide_content(
 async def stream_slides_generation(project_id: str):
     """Stream slides generation process"""
     try:
+        # Guard: free-template must be confirmed before starting generation
+        try:
+            project = await ppt_service.project_manager.get_project(project_id)
+            if project and project.project_metadata:
+                metadata = project.project_metadata or {}
+                if metadata.get("template_mode") == "free" and not metadata.get("free_template_confirmed"):
+                    async def blocked_stream():
+                        yield f"data: {json.dumps({'type': 'error', 'message': '自由模板尚未确认，请先在预览中确认/保存模板后再开始生成PPT。'})}\n\n"
+                    return StreamingResponse(
+                        blocked_stream(),
+                        media_type="text/event-stream",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "Access-Control-Allow-Origin": "*",
+                            "Access-Control-Allow-Headers": "Cache-Control"
+                        }
+                    )
+        except Exception:
+            # If guard fails, do not block generation
+            pass
+
         async def generate_slides_stream():
             async for chunk in ppt_service.generate_slides_streaming(project_id):
                 yield chunk
