@@ -9,7 +9,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_PROJECT_ENVIRONMENT=/opt/venv
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 
 # Install build dependencies
 RUN apt-get update && \
@@ -37,6 +38,16 @@ RUN uv sync && \
     find /opt/venv -name "*.pyc" -delete && \
     find /opt/venv -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
+# Install Playwright browsers in builder stage
+# This downloads chromium to /opt/playwright-browsers
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+    libgbm1 libasound2 libpango-1.0-0 libcairo2 \
+    && /opt/venv/bin/python -m playwright install chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 # Production stage
 FROM python:3.11-slim AS production
 
@@ -45,7 +56,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app/src:/opt/venv/lib/python3.11/site-packages \
     PATH=/opt/venv/bin:$PATH \
-    PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers \
     HOME=/root \
     VIRTUAL_ENV=/opt/venv
 
@@ -57,7 +68,6 @@ RUN apt-get update && \
     ca-certificates \
     curl \
     wget \
-    chromium \
     libgomp1 \
     fonts-liberation \
     fonts-noto-cjk \
@@ -70,6 +80,21 @@ RUN apt-get update && \
     libfontconfig1 \
     libx11-6 \
     libxext6 \
+    # Chromium/Playwright runtime dependencies
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
     && \
     # Download and install wkhtmltopdf from official releases
     WKHTMLTOPDF_VERSION="0.12.6.1-3" && \
@@ -82,20 +107,17 @@ RUN apt-get update && \
 
 # Create non-root user (for compatibility, but run as root)
 RUN groupadd -r landppt && \
-    useradd -r -g landppt -m -d /home/landppt landppt && \
-    mkdir -p /home/landppt/.cache/ms-playwright /root/.cache/ms-playwright
+    useradd -r -g landppt -m -d /home/landppt landppt
 
 # Copy Python packages from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Install Playwright browsers (chromium) - package already installed in builder stage
-# Need to run apt-get update first because install-deps uses apt
-RUN apt-get update && \
-    python -m playwright install-deps chromium && \
-    python -m playwright install chromium && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    chown -R landppt:landppt /home/landppt
+# Copy Playwright browsers from builder
+COPY --from=builder /opt/playwright-browsers /opt/playwright-browsers
+
+# Set permissions for landppt user and playwright browsers
+RUN chown -R landppt:landppt /home/landppt && \
+    chmod -R 755 /opt/playwright-browsers
 
 # Set work directory
 WORKDIR /app
