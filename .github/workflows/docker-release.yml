@@ -28,6 +28,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
       
+      # 清理磁盘空间（防止构建时空间不足）
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
+      
       # 设置 QEMU（用于多平台构建）
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
