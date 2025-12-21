@@ -11,11 +11,11 @@
 
 ---
 
-## 🎯 Open to Opportunities
+##  Open to Opportunities
 
-我目前正在寻找 **Agent 开发相关的工作机会**。如果你对我的项目感兴趣，或有合适的岗位/合作机会，欢迎联系我！
+如果你对我的项目感兴趣，欢迎联系我！
 
-[![Email](https://img.shields.io/badge/📧_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
+[![Email](https://img.shields.io/badge/_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
 
 ---
 
@@ -24,7 +24,7 @@
 
 ---
 
-## 📋 目录
+##  目录
 
 - [项目简介](#-项目简介)
 - [功能亮点](#-功能亮点)
@@ -33,7 +33,7 @@
 - [使用指南](#-使用指南)
 - [配置说明](#-配置说明)
 - [API文档](#-api文档)
-- [技术栈](#️-技术栈)
+- [技术栈](#-技术栈)
 - [常见问题](#-常见问题)
 - [许可证](#-许可证)
 
@@ -82,68 +82,71 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 ### 模板生成
 ![image](https://img.pub/p/892622b3f3cc0d6ad843.png)
 
-## 🌟 功能亮点
+##  功能亮点
 
-- **🚀 一键生成**：从主题到完整PPT，全程AI自动化处理
-- **🎨 智能配图**：AI自动匹配最适合的图像，支持多源获取和参考图片生成
-- **🔍 深度研究**：集成多个搜索引擎，获取最新最全面的信息
-- **🎤 演讲稿生成**：智能生成配套演讲稿，支持多种导出格式
-- **👁️ 视觉参考**：AI编辑助手支持图像上传和视觉内容分析
-- **📂 多文件上传**：支持同时上传多个文件，批量处理更高效
-- **⚡ 批量生成**：支持批量生成PPT页面，显著提升生成速度
-- **🎯 模型自定义**：按功能自定义模型选择，精准控制成本
-- **📝 备注导出**：支持将演讲稿导出至PPT备注栏
-- **🖼️ 图片导出**：支持以图片格式导出PPT页面
-- **🔒 企业级安全**：支持本地部署，数据安全可控
+- ** 一键生成**：从主题到完整PPT，全程AI自动化处理
+- ** 智能配图**：AI自动匹配最适合的图像，支持多源获取和参考图片生成
+- ** TODO 任务板**：全新交互式任务管理界面，实时追踪生成进度，支持复杂动画反馈
+- ** 深度研究**：集成多个搜索引擎，获取最新最全面的信息
+- ** 并行生成**：支持幻灯片内容并行生成，配合增强型 AI 服务显著提升构建速度
+- ** 演讲稿生成**：智能生成配套演讲稿，支持多种导出格式
+- ** 视觉参考**：AI编辑助手支持图像上传和视觉内容分析
+- ** 多文件上传**：支持同时上传多个文件，批量处理更高效
+- ** 模型自定义**：按功能自定义模型选择，精准控制成本
+- ** 备注导出**：支持将演讲稿导出至PPT备注栏
+- ** 图片导出**：支持以图片格式导出PPT页面
+- ** 企业级安全**：支持本地部署，数据安全可控
 
-## ✨ 核心功能
+##  核心功能
 
-### 🤖 多AI提供商支持
+###  多AI提供商支持
 - **OpenAI GPT系列**：GPT-4o、GPT-4o-mini 等模型
 - **Anthropic Claude**：Claude-4 Sonnet、Claude-4 Haiku 系列模型
 - **Google Gemini**：Gemini-2.5 Flash、Gemini-2.5 Pro 系列模型，支持自定义端点配置
 - **Azure OpenAI**：企业级AI服务，支持自定义部署
 - **Ollama**：本地部署的开源模型，支持 Llama、Mistral 等
 
-### 📄 强大的文件处理能力
+###  强大的文件处理能力
 - **多格式支持**：PDF、Word、Markdown、TXT、Excel 等多种格式
 - **智能解析**：使用 MinerU 和 MarkItDown 进行高质量内容提取
 - **深度研究**：集成 Tavily API 和 SearXNG 的多源研究功能
 - **内容增强**：自动网页内容提取和智能摘要生成
 
-### 🎨 智能图像处理系统
+###  智能图像处理系统
 - **多源图像获取**：本地图库、网络搜索、AI生成三合一
 - **网络图像搜索**：支持 Pixabay、Unsplash 等图库
 - **AI图像生成**：集成 DALL-E、SiliconFlow、Pollinations、 Openai、Gemini等服务
 - **智能图像选择**：AI自动匹配最适合的图像内容
 - **图像处理优化**：自动尺寸调整、格式转换、质量优化
 
-### 🔍 增强研究功能
+###  增强研究功能
 - **多引擎搜索**：Tavily 和 SearXNG 双引擎支持
 - **深度内容提取**：智能网页内容解析和结构化处理
 - **多语言支持**：支持中英文等多语言研究内容
 - **实时信息获取**：获取最新的网络信息和数据
 
-### 🎨 丰富的模板系统
+###  丰富的模板系统
 - **全局主模板**：统一的HTML模板系统，支持响应式设计
 - **多样化布局**：AI生成多种创意页面布局和设计风格
 - **场景化模板**：通用、旅游、教育等多种专业场景模板
+- **项目适配模板**：新增针对项目的适配模板生成
 - **自定义模板**：支持导入和创建个性化模板
 - **参考图片生成**：AI模板生成支持参考图片，智能匹配设计风格
 
-### 📊 完整的项目管理
-- **三阶段工作流**：需求确认 → 大纲生成 → PPT生成
+###  完整的项目管理
+- **四阶段工作流**：需求确认  大纲生成  TODO 进度追踪  PPT生成
+- **TODO 任务看板**：集成式任务管理，实时显示生成状态、日志与动画
 - **可视化编辑**：直观的大纲编辑器和实时预览
 - **批量操作**：支持批量生成和处理多个项目
 
-### 🌐 现代化Web界面
+###  现代化Web界面
 - **直观操作**：用户友好的响应式Web界面
 - **AI聊天编辑**：侧边栏AI编辑功能，支持实时对话和视觉参考
 - **演讲稿生成**：支持单页/多页/全部幻灯片的演讲稿生成，导出为DOCX/Markdown格式
 - **多格式导出**：PDF/HTML/PPTX 多种格式导出支持
 - **实时预览**：16:9 标准比例的实时页面预览
 
-## 🚀 快速开始
+##  快速开始
 
 ### 系统要求
 - Python 3.11+
@@ -230,7 +233,7 @@ docker logs -f landppt
 > **注意**: 确保在运行前创建并配置好 `.env` 文件，包含必要的API密钥。
 
 
-## 📖 使用指南
+##  使用指南
 
 ### 1. 访问Web界面
 启动服务后，访问以下地址：
@@ -263,7 +266,7 @@ docker logs -f landppt
 - 保存项目版本和历史记录
 - 支持批量处理和模板复用
 
-## 🔧 配置说明
+##  配置说明
 
 ### 环境变量配置
 
@@ -302,13 +305,13 @@ MAX_TOKENS=8192
 TEMPERATURE=0.7
 ```
 
-## 📚 API文档
+##  API文档
 
 启动服务后访问：
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-## 🛠️ 技术栈
+##  技术栈
 
 ### 后端技术
 - **FastAPI**: 现代化的Python Web框架，支持异步处理
@@ -343,7 +346,7 @@ TEMPERATURE=0.7
 - **Playwright**: HTML转PDF高质量导出
 - **Apryse SDK**: 专业PPT生成和转换
 
-## 🤝 贡献指南
+##  贡献指南
 
 欢迎所有形式的贡献！
 
@@ -359,7 +362,7 @@ TEMPERATURE=0.7
 ### 报告问题
 如果你发现了bug或有功能建议，请在 [Issues](https://github.com/sligter/LandPPT/issues) 页面创建新的issue。
 
-## ❓ 常见问题
+##  常见问题
 
 ### Q: 支持哪些AI模型？
 A: 支持 OpenAI GPT(兼容)、Anthropic Claude、Google Gemini、Azure OpenAI 和 Ollama 本地模型。可以在配置页面切换不同的AI提供商。
@@ -398,7 +401,7 @@ A: 不会。并行生成只是改变了生成顺序，每页的生成逻辑和�
 ### Q: 所有AI提供商都支持批量生成吗？
 A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议查看您使用的AI服务的API文档。
 
-## 📄 许可证
+##  许可证
 
 本项目采用 Apache License 2.0 许可证。详情请见 [LICENSE](LICENSE) 文件。
 
@@ -406,20 +409,20 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sligter/LandPPT&type=Date)](https://www.star-history.com/#sligter/LandPPT&Date)
 
-## 📞 联系我们
+##  联系我们
 
 - **项目主页**: https://github.com/sligter/LandPPT
 - **问题反馈**: https://github.com/sligter/LandPPT/issues
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/602020da0c0f27d91811.png)
+![LandPPT](https://img.pub/p/dcfaf039210173f4b1f7.png)
 ---
 
 <div align="center">
 
-**如果这个项目对你有帮助，请给我们一个 ⭐️ Star！**
+**如果这个项目对你有帮助，请给我们一个  Star！**
 
-Made with ❤️ by the LandPPT Team
+Made with  by the LandPPT Team
 
 </div>

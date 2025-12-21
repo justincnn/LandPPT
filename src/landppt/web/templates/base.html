@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,7 +64,7 @@
             position: relative;
             overflow-x: hidden;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -98,7 +99,7 @@
             font-weight: 500;
             opacity: 0.9;
         }
-        
+
         .nav {
             display: flex;
             justify-content: space-between;
@@ -140,7 +141,7 @@
         .nav-user a {
             padding: var(--spacing-sm) var(--spacing-sm);
             font-size: 0.85rem;
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .nav a:hover {
@@ -158,7 +159,7 @@
         .nav a:active {
             transform: translateY(-2px) scale(0.98);
         }
-        
+
         .main-content {
             background: var(--surface);
             border: 1px solid var(--glass-border);
@@ -177,7 +178,7 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent);
+            background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
         }
 
         .footer {
@@ -191,7 +192,7 @@
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow-soft);
         }
-        
+
         .form-group {
             margin-bottom: var(--spacing-xl);
         }
@@ -235,32 +236,32 @@
             color: var(--text-muted);
             opacity: 0.8;
         }
-        
+
         .alert {
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 6px;
             border-left: 4px solid;
         }
-        
+
         .alert-success {
             background: #d4edda;
             border-color: #27ae60;
             color: #155724;
         }
-        
+
         .alert-error {
             background: #f8d7da;
             border-color: #e74c3c;
             color: #721c24;
         }
-        
+
         .alert-info {
             background: #d1ecf1;
             border-color: #3498db;
             color: #0c5460;
         }
-        
+
         .card {
             background: var(--surface);
             border: 1px solid var(--border-color);
@@ -383,7 +384,7 @@
             display: inline !important;
             color: var(--glass-text);
         }
-        
+
         @media (max-width: 1200px) {
             .nav {
                 flex-direction: column;
@@ -439,6 +440,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
+
 <body>
     <div class="container">
         <header class="header">
@@ -465,23 +467,25 @@
                     <a href="/auth/profile" title="个人资料">
                         <i class="fas fa-user"></i> 个人资料
                     </a>
-                    <a href="/auth/logout" title="退出登录"
-                       onclick="return confirm('确定要退出登录吗？')">
+                    <a href="/auth/logout" title="退出登录" onclick="return confirm('确定要退出登录吗？')">
                         <i class="fas fa-sign-out-alt"></i> 退出
                     </a>
                 </div>
             </nav>
         </header>
-        
+
         <main class="main-content">
             {% block content %}{% endblock %}
         </main>
-        
+
         <footer class="footer">
-            <p>&copy; 2025 LandPPT(v0.1.6) - AI PPT Generator. <a href="https://github.com/sligter/LandPPT" target="_blank" style="color: inherit; text-decoration: none;"><i class="fab fa-github footer-github-icon" style="margin-left: 6px;"></i></a></p>
+            <p>&copy; 2026 LandPPT(v0.1.7) - AI PPT Generator. <a href="https://github.com/sligter/LandPPT"
+                    target="_blank" style="color: inherit; text-decoration: none;"><i
+                        class="fab fa-github footer-github-icon" style="margin-left: 6px;"></i></a></p>
         </footer>
     </div>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

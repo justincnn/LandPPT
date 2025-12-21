@@ -11,11 +11,11 @@
 
 ---
 
-## 🎯 Open to Opportunities
+##  Open to Opportunities
 
-I'm currently seeking **Agent Development** related job opportunities. If you're interested in my projects or have suitable positions/collaboration opportunities, feel free to reach out!
+If you're interested in my projects or have suitable collaboration opportunities, feel free to reach out!
 
-[![Email](https://img.shields.io/badge/📧_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
+[![Email](https://img.shields.io/badge/_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
 
 ---
 
@@ -24,7 +24,7 @@ I'm currently seeking **Agent Development** related job opportunities. If you're
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Project Overview](#-project-overview)
 - [Feature Highlights](#-feature-highlights)
@@ -33,11 +33,11 @@ I'm currently seeking **Agent Development** related job opportunities. If you're
 - [Usage Guide](#-usage-guide)
 - [Configuration](#-configuration)
 - [API Documentation](#-api-documentation)
-- [Tech Stack](#️-tech-stack)
+- [Tech Stack](#-tech-stack)
 - [FAQ](#-faq)
 - [License](#-license)
 
-## 🎯 Project Overview
+##  Project Overview
 
 LandPPT is an intelligent presentation generation platform powered by Large Language Models (LLMs) that automatically converts document content into professional PPT presentations. The platform integrates multiple AI models, intelligent image processing, deep research capabilities, and rich template systems, enabling users to effortlessly create high-quality presentations.
 
@@ -68,70 +68,70 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 ### Template Generation
 ![image](https://img.pub/p/892622b3f3cc0d6ad843.png)
 
-## 🌟 Feature Highlights
+##  Feature Highlights
 
-- **🚀 One-Click Generation**: From topic to complete PPT, fully automated AI processing
-- **🎨 Smart Image Matching**: AI automatically matches the most suitable images with multi-source support and reference image generation
-- **🔍 Deep Research**: Integrated multiple search engines for latest and comprehensive information
-- **🎤 Speech Script Generation**: Intelligent generation of accompanying speech scripts with multiple export formats
-- **👁️ Visual Reference**: AI editing assistant supports image upload and visual content analysis
-- **📂 Multiple File Upload**: Support uploading multiple files simultaneously for efficient batch processing
-- **⚡ Batch Generation**: Support batch PPT page generation for significantly improved speed
-- **🎯 Custom Model Selection**: Customize model selection by function module for precise cost control
-- **📝 Notes Export**: Support exporting speech scripts to PPT notes
-- **🖼️ Image Export**: Support exporting PPT in image format
-- **📱 Responsive Design**: Perfect adaptation to various devices and screen sizes
-- **🔒 Enterprise Security**: Support for local deployment with controllable data security
+- ** One-Click Generation**: From topic to complete PPT, fully automated AI processing
+- ** Smart Image Matching**: AI automatically matches the most suitable images with multi-source support and reference image generation
+- ** Deep Research**: Integrated multiple search engines for latest and comprehensive information
+- ** Speech Script Generation**: Intelligent generation of accompanying speech scripts with multiple export formats
+- ** Visual Reference**: AI editing assistant supports image upload and visual content analysis
+- ** Multiple File Upload**: Support uploading multiple files simultaneously for efficient batch processing
+- ** Batch Generation**: Support batch PPT page generation for significantly improved speed
+- ** Custom Model Selection**: Customize model selection by function module for precise cost control
+- ** Notes Export**: Support exporting speech scripts to PPT notes
+- ** Image Export**: Support exporting PPT in image format
+- ** Responsive Design**: Perfect adaptation to various devices and screen sizes
+- ** Enterprise Security**: Support for local deployment with controllable data security
 
-## ✨ Key Features
+##  Key Features
 
-### 🤖 Multi-AI Provider Support
+###  Multi-AI Provider Support
 - **OpenAI GPT Series**: GPT-4o, GPT-4o-mini and other latest models
 - **Anthropic Claude**: Claude-3.5 Sonnet, Claude-3 Haiku series models
 - **Google Gemini**: Gemini-1.5 Flash, Gemini-1.5 Pro series models with custom endpoint support
 - **Azure OpenAI**: Enterprise-grade AI services with custom deployments
 - **Ollama**: Locally deployed open-source models supporting Llama, Mistral, etc.
 
-### 📄 Powerful File Processing
+###  Powerful File Processing
 - **Multi-format Support**: PDF, Word, Markdown, TXT, Excel and more formats
 - **Intelligent Parsing**: High-quality content extraction using MinerU and MarkItDown
 - **Deep Research**: Multi-source research with Tavily API and SearXNG integration
 - **Content Enhancement**: Automatic web content extraction and intelligent summarization
 
-### 🎨 Intelligent Image Processing System
+###  Intelligent Image Processing System
 - **Multi-source Image Acquisition**: Local gallery, network search, and AI generation in one
 - **Network Image Search**: Support for premium galleries like Pixabay, Unsplash
 - **AI Image Generation**: Integration with DALL-E, SiliconFlow, Pollinations services
 - **Smart Image Selection**: AI automatically matches the most suitable image content
 - **Image Processing Optimization**: Automatic resizing, format conversion, quality optimization
 
-### 🔍 Enhanced Research Capabilities
+###  Enhanced Research Capabilities
 - **Multi-engine Search**: Dual engine support with Tavily and SearXNG
 - **Deep Content Extraction**: Intelligent web content parsing and structured processing
 - **Multi-language Support**: Support for Chinese, English and other languages
 - **Real-time Information**: Access to latest web information and data
 
-### 🎨 Rich Template System
+###  Rich Template System
 - **Global Master Templates**: Unified HTML template system with responsive design
 - **Diverse Layouts**: AI-generated creative page layouts and design styles
 - **Scenario-based Templates**: Professional templates for general, tourism, education scenarios
 - **Custom Templates**: Support for importing and creating personalized templates
 - **Reference Image Generation**: AI template generation supports reference images for intelligent design style matching
 
-### 📊 Complete Project Management
-- **Three-stage Workflow**: Requirements confirmation → Outline generation → PPT generation
+###  Complete Project Management
+- **Three-stage Workflow**: Requirements confirmation  Outline generation  PPT generation
 - **Visual Editing**: Intuitive outline editor with real-time preview
 - **Version Management**: Project history and version rollback functionality
 - **Batch Operations**: Support for batch generation and processing multiple projects
 
-### 🌐 Modern Web Interface
+###  Modern Web Interface
 - **Intuitive Operation**: User-friendly responsive web interface
 - **AI Chat Editing**: Sidebar AI editing with real-time conversation support and visual references
 - **Speech Script Generation**: Support for single/multiple/all slide speech script generation, export to DOCX/Markdown formats
 - **Multi-format Export**: PDF/HTML/PPTX export support
 - **Real-time Preview**: 16:9 standard ratio real-time page preview
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### System Requirements
 - Python 3.11+
@@ -219,7 +219,7 @@ docker logs -f landppt
 
 
 
-## 📖 Usage Guide
+##  Usage Guide
 
 ### 1. Access Web Interface
 After starting the service, visit:
@@ -255,7 +255,7 @@ Configure your AI API keys in the settings page:
 - Save project versions and history
 - Support batch processing and template reuse
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 
@@ -294,13 +294,13 @@ MAX_TOKENS=8192
 TEMPERATURE=0.7
 ```
 
-## 📚 API Documentation
+##  API Documentation
 
 After starting the service, visit:
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Backend Technologies
 - **FastAPI**: Modern Python web framework with async support
@@ -336,7 +336,7 @@ After starting the service, visit:
 - **Playwright**: High-quality HTML to PDF export
 - **Apryse SDK**: Professional PPTX generation and conversion
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome all forms of contributions!
 
@@ -352,7 +352,7 @@ For details, please see [Contributing Guide](CONTRIBUTING.md).
 ### Reporting Issues
 If you find bugs or have feature suggestions, please create a new issue on the [Issues](https://github.com/sligter/LandPPT/issues) page.
 
-## ❓ FAQ
+##  FAQ
 
 ### Q: Which AI models are supported?
 A: Supports OpenAI GPT, Anthropic Claude, Google Gemini, Azure OpenAI, and Ollama local models. You can switch between different AI providers in the configuration page.
@@ -385,15 +385,15 @@ A: Fully supports local deployment, can use Docker or direct installation. Suppo
 ### Q: How to export PPTX format?
 A: Need to configure `APRYSE_LICENSE_KEY`, then select PPTX format in export options.
 
-## 📄 License
+##  License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
-## 🌟 Star History
+##  Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sligter/LandPPT&type=Date)](https://star-history.com/#sligter/LandPPT&Date)
 
-## 📞 Contact Us
+##  Contact Us
 
 - **Project Homepage**: https://github.com/sligter/LandPPT
 - **Issue Reporting**: https://github.com/sligter/LandPPT/issues
@@ -405,8 +405,8 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE
 
 <div align="center">
 
-**If this project helps you, please give us a ⭐️ Star!**
+**If this project helps you, please give us a  Star!**
 
-Made with ❤️ by the LandPPT Team
+Made with  by the LandPPT Team
 
 </div>
