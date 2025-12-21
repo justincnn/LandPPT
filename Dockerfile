@@ -45,6 +45,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app/src:/opt/venv/lib/python3.11/site-packages \
     PATH=/opt/venv/bin:$PATH \
+    PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright \
     HOME=/root \
     VIRTUAL_ENV=/opt/venv
 
@@ -81,18 +82,20 @@ RUN apt-get update && \
 
 # Create non-root user (for compatibility, but run as root)
 RUN groupadd -r landppt && \
-    useradd -r -g landppt -m -d /home/landppt landppt
+    useradd -r -g landppt -m -d /home/landppt landppt && \
+    mkdir -p /home/landppt/.cache/ms-playwright /root/.cache/ms-playwright
 
 # Copy Python packages from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Skip Playwright browser download - use system chromium installed via apt
-# Set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH to use system chromium
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
-
-# Set permissions for landppt user
-RUN chown -R landppt:landppt /home/landppt && \
-    rm -rf /tmp/* /var/tmp/*
+# Install Playwright browsers (chromium) - package already installed in builder stage
+# Need to run apt-get update first because install-deps uses apt
+RUN apt-get update && \
+    python -m playwright install-deps chromium && \
+    python -m playwright install chromium && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    chown -R landppt:landppt /home/landppt
 
 # Set work directory
 WORKDIR /app
