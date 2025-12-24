@@ -44,7 +44,7 @@ RUN uv sync --frozen --no-dev --extra-index-url=https://pypi.apryse.com && \
 # This downloads chromium to /opt/playwright-browsers (system libs are installed in production stage)
 RUN set -eux; \
     mkdir -p /opt/playwright-browsers; \
-    /opt/venv/bin/python -c "import playwright; print('Playwright version:', playwright.__version__)"; \
+    /opt/venv/bin/python -c "from importlib.metadata import version; print('Playwright version:', version('playwright'))"; \
     export DEBUG=pw:install; \
     for i in 1 2 3; do \
       /opt/venv/bin/python -m playwright install chromium && exit 0; \
