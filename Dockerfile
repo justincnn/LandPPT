@@ -32,7 +32,7 @@ COPY src/ ./src/
 # Install Python dependencies using uv
 # uv sync will create venv at UV_PROJECT_ENVIRONMENT and install all dependencies
 RUN uv sync && \
-    uv pip install apryse-sdk>=11.5.0 --extra-index-url=https://pypi.apryse.com && \
+    uv pip install 'apryse-sdk>=11.5.0' --extra-index-url=https://pypi.apryse.com && \
     # Verify key packages are installed
     /opt/venv/bin/python -c "import uvicorn; import playwright; import fastapi" && \
     # Clean up build artifacts
@@ -40,14 +40,8 @@ RUN uv sync && \
     find /opt/venv -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Install Playwright browsers in builder stage
-# This downloads chromium to /opt/playwright-browsers
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-    libgbm1 libasound2 libpango-1.0-0 libcairo2 \
-    && /opt/venv/bin/python -m playwright install chromium \
-    && rm -rf /var/lib/apt/lists/*
+# This downloads chromium to /opt/playwright-browsers (system libs are installed in production stage)
+RUN /opt/venv/bin/python -m playwright install chromium
 
 # Production stage
 FROM python:3.11-slim-bookworm AS production
