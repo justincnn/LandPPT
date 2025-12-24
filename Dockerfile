@@ -2,7 +2,7 @@
 # Multi-stage build for minimal image size
 
 # Build stage
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bookworm AS builder
 
 # Set environment variables for build
 ENV PYTHONUNBUFFERED=1 \
@@ -16,6 +16,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -49,7 +50,9 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Production stage
-FROM python:3.11-slim AS production
+FROM python:3.11-slim-bookworm AS production
+
+ARG TARGETARCH
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -98,7 +101,9 @@ RUN apt-get update && \
     && \
     # Download and install wkhtmltopdf from official releases
     WKHTMLTOPDF_VERSION="0.12.6.1-3" && \
-    wget -q "https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}.bookworm_amd64.deb" -O /tmp/wkhtmltox.deb && \
+    WKHTML_ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
+    case "$WKHTML_ARCH" in amd64|arm64) ;; *) echo "Unsupported wkhtmltopdf arch: $WKHTML_ARCH" >&2; exit 1 ;; esac && \
+    wget -q "https://github.com/wkhtmltopdf/packaging/releases/download/${WKHTMLTOPDF_VERSION}/wkhtmltox_${WKHTMLTOPDF_VERSION}.bookworm_${WKHTML_ARCH}.deb" -O /tmp/wkhtmltox.deb && \
     dpkg -i /tmp/wkhtmltox.deb || apt-get install -f -y && \
     rm /tmp/wkhtmltox.deb && \
     fc-cache -fv && \
