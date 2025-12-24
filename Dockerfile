@@ -10,7 +10,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
-    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers \
+    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 
 # Install build dependencies
 RUN apt-get update && \
@@ -19,6 +20,7 @@ RUN apt-get update && \
     ca-certificates \
     curl \
     git \
+    libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster dependency management
@@ -41,7 +43,14 @@ RUN uv sync && \
 
 # Install Playwright browsers in builder stage
 # This downloads chromium to /opt/playwright-browsers (system libs are installed in production stage)
-RUN /opt/venv/bin/python -m playwright install chromium
+RUN set -eux; \
+    mkdir -p /opt/playwright-browsers; \
+    for i in 1 2 3; do \
+      /opt/venv/bin/python -m playwright install chromium && break; \
+      echo "Playwright Chromium install failed (attempt $i)" >&2; \
+      if [ "$i" -eq 3 ]; then exit 1; fi; \
+      sleep 5; \
+    done
 
 # Production stage
 FROM python:3.11-slim-bookworm AS production
@@ -66,6 +75,7 @@ RUN apt-get update && \
     curl \
     wget \
     libgomp1 \
+    libatomic1 \
     fonts-liberation \
     fonts-noto-cjk \
     fontconfig \
