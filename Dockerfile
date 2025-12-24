@@ -28,13 +28,12 @@ RUN pip install --no-cache-dir uv
 
 # Set work directory and copy dependency files
 WORKDIR /app
-COPY pyproject.toml uv.lock* README.md ./
+COPY pyproject.toml uv.lock* uv.toml README.md ./
 COPY src/ ./src/
 
 # Install Python dependencies using uv
 # uv sync will create venv at UV_PROJECT_ENVIRONMENT and install all dependencies
-RUN uv sync && \
-    uv pip install 'apryse-sdk>=11.5.0' --extra-index-url=https://pypi.apryse.com && \
+RUN uv sync --frozen --no-dev --extra-index-url=https://pypi.apryse.com && \
     # Verify key packages are installed
     /opt/venv/bin/python -c "import uvicorn; import playwright; import fastapi" && \
     # Clean up build artifacts
