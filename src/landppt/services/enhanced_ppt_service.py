@@ -1341,13 +1341,17 @@ Please fully utilize the above research information to enrich the PPT content, e
                             # 创建文件大纲生成请求，使用现有的generate_outline_from_file方法
                             from ..api.models import FileOutlineGenerationRequest
 
+                            language = "zh"
+                            if project.project_metadata and isinstance(project.project_metadata, dict):
+                                language = project.project_metadata.get("language", "zh")
+
                             file_request = FileOutlineGenerationRequest(
                                 file_path=temp_research_file,
                                 filename=f"research_{project.topic}.md",
                                 topic=confirmed_requirements.get('topic', project.topic),
                                 scenario=confirmed_requirements.get('type', project.scenario),
                                 requirements=confirmed_requirements.get('requirements', project.requirements),
-                                language="zh",
+                                language=language,
                                 page_count_mode=confirmed_requirements.get('page_count_settings', {}).get('mode', 'ai_decide'),
                                 min_pages=confirmed_requirements.get('page_count_settings', {}).get('min_pages', 8),
                                 max_pages=confirmed_requirements.get('page_count_settings', {}).get('max_pages', 15),
@@ -6537,6 +6541,7 @@ Please fully utilize the above research information to enrich the PPT content, e
     def _convert_summeryfile_outline_to_landppt(self, summery_outline, request) -> Dict[str, Any]:
         """将summeryanyfile的大纲格式转换为LandPPT格式"""
         try:
+            language = getattr(request, "language", None) or "zh"
             slides = []
 
             for i, slide in enumerate(summery_outline.slides):
@@ -6575,17 +6580,17 @@ Please fully utilize the above research information to enrich the PPT content, e
                 "title": summery_outline.title,
                 "slides": slides,
                 "metadata": {
-                    "scenario": request.scenario,
-                    "language": "zh",
+                    "scenario": getattr(request, "scenario", "general"),
+                    "language": language,
                     "total_slides": len(slides),
                     "generated_with_summeryfile": True,
-                    "file_source": request.filename,
+                    "file_source": getattr(request, "filename", ""),
                     "page_count_mode": summery_outline.page_count_mode,
                     "total_pages": summery_outline.total_pages,
-                    "ppt_style": request.ppt_style,
-                    "focus_content": request.focus_content,
-                    "tech_highlights": request.tech_highlights,
-                    "target_audience": request.target_audience
+                    "ppt_style": getattr(request, "ppt_style", "general"),
+                    "focus_content": getattr(request, "focus_content", []),
+                    "tech_highlights": getattr(request, "tech_highlights", []),
+                    "target_audience": getattr(request, "target_audience", None)
                 }
             }
 
@@ -6594,6 +6599,7 @@ Please fully utilize the above research information to enrich the PPT content, e
         except Exception as e:
             logger.error(f"大纲格式转换失败: {e}")
             # 返回基本格式
+            language = getattr(request, "language", None) or "zh"
             return {
                 "title": request.topic or "文档演示",
                 "slides": [
@@ -6601,13 +6607,13 @@ Please fully utilize the above research information to enrich the PPT content, e
                         "id": 1,
                         "type": "title",
                         "title": request.topic or "文档演示",
-                        "subtitle": "基于文档内容生成",
+                        "subtitle": "基于文档内容生成" if language == "zh" else "Generated from document content",
                         "content": ""
                     }
                 ],
                 "metadata": {
-                    "scenario": request.scenario,
-                    "language": "zh",
+                    "scenario": getattr(request, "scenario", "general"),
+                    "language": language,
                     "total_slides": 1,
                     "generated_with_summeryfile": False,
                     "error": str(e)

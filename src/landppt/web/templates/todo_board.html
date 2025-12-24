@@ -1210,6 +1210,15 @@
     let pendingOutlineData = null;
     const MAX_OUTLINE_RENDER_RETRIES = 5;
 
+    const projectMetadata = {{ (project.project_metadata if project and project.project_metadata else {}) | tojson }};
+    const hasProjectLanguage = (
+        projectMetadata &&
+        typeof projectMetadata === 'object' &&
+        typeof projectMetadata.language === 'string' &&
+        projectMetadata.language.trim()
+    );
+    const projectLanguage = hasProjectLanguage ? projectMetadata.language.trim() : null;
+
     // Helper function to convert language code to display name
     function getLanguageDisplayName(languageCode) {
         const languageMap = {
@@ -1222,6 +1231,20 @@
             'es': 'Español'
         };
         return languageMap[languageCode] || languageCode || '中文';
+    }
+
+    function getOutlineLanguageCode(outline) {
+        const candidates = [
+            projectLanguage,
+            outline?.metadata?.language,
+            outline?.language
+        ];
+        for (const candidate of candidates) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+                return candidate.trim();
+            }
+        }
+        return 'zh';
     }
 
     function setOutlineLoadingState(isLoading) {
@@ -4819,7 +4842,7 @@
         <p style="color: #7f8c8d; margin: 0;">
             总共 ${outline.slides.length} 页幻灯片 |
             场景: ${outline.metadata?.scenario || '未指定'} |
-            语言: ${getLanguageDisplayName(outline.metadata?.language)}
+            语言: ${getLanguageDisplayName(getOutlineLanguageCode(outline))}
         </p>
     `;
         container.appendChild(titleSection);

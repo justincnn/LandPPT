@@ -1369,6 +1369,7 @@ async def regenerate_outline(
                 scenario=project_request.scenario,
                 requirements=confirmed_requirements.get('requirements', ''),
                 target_audience=confirmed_requirements.get('target_audience', '普通大众'),
+                language=language,
                 page_count_mode=page_count_settings.get('mode', 'ai_decide'),
                 min_pages=page_count_settings.get('min_pages', 5),
                 max_pages=page_count_settings.get('max_pages', 20),
@@ -1525,6 +1526,11 @@ async def generate_file_outline(
                         project_reqs = project.requirements or ''
                         final_reqs = confirmed_reqs or project_reqs
 
+                        # Extract language from project metadata (set during project creation)
+                        language = "zh"
+                        if project.project_metadata and isinstance(project.project_metadata, dict):
+                            language = project.project_metadata.get("language", "zh")
+
                         file_request = FileOutlineGenerationRequest(
                             filename=file_info.get('filename', 'uploaded_file'),
                             file_path=file_info.get('file_path', ''),
@@ -1532,6 +1538,7 @@ async def generate_file_outline(
                             scenario='general',
                             requirements=final_reqs,
                             target_audience=project.confirmed_requirements.get('target_audience', '普通大众'),
+                            language=language,
                             page_count_mode=project.confirmed_requirements.get('page_count_settings', {}).get('mode', 'ai_decide'),
                             min_pages=project.confirmed_requirements.get('page_count_settings', {}).get('min_pages', 8),
                             max_pages=project.confirmed_requirements.get('page_count_settings', {}).get('max_pages', 15),
@@ -6438,9 +6445,10 @@ async def _process_uploaded_files_for_outline(
                 file_path=merged_file_path,
                 filename=merged_filename,
                 topic=topic if topic.strip() else None,
-                scenario="general",
+                scenario=scenario,
                 requirements=requirements,
                 target_audience=target_audience,
+                language=language,
                 page_count_mode=page_count_mode,
                 min_pages=min_pages,
                 max_pages=max_pages,
