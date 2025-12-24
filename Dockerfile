@@ -45,12 +45,15 @@ RUN uv sync && \
 # This downloads chromium to /opt/playwright-browsers (system libs are installed in production stage)
 RUN set -eux; \
     mkdir -p /opt/playwright-browsers; \
+    /opt/venv/bin/python -c "import playwright; print('Playwright version:', playwright.__version__)"; \
+    export DEBUG=pw:install; \
     for i in 1 2 3; do \
-      /opt/venv/bin/python -m playwright install chromium && break; \
+      /opt/venv/bin/python -m playwright install chromium && exit 0; \
       echo "Playwright Chromium install failed (attempt $i)" >&2; \
-      if [ "$i" -eq 3 ]; then exit 1; fi; \
       sleep 5; \
-    done
+    done; \
+    echo "Retrying Playwright download with mirror (npmmirror.com)..." >&2; \
+    PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright /opt/venv/bin/python -m playwright install chromium
 
 # Production stage
 FROM python:3.11-slim-bookworm AS production
