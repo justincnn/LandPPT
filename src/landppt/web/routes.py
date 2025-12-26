@@ -129,6 +129,15 @@ class ImagePPTXExportRequest(BaseModel):
     slides: Optional[List[Dict[str, Any]]] = None  # 包含index, html_content, title
     images: Optional[List[Dict[str, Any]]] = None  # 包含index, data(base64), width, height (向后兼容)
 
+class SlideBatchRegenerateRequest(BaseModel):
+    """Batch slide regeneration request (0-based indices)."""
+    slide_indices: Optional[List[int]] = None
+    regenerate_all: bool = False
+    scenario: Optional[str] = None
+    topic: Optional[str] = None
+    requirements: Optional[str] = None
+    language: str = "zh"
+
 # Helper function to extract slides from HTML content
 async def _extract_slides_from_html(slides_html: str, existing_slides_data: list) -> list:
     """
@@ -2313,6 +2322,149 @@ async def regenerate_slide(project_id: str, slide_number: int):
             "slide_data": project.slides_data[slide_number - 1]
         }
 
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@router.post("/api/projects/{project_id}/slides/batch-regenerate")
+async def batch_regenerate_slides(project_id: str, payload: SlideBatchRegenerateRequest):
+    """Regenerate multiple slides (or all slides) in one request."""
+    try:
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        if not project.outline:
+            raise HTTPException(status_code=400, detail="Project outline not found")
+
+        if not project.confirmed_requirements:
+            raise HTTPException(status_code=400, detail="Project requirements not confirmed")
+
+        if isinstance(project.outline, dict):
+            outline_slides = project.outline.get("slides", [])
+            outline_title = project.outline.get("title", project.title)
+        else:
+            outline_slides = project.outline.slides if hasattr(project.outline, "slides") else []
+            outline_title = project.outline.title if hasattr(project.outline, "title") else project.title
+
+        total_slides = len(outline_slides)
+        if total_slides <= 0:
+            raise HTTPException(status_code=400, detail="No slides found in outline")
+
+        # Determine target indices (0-based).
+        if payload.regenerate_all or not payload.slide_indices:
+            target_indices = list(range(total_slides))
+        else:
+            target_indices = sorted(set(payload.slide_indices))
+
+        invalid_indices = [i for i in target_indices if i < 0 or i >= total_slides]
+        if invalid_indices:
+            raise HTTPException(status_code=400, detail=f"Invalid slide indices: {invalid_indices}")
+
+        # Prepare generation context once.
+        system_prompt = ppt_service._load_prompts_md_system_prompt()
+        selected_template = await ppt_service._ensure_global_master_template_selected(project_id)
+
+        if project.slides_data is None:
+            project.slides_data = []
+
+        # Ensure slides_data has enough entries for all slides.
+        while len(project.slides_data) < total_slides:
+            page_number = len(project.slides_data) + 1
+            project.slides_data.append({
+                "page_number": page_number,
+                "title": f"Slide {page_number}",
+                "html_content": "<div>Pending</div>",
+                "slide_type": "content",
+                "content_points": [],
+                "is_user_edited": False
+            })
+
+        results: List[Dict[str, Any]] = []
+
+        for slide_index in target_indices:
+            slide_number = slide_index + 1  # 1-based for prompts/templates
+            slide_outline = outline_slides[slide_index]
+            try:
+                if selected_template:
+                    new_html_content = await ppt_service._generate_slide_with_template(
+                        slide_outline,
+                        selected_template,
+                        slide_number,
+                        total_slides,
+                        project.confirmed_requirements
+                    )
+                else:
+                    new_html_content = await ppt_service._generate_single_slide_html_with_prompts(
+                        slide_outline,
+                        project.confirmed_requirements,
+                        system_prompt,
+                        slide_number,
+                        total_slides,
+                        outline_slides,
+                        project.slides_data,
+                        project_id=project_id
+                    )
+
+                existing_slide = project.slides_data[slide_index] if slide_index < len(project.slides_data) else {}
+                updated_slide = {
+                    "page_number": slide_number,
+                    "title": slide_outline.get("title", existing_slide.get("title", f"Slide {slide_number}")),
+                    "html_content": new_html_content,
+                    "slide_type": slide_outline.get("slide_type", existing_slide.get("slide_type", "content")),
+                    "content_points": slide_outline.get("content_points", existing_slide.get("content_points", [])),
+                    "is_user_edited": existing_slide.get("is_user_edited", False),
+                    **{k: v for k, v in (existing_slide or {}).items() if k not in ["page_number", "title", "html_content", "slide_type", "content_points", "is_user_edited"]}
+                }
+
+                project.slides_data[slide_index] = updated_slide
+
+                results.append({
+                    "slide_index": slide_index,
+                    "slide_number": slide_number,
+                    "success": True,
+                    "slide_data": updated_slide
+                })
+            except Exception as e:
+                logger.error(f"Batch regenerate failed for project {project_id} slide {slide_number}: {e}")
+                results.append({
+                    "slide_index": slide_index,
+                    "slide_number": slide_number,
+                    "success": False,
+                    "error": str(e)
+                })
+
+        # Rebuild combined HTML once.
+        project.slides_html = ppt_service._combine_slides_to_full_html(project.slides_data, outline_title)
+        project.updated_at = time.time()
+
+        updated_count = len([r for r in results if r.get("success")])
+
+        # Persist: save regenerated slides and update project HTML.
+        try:
+            from ..services.db_project_manager import DatabaseProjectManager
+            db_manager = DatabaseProjectManager()
+
+            for r in results:
+                if not r.get("success") or not r.get("slide_data"):
+                    continue
+                await db_manager.save_single_slide(project_id, int(r["slide_index"]), r["slide_data"])
+
+            await db_manager.update_project_data(project_id, {
+                "slides_html": project.slides_html,
+                "updated_at": project.updated_at
+            })
+        except Exception as save_error:
+            logger.error(f"Batch regenerate DB save failed for project {project_id}: {save_error}")
+
+        return {
+            "success": updated_count > 0,
+            "updated_count": updated_count,
+            "total_requested": len(target_indices),
+            "results": results
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         return {"success": False, "error": str(e)}
 
