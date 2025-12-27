@@ -1991,6 +1991,175 @@
             animation: spin 1s linear infinite;
         }
 
+        /* AI自由对话按钮样式 */
+        .ai-native-dialog-btn {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(31, 38, 135, 0.1);
+        }
+
+        .ai-native-dialog-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .ai-native-dialog-btn:hover {
+            background: rgba(13, 110, 253, 0.08);
+            border-color: rgba(13, 110, 253, 0.28);
+            color: rgba(13, 110, 253, 0.95);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.18);
+        }
+
+        .ai-native-dialog-btn:hover::before {
+            left: 100%;
+        }
+
+        /* 自由对话 Dialog */
+        .ai-native-chat-dialog {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 0;
+            width: min(960px, calc(100vw - 48px));
+            height: min(78vh, 760px);
+            box-shadow: var(--shadow-soft);
+            background: var(--surface-elevated);
+            overflow: hidden;
+        }
+
+        .ai-native-chat-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .ai-native-chat-dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .ai-native-chat-dialog-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .ai-native-chat-dialog-close {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius-md);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ai-native-chat-dialog-close:hover {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .ai-native-chat-dialog-body {
+            height: calc(100% - 62px - 78px);
+            padding: var(--spacing-md);
+            overflow: hidden;
+        }
+
+        .ai-native-chat-dialog-body .ai-chat-messages {
+            height: 100%;
+        }
+
+        .ai-native-chat-dialog-footer {
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+        }
+
+        .ai-native-chat-input-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .ai-native-chat-input {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            outline: none;
+            background: var(--surface-elevated);
+        }
+
+        .ai-native-chat-input:focus {
+            border-color: rgba(13, 110, 253, 0.55);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        .ai-native-chat-send-btn {
+            background: var(--accent-color);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--border-radius-md);
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .ai-native-chat-send-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .ai-native-chat-send-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .ai-native-chat-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-sm);
+        }
+
         /* 快速编辑模式样式 */
         .quick-edit-mode .slide-frame {
             cursor: pointer;
@@ -4866,8 +5035,8 @@
                         <button class="ai-vision-toggle-btn" id="aiVisionToggleBtn" onclick="toggleVisionMode()" title="启用视觉模式 - AI将能看到当前幻灯片">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="ai-regenerate-btn" onclick="quickRegenerateSlide()" title="重新生成当前幻灯片">
-                            <i class="fas fa-sync"></i>
+                        <button class="ai-native-dialog-btn" type="button" onclick="openNativeChatDialog()" title="自由对话（仅当前页）">
+                            <i class="fas fa-comments"></i>
                         </button>
                         <button class="ai-clear-context-btn" onclick="clearAIContext()" title="清除对话上下文">
                             <i class="fas fa-trash"></i>
@@ -4893,6 +5062,41 @@
             </div>
         </div>
     </div>
+
+    <!-- AI自由对话（仅当前页） -->
+    <dialog class="ai-native-chat-dialog" id="aiNativeChatDialog">
+        <div class="ai-native-chat-dialog-header">
+            <div class="ai-native-chat-dialog-title">
+                <i class="fas fa-comments"></i>
+                <span>自由对话（仅当前页）</span>
+            </div>
+            <button class="ai-native-chat-dialog-close" type="button" onclick="closeNativeChatDialog()" title="关闭">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ai-native-chat-dialog-body">
+            <div class="ai-chat-messages" id="aiNativeChatMessages"></div>
+        </div>
+        <div class="ai-native-chat-dialog-footer">
+            <div class="ai-native-chat-input-row">
+                <input class="ai-native-chat-input" id="aiNativeInputBox" type="text" placeholder="和当前页对话…" autocomplete="off">
+                <button class="ai-native-chat-send-btn" id="aiNativeSendBtn" type="button" onclick="sendNativeChatMessage()">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
+                <button class="ai-image-upload-btn" id="aiNativeImageUploadBtn" type="button" onclick="triggerNativeImageUpload()" title="上传图片（也支持粘贴图片）">
+                    <i class="fas fa-image"></i>
+                </button>
+                <button class="ai-clear-context-btn" id="aiNativeClearContextBtn" type="button" onclick="clearNativeChatContext()" title="清除对话上下文">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="ai-native-chat-hint">
+                <span>不设系统提示词，仅带当前页信息；支持粘贴/上传图片对话。</span>
+            </div>
+            <input type="file" id="aiNativeImageFileInput" accept="image/*" multiple style="display: none;">
+            <div class="ai-uploaded-images" id="aiNativeUploadedImages"></div>
+        </div>
+    </dialog>
 
     <script id="projectDataScript" type="application/json">{{ {'projectId': project.project_id}|tojson|safe }}</script>
     <script id="projectSlidesScript" type="application/json">{{ {'slides': project.slides_data or []}|tojson|safe }}</script>
@@ -7468,6 +7672,489 @@
                 closeAIEditSidebar();
             } else {
                 showNotification('请先选择一个幻灯片', 'warning');
+            }
+        }
+
+        // 自由对话（仅当前页）
+        let isNativeChatSending = false;
+        const nativeChatHistory = {}; // key: slideIndex, value: [{role, content, timestamp}]
+        let isNativeImageUploading = false;
+        const nativeUploadedImagesBySlide = {}; // key: slideIndex, value: [{id,name,size,url}]
+
+        function openNativeChatDialog() {
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            const dialog = document.getElementById('aiNativeChatDialog');
+            if (!dialog) return;
+            if (typeof dialog.showModal !== 'function') {
+                alert('当前浏览器不支持自由对话框（<dialog>）。');
+                return;
+            }
+
+            renderNativeChatMessages();
+            renderNativeUploadedImages();
+            updateNativeUploadButtonState();
+            dialog.showModal();
+
+            setTimeout(() => {
+                const input = document.getElementById('aiNativeInputBox');
+                if (input) input.focus();
+            }, 50);
+        }
+
+        function closeNativeChatDialog() {
+            const dialog = document.getElementById('aiNativeChatDialog');
+            if (dialog && dialog.open) {
+                dialog.close();
+            }
+        }
+
+        function renderNativeChatMessages() {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'ai-message system';
+            systemDiv.innerHTML = `
+                <div style="text-align: center; padding: var(--spacing-sm);">
+                    <div style="font-size: 1.8rem; margin-bottom: var(--spacing-sm); color: var(--text-secondary);">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div style="font-weight: 700; margin-bottom: var(--spacing-xs); color: var(--text-primary);">
+                        自由对话（仅当前页）
+                    </div>
+                    <div style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-muted);">
+                        这里不设置系统提示词；每次仅携带当前页信息进行对话。支持粘贴或上传图片参与对话。
+                    </div>
+                </div>
+            `;
+            container.appendChild(systemDiv);
+
+            if (!nativeChatHistory[currentSlideIndex]) {
+                nativeChatHistory[currentSlideIndex] = [];
+            }
+            for (const msg of nativeChatHistory[currentSlideIndex]) {
+                appendNativeChatMessageToDom(msg.role, msg.content);
+            }
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearNativeChatContext() {
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            if (!confirm('确定要清除当前页的自由对话上下文吗？这将删除该页的对话记录和已添加图片。')) {
+                return;
+            }
+
+            nativeChatHistory[currentSlideIndex] = [];
+            nativeUploadedImagesBySlide[currentSlideIndex] = [];
+            renderNativeChatMessages();
+            renderNativeUploadedImages();
+            updateNativeUploadButtonState();
+            showNotification('自由对话上下文已清除', 'info');
+        }
+
+        function appendNativeChatMessageToDom(role, content, messageId = null) {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return null;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `ai-message ${role === 'user' ? 'user' : 'assistant'}`;
+            if (messageId) messageDiv.id = messageId;
+
+            if (role === 'user') {
+                messageDiv.textContent = content;
+            } else {
+                messageDiv.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            }
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            return messageDiv;
+        }
+
+        function addNativeWaitingAnimation() {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return null;
+            const waitingDiv = document.createElement('div');
+            waitingDiv.className = 'ai-message assistant ai-waiting';
+            waitingDiv.id = 'ai-native-waiting';
+            waitingDiv.innerHTML = `
+                <div class="ai-typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span style="margin-left: 10px;">AI正在思考中...</span>
+            `;
+            container.appendChild(waitingDiv);
+            container.scrollTop = container.scrollHeight;
+            return waitingDiv;
+        }
+
+        function removeNativeWaitingAnimation() {
+            const waitingDiv = document.getElementById('ai-native-waiting');
+            if (waitingDiv) waitingDiv.remove();
+        }
+
+        function getNativeUploadedImages() {
+            if (!nativeUploadedImagesBySlide[currentSlideIndex]) {
+                nativeUploadedImagesBySlide[currentSlideIndex] = [];
+            }
+            return nativeUploadedImagesBySlide[currentSlideIndex];
+        }
+
+        function updateNativeUploadButtonState() {
+            const btn = document.getElementById('aiNativeImageUploadBtn');
+            const images = getNativeUploadedImages();
+            if (!btn) return;
+            if (images.length === 0) {
+                btn.classList.remove('has-images');
+                btn.removeAttribute('data-count');
+            } else {
+                btn.classList.add('has-images');
+                btn.setAttribute('data-count', images.length);
+            }
+        }
+
+        function renderNativeUploadedImages() {
+            const container = document.getElementById('aiNativeUploadedImages');
+            if (!container) return;
+
+            const images = getNativeUploadedImages();
+            container.innerHTML = '';
+
+            images.forEach((image, index) => {
+                const imageDiv = document.createElement('div');
+                imageDiv.className = 'ai-uploaded-image';
+                const previewUrl = image.dataUrl || image.url;
+
+                imageDiv.innerHTML = `
+                    <img src="${previewUrl}" alt="${escapeHtml(image.name)}" onclick="showNativeUploadedImagePreview(${index})">
+                    <button class="ai-image-remove" onclick="removeNativeUploadedImage(${index}); event.stopPropagation();" title="移除图片">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="ai-image-info">
+                        <div style="font-weight: 600; margin-bottom: 2px;">${escapeHtml(image.name)}</div>
+                        <div style="opacity: 0.85;">${formatFileSize(image.size || 0)} · 发送时附带</div>
+                    </div>
+                `;
+
+                container.appendChild(imageDiv);
+            });
+        }
+
+        function showNativeUploadedImagePreview(index) {
+            const images = getNativeUploadedImages();
+            if (index < 0 || index >= images.length) return;
+            const image = images[index];
+            window.currentPreviewOwner = 'native_dialog';
+            window.currentPreviewNativeIndex = index;
+            const previewUrl = image.dataUrl || image.url;
+            showImagePreview({
+                id: image.id,
+                name: image.name,
+                size: image.size || 0,
+                url: previewUrl
+            });
+        }
+
+        function removeNativeUploadedImage(index) {
+            const images = getNativeUploadedImages();
+            if (index >= 0 && index < images.length) {
+                images.splice(index, 1);
+                renderNativeUploadedImages();
+                updateNativeUploadButtonState();
+            }
+        }
+
+        function triggerNativeImageUpload() {
+            if (isNativeImageUploading) {
+                showNotification('正在上传中，请稍候...', 'warning');
+                return;
+            }
+            const input = document.getElementById('aiNativeImageFileInput');
+            if (input) input.click();
+        }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('FileReader读取失败'));
+                    reader.readAsDataURL(file);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        async function uploadNativeSingleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', file.name.split('.')[0]);
+            formData.append('description', `AI自由对话上传的图片: ${file.name}`);
+            formData.append('category', 'ai_native_dialog');
+            formData.append('tags', 'ai_native_dialog,ppt_edit');
+
+            const response = await fetch('/api/image/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                return { success: false, message: result.message || '上传失败' };
+            }
+
+            const imageUrl = await getImageAbsoluteUrl(result.image_id);
+            return {
+                success: true,
+                data: {
+                    id: result.image_id,
+                    name: file.name,
+                    size: file.size,
+                    url: imageUrl
+                }
+            };
+        }
+
+        async function uploadNativeFiles(files) {
+            if (!files || files.length === 0) return;
+            if (isNativeImageUploading) return;
+
+            const supportedTypes = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+                'image/webp', 'image/bmp', 'image/svg+xml'
+            ];
+
+            const validFiles = [];
+            const errors = [];
+
+            Array.from(files).forEach(file => {
+                if (!supportedTypes.includes((file.type || '').toLowerCase())) {
+                    errors.push(`${file.name}: 不支持的图片格式 (${file.type || 'unknown'})`);
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    errors.push(`${file.name}: 文件大小超过10MB限制 (${formatFileSize(file.size)})`);
+                    return;
+                }
+                validFiles.push(file);
+            });
+
+            if (errors.length > 0) {
+                showNotification(errors[0], 'warning');
+            }
+            if (validFiles.length === 0) return;
+
+            // 限制数量，避免请求过大
+            const images = getNativeUploadedImages();
+            const maxImages = 6;
+            if (images.length + validFiles.length > maxImages) {
+                showNotification(`最多只能上传 ${maxImages} 张图片（当前已上传 ${images.length} 张）`, 'warning');
+                return;
+            }
+
+            isNativeImageUploading = true;
+            updateNativeUploadButtonState();
+            try {
+                for (const file of validFiles) {
+                    let dataUrl = null;
+                    try {
+                        const maybe = await readFileAsDataUrl(file);
+                        dataUrl = typeof maybe === 'string' ? maybe : null;
+                    } catch (e) {
+                        // 忽略读取失败，继续走上传URL
+                    }
+
+                    const result = await uploadNativeSingleFile(file);
+                    if (result.success) {
+                        images.push({
+                            ...result.data,
+                            dataUrl: dataUrl
+                        });
+                    } else {
+                        // 即使上传失败，仍允许用 dataUrl 参与对话
+                        if (dataUrl) {
+                            images.push({
+                                id: null,
+                                name: file.name,
+                                size: file.size,
+                                url: dataUrl,
+                                dataUrl: dataUrl
+                            });
+                            showNotification(`上传失败，已改用本地图片参与对话：${file.name}`, 'warning');
+                        } else {
+                            showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        }
+                    }
+                }
+                renderNativeUploadedImages();
+                updateNativeUploadButtonState();
+                showNotification(`已上传 ${validFiles.length} 张图片`, 'success');
+            } catch (e) {
+                showNotification('上传失败，请重试', 'error');
+            } finally {
+                isNativeImageUploading = false;
+                updateNativeUploadButtonState();
+            }
+        }
+
+        async function handleNativePaste(e) {
+            if (!e || !e.clipboardData) return;
+            const items = e.clipboardData.items;
+            if (!items) return;
+
+            const imageFiles = [];
+            for (const item of items) {
+                if (item && item.type && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                await uploadNativeFiles(imageFiles);
+            }
+        }
+
+        async function sendNativeChatMessage() {
+            const inputBox = document.getElementById('aiNativeInputBox');
+            const sendBtn = document.getElementById('aiNativeSendBtn');
+            if (!inputBox || !sendBtn) return;
+
+            let message = inputBox.value.trim();
+            if (!message || isNativeChatSending) return;
+
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            isNativeChatSending = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 响应中...';
+            inputBox.disabled = true;
+
+            if (!nativeChatHistory[currentSlideIndex]) nativeChatHistory[currentSlideIndex] = [];
+
+            // 仅发送“此前”历史，避免当前用户消息重复进入上下文
+            const chatHistory = nativeChatHistory[currentSlideIndex].map(m => ({
+                role: m.role,
+                content: m.content
+            }));
+
+            // 用户消息入历史 + UI
+            nativeChatHistory[currentSlideIndex].push({ role: 'user', content: message, timestamp: Date.now() });
+            appendNativeChatMessageToDom('user', message);
+            inputBox.value = '';
+
+            addNativeWaitingAnimation();
+
+            try {
+                const currentSlide = slidesData[currentSlideIndex];
+                const referencedImages = getNativeUploadedImages().map(image => ({
+                    id: image.id,
+                    name: image.name,
+                    size: image.size > 0 ? formatFileSize(image.size) : '未知大小',
+                    url: image.dataUrl || image.url
+                }));
+
+                const payload = {
+                    slideIndex: currentSlideIndex + 1,
+                    slideTitle: currentSlide.title,
+                    slideContent: currentSlide.html_content,
+                    userRequest: message,
+                    chatHistory: chatHistory,
+                    images: referencedImages
+                };
+
+                const response = await fetch('/api/ai/slide-native-dialog/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                await handleNativeStreamingResponse(response);
+            } catch (error) {
+                removeNativeWaitingAnimation();
+                appendNativeChatMessageToDom('assistant', '抱歉，无法连接到AI服务。请稍后重试。');
+            } finally {
+                isNativeChatSending = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+                inputBox.disabled = false;
+                inputBox.focus();
+            }
+        }
+
+        async function handleNativeStreamingResponse(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let aiMessageDiv = null;
+            let fullResponse = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim().startsWith('data: ')) continue;
+                    const dataStr = line.slice(6).trim();
+                    if (!dataStr) continue;
+
+                    let data;
+                    try {
+                        data = JSON.parse(dataStr);
+                    } catch {
+                        continue;
+                    }
+
+                    if (data.type === 'start') {
+                        removeNativeWaitingAnimation();
+                        const messageId = 'ai-native-streaming-' + Date.now();
+                        aiMessageDiv = appendNativeChatMessageToDom('assistant', '', messageId);
+                    } else if (data.type === 'content' && data.content) {
+                        fullResponse += data.content;
+                        if (aiMessageDiv) {
+                            aiMessageDiv.innerHTML = escapeHtml(fullResponse).replace(/\n/g, '<br>');
+                            const container = document.getElementById('aiNativeChatMessages');
+                            if (container) container.scrollTop = container.scrollHeight;
+                        }
+                    } else if (data.type === 'complete') {
+                        fullResponse = data.fullResponse || fullResponse;
+                        if (aiMessageDiv) {
+                            aiMessageDiv.innerHTML = escapeHtml(fullResponse).replace(/\n/g, '<br>');
+                        }
+                        if (!nativeChatHistory[currentSlideIndex]) nativeChatHistory[currentSlideIndex] = [];
+                        nativeChatHistory[currentSlideIndex].push({ role: 'assistant', content: fullResponse, timestamp: Date.now() });
+                        return;
+                    } else if (data.type === 'error') {
+                        removeNativeWaitingAnimation();
+                        const err = data.error || '未知错误';
+                        appendNativeChatMessageToDom('assistant', '抱歉，处理您的请求时出现了错误：' + err);
+                        return;
+                    }
+                }
             }
         }
 
@@ -11116,6 +11803,31 @@
                 });
             }
 
+            // 绑定自由对话输入框回车键事件
+            const aiNativeInputBox = document.getElementById('aiNativeInputBox');
+            if (aiNativeInputBox) {
+                aiNativeInputBox.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        sendNativeChatMessage();
+                    }
+                });
+                aiNativeInputBox.addEventListener('paste', handleNativePaste);
+            }
+
+            // 绑定自由对话图片上传
+            const aiNativeImageFileInput = document.getElementById('aiNativeImageFileInput');
+            if (aiNativeImageFileInput) {
+                aiNativeImageFileInput.addEventListener('change', function(e) {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                        uploadNativeFiles(files);
+                    }
+                    // 允许重复选择同一文件
+                    e.target.value = '';
+                });
+            }
+
             // 确保第一张幻灯片被选中
             if (hasSlidesData && slidesData.length > 0) {
                 selectSlide(0);
@@ -11794,6 +12506,8 @@
             const overlay = document.getElementById('imagePreviewOverlay');
             overlay.style.display = 'none';
             currentPreviewImage = null;
+            window.currentPreviewOwner = null;
+            window.currentPreviewNativeIndex = null;
 
             // 恢复页面滚动
             document.body.style.overflow = '';
@@ -11816,6 +12530,17 @@
 
         function removeCurrentImage() {
             if (!currentPreviewImage) return;
+
+            if (window.currentPreviewOwner === 'native_dialog') {
+                const idx = Number(window.currentPreviewNativeIndex);
+                if (Number.isInteger(idx) && idx >= 0) {
+                    if (confirm(`确定要移除图片 "${currentPreviewImage.name}" 吗？`)) {
+                        removeNativeUploadedImage(idx);
+                        closeImagePreview();
+                    }
+                }
+                return;
+            }
 
             const index = uploadedImages.findIndex(img => img.id === currentPreviewImage.id);
             if (index !== -1) {

@@ -82,6 +82,15 @@ class AISlideEditRequest(BaseModel):
     visionEnabled: Optional[bool] = False  # 新增：视觉模式启用状态
     slideScreenshot: Optional[str] = None  # 新增：幻灯片截图数据（base64格式）
 
+# AI自由对话请求数据模型（不设系统提示词，仅当前页）
+class AISlideNativeDialogRequest(BaseModel):
+    slideIndex: int
+    slideTitle: str
+    slideContent: str
+    userRequest: str
+    chatHistory: Optional[List[Dict[str, str]]] = None
+    images: Optional[List[Dict[str, str]]] = None  # 粘贴/上传图片信息列表（url/id/name/size）
+
 # AI要点增强请求数据模型
 class AIBulletPointEnhanceRequest(BaseModel):
     slideIndex: int
@@ -2847,6 +2856,118 @@ async def ai_slide_edit_stream(
             "error": str(e),
             "response": "抱歉，AI编辑服务暂时不可用。请稍后重试。"
         }
+
+@router.post("/api/ai/slide-native-dialog/stream")
+async def ai_slide_native_dialog_stream(
+    request: AISlideNativeDialogRequest,
+    user: User = Depends(get_current_user_required)
+):
+    """AI自由对话流式接口（不设系统提示词，仅当前页）"""
+    try:
+        provider, settings = get_role_provider("editor")
+
+        images_info = ""
+        if request.images:
+            images_info = f"\n用户上传/粘贴的图片数量：{len(request.images)}（图片内容在消息中以多模态形式附带）\n"
+
+        context = f"""
+当前页面信息（仅此页）：
+- 页码：第{request.slideIndex}页
+- 标题：{request.slideTitle}
+
+当前页面HTML内容：
+{request.slideContent}
+
+用户问题：
+{request.userRequest}
+{images_info}
+"""
+
+        messages: List[AIMessage] = []
+
+        # 添加对话历史（忽略 system 角色，避免“系统提示词”进入模型）
+        if request.chatHistory:
+            for chat_msg in request.chatHistory:
+                role_str = (chat_msg.get("role") or "").lower()
+                if role_str == "system":
+                    continue
+
+                if role_str == "assistant":
+                    role = MessageRole.ASSISTANT
+                else:
+                    role = MessageRole.USER
+
+                messages.append(AIMessage(role=role, content=chat_msg.get("content", "")))
+
+        # 添加当前用户请求（支持粘贴/上传图片的多模态内容）
+        if request.images and len(request.images) > 0:
+            from ..ai.base import TextContent, ImageContent
+
+            user_content = [TextContent(text=context)]
+            for img in request.images:
+                url = img.get("url")
+                if url:
+                    user_content.append(ImageContent(image_url={"url": url}))
+
+            messages.append(AIMessage(role=MessageRole.USER, content=user_content))
+        else:
+            messages.append(AIMessage(role=MessageRole.USER, content=context))
+
+        async def generate_ai_stream():
+            try:
+                yield f"data: {json.dumps({'type': 'start', 'content': ''})}\n\n"
+
+                full_response = ""
+                if hasattr(provider, "stream_chat_completion"):
+                    async for chunk in provider.stream_chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get("model"),
+                    ):
+                        if chunk:
+                            full_response += chunk
+                            yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
+                else:
+                    response = await provider.chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get("model"),
+                    )
+                    if response.content:
+                        full_response = response.content
+                        yield f"data: {json.dumps({'type': 'content', 'content': response.content})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'complete', 'content': '', 'fullResponse': full_response})}\n\n"
+
+            except Exception as e:
+                logger.error(f"AI自由对话流式请求失败: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'content': '', 'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            generate_ai_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"AI自由对话请求失败: {e}")
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'type': 'error', 'content': '', 'error': str(e)})}\n\n"]),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+            },
+        )
 
 # 大纲AI优化请求数据模型
 class OutlineAIOptimizeRequest(BaseModel):
