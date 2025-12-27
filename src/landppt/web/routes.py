@@ -2855,6 +2855,7 @@ class OutlineAIOptimizeRequest(BaseModel):
     project_info: Dict[str, Any]  # 项目信息
     optimization_type: str = "full"  # full=全大纲优化, single=单页优化
     slide_index: Optional[int] = None  # 当optimization_type=single时使用
+    language: Optional[str] = None  # 目标语言（如 zh/en/ja...），优先级高于大纲metadata.language
 
 @router.post("/api/ai/optimize-outline")
 async def ai_optimize_outline(
@@ -2874,6 +2875,43 @@ async def ai_optimize_outline(
                 "success": False,
                 "error": f"大纲JSON格式错误: {str(e)}"
             }
+
+        def _normalize_language_code(value: Any) -> Optional[str]:
+            if not isinstance(value, str):
+                return None
+            code = value.strip().lower()
+            if not code:
+                return None
+            # Normalize common variants (zh-cn -> zh, en-us -> en, etc.)
+            if code.startswith("zh"):
+                return "zh"
+            if code.startswith("en"):
+                return "en"
+            if code.startswith("ja"):
+                return "ja"
+            if code.startswith("ko"):
+                return "ko"
+            if code.startswith("fr"):
+                return "fr"
+            if code.startswith("de"):
+                return "de"
+            if code.startswith("es"):
+                return "es"
+            return code
+
+        outline_language = None
+        if isinstance(outline_data, dict):
+            metadata = outline_data.get("metadata")
+            if isinstance(metadata, dict):
+                outline_language = metadata.get("language") or outline_data.get("language")
+            else:
+                outline_language = outline_data.get("language")
+
+        target_language = (
+            _normalize_language_code(request.language)
+            or _normalize_language_code(outline_language)
+            or "zh"
+        )
         
         # 根据优化类型构建不同的提示词
         if request.optimization_type == "single" and request.slide_index is not None:
@@ -2886,7 +2924,7 @@ async def ai_optimize_outline(
             
             slide = outline_data['slides'][request.slide_index]
             
-            context = f"""
+            context = f"""Output language: {target_language}
 你是一位专业的PPT大纲设计专家。用户想要优化PPT大纲中的第{request.slide_index + 1}页内容。
 
 项目信息：
@@ -2926,7 +2964,7 @@ async def ai_optimize_outline(
 """
         else:
             # 全大纲优化
-            context = f"""
+            context = f"""Output language: {target_language}
 你是一位专业的PPT大纲设计专家。用户想要优化整个PPT大纲。
 
 项目信息：
@@ -2960,7 +2998,7 @@ async def ai_optimize_outline(
   ],
   "metadata": {{
     "scenario": "{request.project_info.get('scenario', '通用')}",
-    "language": "zh",
+    "language": "{target_language}",
     "target_audience": "{request.project_info.get('target_audience', '普通大众')}",
     "optimized": true
   }}
@@ -2977,6 +3015,7 @@ async def ai_optimize_outline(
         # 构建AI消息
         messages = [
             AIMessage(role=MessageRole.SYSTEM, content="你是一位专业的PPT大纲设计专家，擅长优化和改进PPT大纲结构和内容。你的回复必须是纯JSON格式，不要包含任何解释性文字、markdown标记或注释。"),
+            AIMessage(role=MessageRole.SYSTEM, content=f"Output language: {target_language}. Return pure JSON only."),
             AIMessage(role=MessageRole.USER, content=context)
         ]
         

@@ -14416,6 +14416,7 @@
                     body: JSON.stringify({
                         outline_content: outlineContent,
                         user_request: userRequest.trim(),
+                        language: projectOutline?.metadata?.language || 'zh',
                         project_info: {
                             topic: projectOutline.title || '未知',
                             scenario: projectOutline.metadata?.scenario || '通用',

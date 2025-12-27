@@ -6273,6 +6273,7 @@
         try {
             const outlineContent = getOutlineContentNew();
             const parsedOutline = JSON.parse(outlineContent);
+            const language = getOutlineLanguageCode(parsedOutline);
 
             // 调用AI优化接口
             const response = await fetch('/api/ai/optimize-outline', {
@@ -6283,6 +6284,7 @@
                 body: JSON.stringify({
                     outline_content: outlineContent,
                     user_request: userRequest.trim(),
+                    language,
                     project_info: {
                         topic: parsedOutline.title || '未知',
                         scenario: parsedOutline.metadata?.scenario || '通用',
@@ -6437,6 +6439,7 @@
                 body: JSON.stringify({
                     outline_content: editor.value,
                     user_request: userRequest.trim(),
+                    language: getOutlineLanguageCode(parsedOutline),
                     project_info: {
                         topic: parsedOutline.title || '未知',
                         scenario: parsedOutline.metadata?.scenario || '通用',
@@ -6540,6 +6543,7 @@
                 body: JSON.stringify({
                     outline_content: outlineContent,
                     user_request: userRequest.trim(),
+                    language: getOutlineLanguageCode(parsedOutline),
                     project_info: {
                         topic: parsedOutline.title || '未知',
                         scenario: parsedOutline.metadata?.scenario || '通用',
@@ -6670,6 +6674,7 @@
                 body: JSON.stringify({
                     outline_content: editor.value,
                     user_request: userRequest.trim(),
+                    language: getOutlineLanguageCode(parsedOutline),
                     project_info: {
                         topic: parsedOutline.title || '未知',
                         scenario: parsedOutline.metadata?.scenario || '通用',
