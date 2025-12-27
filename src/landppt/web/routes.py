@@ -78,9 +78,9 @@ class AISlideEditRequest(BaseModel):
     projectInfo: Dict[str, Any]
     slideOutline: Optional[Dict[str, Any]] = None
     chatHistory: Optional[List[Dict[str, str]]] = None
-    images: Optional[List[Dict[str, str]]] = None  # 新增：图片信息列表
+    images: Optional[List[Dict[str, Any]]] = None  # 新增：图片信息列表（url/id/name/size 等）
     visionEnabled: Optional[bool] = False  # 新增：视觉模式启用状态
-    slideScreenshot: Optional[str] = None  # 新增：幻灯片截图数据（base64格式）
+    slideScreenshot: Optional[str] = None  # 新增：幻灯片截图数据（data URL / base64）
 
 # AI自由对话请求数据模型（不设系统提示词，仅当前页）
 class AISlideNativeDialogRequest(BaseModel):
@@ -2702,9 +2702,16 @@ async def ai_slide_edit_stream(
 用户上传的图片信息：
 """
             for i, image in enumerate(request.images, 1):
+                url = image.get("url", "") if isinstance(image, dict) else ""
+                # 避免把 data URL/base64 整段塞进文本上下文（图片会以多模态内容附带）
+                if isinstance(url, str) and url.startswith("data:image"):
+                    url_display = "（data URL 已随消息附带）"
+                else:
+                    url_display = url
+
                 images_info += f"""
 - 图片{i}：{image.get('name', '未知')}
-  - URL：{image.get('url', '')}
+  - URL：{url_display}
   - 大小：{image.get('size', '未知')}
   - 说明：请分析这张图片的内容，理解用户的意图，并根据编辑要求进行相应的处理
 """
@@ -2766,17 +2773,23 @@ async def ai_slide_edit_stream(
         else:
             logger.info("AI流式编辑未接收到对话历史")
 
-        # 添加当前用户请求（支持多模态内容）
-        if request.visionEnabled and request.slideScreenshot:
-            # 创建多模态消息，包含文本和图片
+        # 添加当前用户请求（视觉模式：支持截图 + 上传图片的多模态内容）
+        if request.visionEnabled:
             from ..ai.base import TextContent, ImageContent
-            user_content = [
-                TextContent(text=context),
-                ImageContent(image_url={"url": request.slideScreenshot})
-            ]
+
+            user_content = [TextContent(text=context)]
+
+            if request.slideScreenshot:
+                user_content.append(ImageContent(image_url={"url": request.slideScreenshot}))
+
+            if request.images:
+                for img in request.images:
+                    url = (img or {}).get("url")
+                    if url:
+                        user_content.append(ImageContent(image_url={"url": url}))
+
             messages.append(AIMessage(role=MessageRole.USER, content=user_content))
         else:
-            # 普通文本消息
             messages.append(AIMessage(role=MessageRole.USER, content=context))
 
         async def generate_ai_stream():

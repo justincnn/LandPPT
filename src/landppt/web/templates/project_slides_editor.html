@@ -8028,6 +8028,28 @@
             }
         }
 
+        // AI编辑助手：视觉模式开启时支持粘贴图片（自动上传并随消息发送）
+        async function handleAIPaste(e) {
+            if (!visionModeEnabled) return;
+            if (!e || !e.clipboardData) return;
+            const items = e.clipboardData.items;
+            if (!items) return;
+
+            const imageFiles = [];
+            for (const item of items) {
+                if (item && item.type && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                showNotification(`检测到 ${imageFiles.length} 张剪贴板图片，正在处理...`, 'info');
+                handleFiles(imageFiles);
+            }
+        }
+
         async function sendNativeChatMessage() {
             const inputBox = document.getElementById('aiNativeInputBox');
             const sendBtn = document.getElementById('aiNativeSendBtn');
@@ -11801,6 +11823,7 @@
                         sendAIMessage();
                     }
                 });
+                aiInputBox.addEventListener('paste', handleAIPaste);
             }
 
             // 绑定自由对话输入框回车键事件
@@ -12144,22 +12167,53 @@
             showUploadProgress(true);
 
             try {
+                let addedCount = 0;
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     updateUploadProgress((i / files.length) * 100, `上传中 ${i + 1}/${files.length}: ${file.name}`);
 
+                    let dataUrl = null;
+                    try {
+                        const maybe = await readFileAsDataUrl(file);
+                        dataUrl = typeof maybe === 'string' ? maybe : null;
+                    } catch (e) {
+                        // 忽略读取失败，继续走上传URL
+                    }
+
                     const result = await uploadSingleFile(file);
                     if (result.success) {
-                        addUploadedImage(result.data);
+                        addUploadedImage({
+                            ...result.data,
+                            dataUrl: dataUrl
+                        });
+                        addedCount++;
                     } else {
-                        showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        // 即使上传失败，仍允许用 dataUrl 参与对话（视觉模式）
+                        if (dataUrl) {
+                            addUploadedImage({
+                                id: null,
+                                name: file.name,
+                                size: file.size,
+                                url: '',
+                                file: file,
+                                dataUrl: dataUrl
+                            });
+                            addedCount++;
+                            showNotification(`上传失败，已改用本地图片参与对话：${file.name}`, 'warning');
+                        } else {
+                            showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        }
                     }
                 }
 
                 updateUploadProgress(100, '上传完成');
                 setTimeout(() => showUploadProgress(false), 1000);
 
-                showNotification(`成功上传 ${files.length} 张图片`, 'success');
+                if (addedCount > 0) {
+                    showNotification(`已添加 ${addedCount} 张图片`, 'success');
+                } else {
+                    showNotification('未能添加图片，请重试', 'error');
+                }
 
             } catch (error) {
                 showNotification('上传失败，请重试', 'error');
@@ -12355,7 +12409,9 @@
             let imageInfoText = '\n\n📷 图片信息：\n';
             uploadedImages.forEach((image, index) => {
                 imageInfoText += `${index + 1}. 图片名称：${image.name}\n`;
-                imageInfoText += `   图片地址：${image.url}\n`;
+                const url = (image && typeof image.url === 'string') ? image.url : '';
+                const displayUrl = url && url.startsWith('data:image') ? '（本地图片，已随消息发送）' : (url || '（无URL）');
+                imageInfoText += `   图片地址：${displayUrl}\n`;
                 imageInfoText += `   文件大小：${formatFileSize(image.size)}\n`;
                 if (index < uploadedImages.length - 1) {
                     imageInfoText += '\n';
@@ -12371,7 +12427,8 @@
         function getAllUploadedImages() {
             return uploadedImages.map(image => ({
                 name: image.name,
-                url: image.url,
+                // 视觉模式优先使用 dataUrl，避免外部模型无法访问私有URL
+                url: visionModeEnabled ? (image.dataUrl || image.url || '') : (image.url || ''),
                 size: image.size > 0 ? formatFileSize(image.size) : '未知大小',
                 id: image.id
             }));
@@ -12496,7 +12553,7 @@
             };
 
             // 设置图片源
-            img.src = image.url;
+            img.src = image.dataUrl || image.url;
 
             // 阻止页面滚动
             document.body.style.overflow = 'hidden';
