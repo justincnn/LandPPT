@@ -1509,10 +1509,14 @@
             throw lastErr || new Error('模板生成失败');
         }
 
-        function openFreeTemplateWizardAndWait() {
+        function openFreeTemplateWizardAndWait(alreadyConfirmed = false) {
+            console.log('[FreeTemplate] openFreeTemplateWizardAndWait called, alreadyConfirmed:', alreadyConfirmed);
             return new Promise(async (resolve) => {
+                console.log('[FreeTemplate] freeTemplateModalInstance before init:', freeTemplateModalInstance);
                 if (!freeTemplateModalInstance) initFreeTemplateWizard();
+                console.log('[FreeTemplate] freeTemplateModalInstance after init:', freeTemplateModalInstance);
                 if (!freeTemplateModalInstance) {
+                    console.error('[FreeTemplate] Modal instance is null, cannot open dialog');
                     alert('无法打开自由模板对话框');
                     resolve(false);
                     return;
@@ -1576,22 +1580,91 @@
                     };
                 }
 
+                console.log('[FreeTemplate] About to show modal');
                 freeTemplateModalInstance.show();
+                console.log('[FreeTemplate] Modal.show() called');
+
                 try {
-                    await generateFreeTemplateWithRetry(false);
+                    if (alreadyConfirmed) {
+                        // 已有确认过的模板，尝试加载已有模板预览
+                        setFreeTemplateStatus('正在加载已有模板...');
+                        updateFreeTemplateStatusIndicator('generating', '正在加载已有模板...');
+
+                        const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.template && data.template.html_template) {
+                                setFreeTemplatePreviewHtml(data.template.html_template);
+                                const successMsg = `模板已加载：${data.template.template_name || '自由模板'}`;
+                                setFreeTemplateStatus(successMsg);
+                                updateFreeTemplateStatusIndicator('success', successMsg);
+                                setTimeout(updateFreeTemplatePreviewScale, 100);
+                                showFreeTemplateAdjustSection(true);
+                                if (confirmBtn) confirmBtn.disabled = false;
+                                if (regenerateBtn) regenerateBtn.disabled = false;
+                            } else {
+                                // 没有有效模板，重新生成
+                                await generateFreeTemplateWithRetry(false);
+                            }
+                        } else {
+                            // 加载失败，重新生成
+                            await generateFreeTemplateWithRetry(false);
+                        }
+                    } else {
+                        // 首次生成模板
+                        await generateFreeTemplateWithRetry(false);
+                    }
                 } catch (_) { }
             });
         }
 
         async function ensureFreeTemplateConfirmedBeforeStart() {
+            console.log('[FreeTemplate] ensureFreeTemplateConfirmedBeforeStart called');
             const meta = await fetchProjectMeta();
             const metadata = meta.project_metadata || {};
-            if (metadata.template_mode !== 'free') return true;
-            if (metadata.free_template_confirmed) return true;
-            return await openFreeTemplateWizardAndWait();
+            console.log('[FreeTemplate] template_mode:', metadata.template_mode, 'free_template_confirmed:', metadata.free_template_confirmed);
+
+            // 检测是否是自由模板：多种检测方式
+            let isFreeTemplate = metadata.template_mode === 'free';
+
+            // 如果 template_mode 不是 'free'，额外检查是否有自由模板的 HTML
+            if (!isFreeTemplate && metadata.free_template_html) {
+                console.log('[FreeTemplate] Detected free_template_html in metadata');
+                isFreeTemplate = true;
+            }
+
+            // 如果还不是，检查选中的模板是否是 AI 生成的自由模板
+            if (!isFreeTemplate) {
+                try {
+                    const templateResp = await fetch(`/api/projects/{{ todo_board.task_id }}/selected-global-template`);
+                    if (templateResp.ok) {
+                        const templateData = await templateResp.json();
+                        if (templateData.template && (
+                            templateData.template.created_by === 'ai_free' ||
+                            (templateData.template.template_name && templateData.template.template_name.startsWith('自由模板'))
+                        )) {
+                            console.log('[FreeTemplate] Detected free template via selected-global-template API');
+                            isFreeTemplate = true;
+                        }
+                    }
+                } catch (e) {
+                    console.log('[FreeTemplate] Error checking selected template:', e);
+                }
+            }
+
+            if (!isFreeTemplate) {
+                console.log('[FreeTemplate] Not free mode, returning true');
+                return true;
+            }
+
+            // 自由模板模式下总是显示预览弹窗
+            // 如果已有确认过的模板，则加载已有模板预览；否则重新生成
+            console.log('[FreeTemplate] Opening wizard with alreadyConfirmed:', metadata.free_template_confirmed);
+            return await openFreeTemplateWizardAndWait(metadata.free_template_confirmed);
         }
 
         async function startGeneration() {
+            console.log('[DEBUG] startGeneration called - version 2');
             // Prevent multiple simultaneous generations
             if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
                 return;
@@ -1604,6 +1677,7 @@
             lastKnownTotalSlides = null;
 
             // Free template pre-flight: generate/preview/confirm first
+            console.log('[DEBUG] About to call ensureFreeTemplateConfirmedBeforeStart');
             try {
                 const ok = await ensureFreeTemplateConfirmedBeforeStart();
                 if (!ok) {

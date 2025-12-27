@@ -455,12 +455,112 @@ async def test_openai_provider_proxy(
                         "status": "error",  # Add status field for compatibility
                         "error": error_message
                     }
-                    
+
     except Exception as e:
         logger.error(f"Error testing OpenAI provider with frontend config: {e}")
         return {
             "success": False,
             "status": "error",  # Add status field for compatibility
+            "error": str(e)
+        }
+
+@router.post("/api/ai/providers/anthropic/test")
+async def test_anthropic_provider_proxy(
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Proxy endpoint to test Anthropic provider, avoiding CORS issues - uses frontend provided config"""
+    try:
+        import aiohttp
+
+        # Get configuration from frontend request
+        data = await request.json()
+        base_url = data.get('base_url', 'https://api.anthropic.com')
+        api_key = data.get('api_key', '')
+        model = data.get('model', 'claude-3-5-sonnet-20241022')
+
+        logger.info(f"Frontend requested Anthropic test with: base_url={base_url}, model={model}")
+
+        if not api_key:
+            return {"success": False, "error": "API Key is required"}
+
+        # Ensure base URL format
+        base_url = base_url.rstrip('/')
+        if not base_url.endswith('/v1'):
+            base_url = base_url + '/v1'
+
+        messages_url = f"{base_url}/messages"
+        logger.info(f"Testing Anthropic provider at: {messages_url}")
+
+        # Make test request to Anthropic API using frontend provided credentials
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'x-api-key': api_key,
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01'
+            }
+
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Say 'Hello, I am working!' in exactly 5 words."
+                    }
+                ],
+                "max_tokens": 1024,
+                "temperature": 0
+            }
+
+            async with session.post(messages_url, headers=headers, json=payload, timeout=30) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    logger.info(f"Anthropic test successful for {base_url} with model {model}")
+
+                    # Anthropic response format: data.content[0].text
+                    content = data.get('content', [])
+                    response_text = content[0].get('text', '') if content else ''
+
+                    # Anthropic usage format: input_tokens, output_tokens
+                    # Frontend expects: prompt_tokens, completion_tokens, total_tokens
+                    anthropic_usage = data.get('usage', {})
+                    usage = {
+                        "prompt_tokens": anthropic_usage.get('input_tokens', 0),
+                        "completion_tokens": anthropic_usage.get('output_tokens', 0),
+                        "total_tokens": anthropic_usage.get('input_tokens', 0) + anthropic_usage.get('output_tokens', 0)
+                    }
+
+                    # Return with consistent format that frontend expects
+                    return {
+                        "success": True,
+                        "status": "success",
+                        "provider": "anthropic",
+                        "model": model,
+                        "response_preview": response_text,
+                        "usage": usage
+                    }
+                else:
+                    error_text = await response.text()
+                    try:
+                        error_data = json.loads(error_text)
+                        error_message = error_data.get('error', {}).get('message', f"API returned status {response.status}")
+                    except:
+                        error_message = f"API returned status {response.status}: {error_text}"
+
+                    logger.error(f"Anthropic test failed for {base_url}: {error_message}")
+
+                    return {
+                        "success": False,
+                        "status": "error",
+                        "error": error_message
+                    }
+
+    except Exception as e:
+        logger.error(f"Error testing Anthropic provider with frontend config: {e}")
+        return {
+            "success": False,
+            "status": "error",
             "error": str(e)
         }
 

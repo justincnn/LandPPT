@@ -216,6 +216,24 @@ class EnhancedPPTService(PPTService):
         provider, settings = self._get_role_provider(role)
         if settings.get("model"):
             kwargs.setdefault("model", settings["model"])
+
+        # For outline generation with Anthropic, use streaming to avoid timeout
+        if role == "outline" and settings.get("provider") == "anthropic":
+            # Use streaming and collect the result
+            full_response = ""
+            async for chunk in provider.stream_text_completion(prompt=prompt, **kwargs):
+                full_response += chunk
+
+            # Return a mock AIResponse-like object with the collected content
+            from ..ai.base import AIResponse
+            return AIResponse(
+                content=full_response,
+                model=settings.get("model", "anthropic"),
+                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                finish_reason="stop",
+                metadata={"provider": "anthropic", "streamed": True}
+            )
+
         return await provider.text_completion(prompt=prompt, **kwargs)
 
     async def _chat_completion_for_role(self, role: str, *, messages: List[AIMessage], **kwargs):

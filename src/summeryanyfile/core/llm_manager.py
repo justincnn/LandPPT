@@ -5,9 +5,244 @@ LLM管理器 - 处理不同LLM提供商的配置和初始化
 import os
 from typing import Optional, Dict, Any
 import logging
+from pydantic import Field
 from langchain_core.language_models.chat_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
+
+
+class CustomChatAnthropic(BaseChatModel):
+    """自定义Anthropic聊天模型，支持第三方API和双认证方式"""
+
+    model: str = Field(default="claude-3-5-sonnet-20241022")
+    temperature: float = Field(default=0.7)
+    max_tokens: int = Field(default=1024)
+    api_key: Optional[str] = Field(default=None)
+    base_url: Optional[str] = Field(default=None)
+
+    @property
+    def _llm_type(self) -> str:
+        return "custom_anthropic"
+
+    @property
+    def _identifying_params(self) -> Dict[str, Any]:
+        return {
+            "model": self.model,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "base_url": self.base_url
+        }
+
+    async def _agenerate(
+        self,
+        messages: list,
+        stop: Optional[list] = None,
+        run_manager: Optional[Any] = None,
+        **kwargs
+    ) -> Any:
+        """异步生成响应"""
+        import aiohttp
+        import json
+
+        logger.info(f"CustomChatAnthropic: model={self.model}, base_url={self.base_url}, api_key={self.api_key[:10] if self.api_key else None}...")
+
+        # 检测是否是第三方API（如MiniMax）
+        is_third_party = self.base_url and not self.base_url.startswith("https://api.anthropic.com")
+        logger.info(f"CustomChatAnthropic: is_third_party={is_third_party}")
+
+        # 角色映射: LangChain使用"human"/"ai"，Anthropic API使用"user"/"assistant"
+        role_mapping = {
+            "human": "user",
+            "ai": "assistant",
+            "system": "user",  # Anthropic没有system角色，转为user
+            "HumanMessage": "user",
+            "AIMessage": "assistant",
+            "SystemMessage": "user",
+        }
+        
+        # 转换消息格式
+        claude_messages = []
+        for msg in messages:
+            raw_role = msg.role if hasattr(msg, 'role') else msg.type
+            # 映射角色名称
+            role = role_mapping.get(raw_role, raw_role)
+            content = msg.content if hasattr(msg, 'content') else str(msg)
+
+            if is_third_party:
+                # MiniMax格式: content是数组
+                if isinstance(content, list):
+                    claude_messages.append({"role": role, "content": content})
+                else:
+                    claude_messages.append({"role": role, "content": [{"type": "text", "text": content}]})
+            else:
+                # Anthropic官方格式: content是字符串
+                claude_messages.append({"role": role, "content": content})
+
+        # 构建URL
+        base_url = self.base_url or "https://api.anthropic.com"
+        base_url = base_url.rstrip('/')
+        if not base_url.endswith('/v1'):
+            base_url = base_url + '/v1'
+        url = f"{base_url}/messages"
+        logger.info(f"CustomChatAnthropic: request URL={url}")
+
+        # 构建请求体
+        body = {
+            "model": self.model,
+            "messages": claude_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature
+        }
+
+        # 第三方API使用流式响应
+        if is_third_party:
+            body["stream"] = True
+
+        # 尝试两种认证方式
+        auth_methods = [
+            ("x-api-key", {"x-api-key": self.api_key}),
+            ("Authorization", {"Authorization": f"Bearer {self.api_key}"})
+        ]
+
+        for auth_name, auth_header in auth_methods:
+            try:
+                headers = {
+                    "Content-Type": "application/json",
+                    "anthropic-version": "2023-06-01"
+                }
+                headers.update(auth_header)
+
+                # 第三方API可能需要额外的header
+                if is_third_party:
+                    headers["x-title"] = "LandPPT"
+
+                logger.info(f"CustomChatAnthropic: trying auth method={auth_name}")
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, headers=headers, json=body) as response:
+                        logger.info(f"CustomChatAnthropic: response status={response.status}")
+
+                        # 401 或 400 都说明当前认证方式可能不对，尝试下一种
+                        if auth_name == "x-api-key" and response.status in (401, 400):
+                            logger.debug(f"x-api-key auth failed ({response.status}), trying Authorization header")
+                            error_text = await response.text()
+                            logger.debug(f"x-api-key error: {error_text[:100]}")
+                            continue  # 继续下一次循环，尝试 Authorization
+
+                        if response.status != 200:
+                            error_text = await response.text()
+                            logger.error(f"CustomChatAnthropic: API error {response.status}: {error_text[:200]}")
+                            raise Exception(f"API error {response.status}: {error_text}")
+
+                        # 检查是否为流式响应
+                        content_type = response.headers.get("Content-Type", "")
+                        if "text/event-stream" in content_type:
+                            # 解析SSE流式响应
+                            text_content = ""
+                            input_tokens = 0
+                            output_tokens = 0
+                            
+                            async for line in response.content:
+                                line = line.decode('utf-8').strip()
+                                
+                                # SSE格式: 以"data: "开头
+                                if line.startswith("data: "):
+                                    data_str = line[6:]  # 移除 "data: " 前缀
+                                    
+                                    # 跳过特殊事件标记
+                                    if data_str == "[DONE]":
+                                        continue
+                                    
+                                    try:
+                                        data = json.loads(data_str)
+                                        event_type = data.get("type", "")
+                                        
+                                        # 处理内容块增量
+                                        if event_type == "content_block_delta":
+                                            delta = data.get("delta", {})
+                                            if delta.get("type") == "text_delta":
+                                                text_content += delta.get("text", "")
+                                        
+                                        # 获取使用统计
+                                        elif event_type == "message_delta":
+                                            usage = data.get("usage", {})
+                                            output_tokens = usage.get("output_tokens", output_tokens)
+                                        
+                                        # 从message_start获取input_tokens
+                                        elif event_type == "message_start":
+                                            message = data.get("message", {})
+                                            usage = message.get("usage", {})
+                                            input_tokens = usage.get("input_tokens", input_tokens)
+                                            
+                                    except json.JSONDecodeError:
+                                        # 某些行可能不是有效JSON，跳过
+                                        continue
+                            
+                            logger.info(f"CustomChatAnthropic: stream completed, text length={len(text_content)}")
+                            
+                            from langchain_core.messages import AIMessage
+                            return self._generate_response(
+                                AIMessage(content=text_content),
+                                input_tokens,
+                                output_tokens
+                            )
+                        else:
+                            # 标准JSON响应
+                            data = await response.json()
+
+                            # 返回LangChain格式的响应
+                            content = data.get('content', [])
+                            text = content[0].get('text', '') if content else ''
+                            usage = data.get('usage', {})
+
+                            from langchain_core.messages import AIMessage
+                            return self._generate_response(
+                                AIMessage(content=text),
+                                usage.get('input_tokens', 0),
+                                usage.get('output_tokens', 0)
+                            )
+
+            except Exception as auth_error:
+                logger.debug(f"Auth method {auth_name} failed: {auth_error}")
+                logger.error(f"CustomChatAnthropic: auth_error={type(auth_error).__name__}: {auth_error}")
+                continue
+
+        raise Exception("All authentication methods failed")
+
+    def _generate_response(self, ai_message, prompt_tokens, completion_tokens):
+        """生成LangChain格式的响应"""
+        from langchain_core.outputs import ChatGeneration, ChatResult
+        from langchain_core.messages import AIMessage
+
+        return ChatResult(
+            generations=[ChatGeneration(message=ai_message)],
+            llm_output={
+                "token_usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens
+                },
+                "model": self.model
+            }
+        )
+
+    def _generate(
+        self,
+        messages: list,
+        stop: Optional[list] = None,
+        run_manager: Optional[Any] = None,
+        **kwargs
+    ) -> Any:
+        """同步生成响应"""
+        import asyncio
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        return loop.run_until_complete(self._agenerate(messages, stop, run_manager, **kwargs))
 
 
 class LLMManager:
@@ -174,7 +409,7 @@ class LLMManager:
         openai_kwargs.update({k: v for k, v in kwargs.items() if k not in excluded_keys})
 
         return ChatOpenAI(**openai_kwargs)
-    
+
     def _create_anthropic_llm(
         self,
         model: str,
@@ -182,22 +417,21 @@ class LLMManager:
         max_tokens: int,
         **kwargs
     ) -> BaseChatModel:
-        """创建Anthropic LLM"""
-        try:
-            from langchain_anthropic import ChatAnthropic
-        except ImportError:
-            raise ImportError("请安装 langchain-anthropic: pip install langchain-anthropic")
-        
+        """创建Anthropic LLM（使用自定义实现支持双认证）"""
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("未找到Anthropic API密钥。请设置ANTHROPIC_API_KEY环境变量或传递api_key参数")
-        
-        return ChatAnthropic(
+
+        # 获取base_url
+        base_url = kwargs.get("base_url") or os.getenv("ANTHROPIC_BASE_URL")
+
+        # 使用自定义Anthropic实现，支持第三方API和双认证
+        return CustomChatAnthropic(
             model=model,
             temperature=temperature,
-            # max_tokens=max_tokens,
+            max_tokens=max_tokens,
             api_key=api_key,
-            **{k: v for k, v in kwargs.items() if k != "api_key"}
+            base_url=base_url
         )
     
     def _create_azure_llm(
@@ -222,15 +456,13 @@ class LLMManager:
         if not azure_endpoint:
             raise ValueError("未找到Azure OpenAI端点。请设置AZURE_OPENAI_ENDPOINT环境变量")
         
-        return AzureChatOpenAI(
-            deployment_name=model,
-            temperature=temperature,
-            # max_tokens=max_tokens,
-            api_key=api_key,
-            azure_endpoint=azure_endpoint,
-            api_version=api_version,
-            **{k: v for k, v in kwargs.items() if k not in ["api_key", "azure_endpoint", "api_version"]}
-        )
+        azure_kwargs = {
+            "deployment_name": model,
+            "api_key": api_key,
+            "azure_endpoint": azure_endpoint,
+            "api_version": api_version,
+        }
+        return AzureChatOpenAI(**azure_kwargs)
 
     def _create_ollama_llm(
         self,

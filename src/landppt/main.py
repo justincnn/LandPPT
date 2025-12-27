@@ -97,11 +97,12 @@ app.include_router(auth_router, prefix="", tags=["Authentication"])
 app.include_router(config_router, prefix="", tags=["Configuration Management"])
 app.include_router(image_router, prefix="", tags=["Image Service"])
 
+# Web router must come before landppt_router to ensure specific endpoints take precedence
+app.include_router(web_router, prefix="", tags=["Web Interface"])
 app.include_router(openai_router, prefix="/v1", tags=["OpenAI Compatible"])
 app.include_router(landppt_router, prefix="/api", tags=["LandPPT API"])
 app.include_router(template_api_router, tags=["Global Master Templates"])
 app.include_router(database_router, tags=["Database Management"])
-app.include_router(web_router, prefix="", tags=["Web Interface"])
 
 # Mount static files
 static_dir = os.path.join(os.path.dirname(__file__), "web", "static")

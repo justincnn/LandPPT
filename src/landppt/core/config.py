@@ -30,18 +30,13 @@ class AIConfig(BaseSettings):
     
     # Anthropic Configuration
     anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
+    anthropic_base_url: str = Field(default="https://api.anthropic.com", env="ANTHROPIC_BASE_URL")
     anthropic_model: str = Field(default="claude-3-haiku-20240307", env="ANTHROPIC_MODEL")
 
     # Google Gemini Configuration
     google_api_key: Optional[str] = Field(default=None, env="GOOGLE_API_KEY")
     google_base_url: str = Field(default="https://generativelanguage.googleapis.com", env="GOOGLE_BASE_URL")
     google_model: str = Field(default="gemini-1.5-flash", env="GOOGLE_MODEL")
-    
-    # Azure OpenAI Configuration
-    azure_openai_api_key: Optional[str] = Field(default=None, env="AZURE_OPENAI_API_KEY")
-    azure_openai_endpoint: Optional[str] = Field(default=None, env="AZURE_OPENAI_ENDPOINT")
-    azure_openai_api_version: str = Field(default="2024-02-15-preview", env="AZURE_OPENAI_API_VERSION")
-    azure_openai_deployment_name: Optional[str] = Field(default=None, env="AZURE_OPENAI_DEPLOYMENT_NAME")
     
     # Ollama Configuration
     ollama_base_url: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
@@ -178,8 +173,6 @@ class AIConfig(BaseSettings):
             return self._normalize_optional_str(self.ai_302ai_model)
         if provider_key == "ollama":
             return self._normalize_optional_str(self.ollama_model)
-        if provider_key == "azure_openai":
-            return self._normalize_optional_str(getattr(self, "azure_openai_deployment_name", None))
         return self._normalize_optional_str(self.openai_model)
 
     def get_model_config_for_role(self, role: str, provider_override: Optional[str] = None) -> Dict[str, Optional[str]]:
@@ -235,6 +228,7 @@ class AIConfig(BaseSettings):
             },
             "anthropic": {
                 "api_key": self.anthropic_api_key,
+                "base_url": self.anthropic_base_url,
                 "model": self.anthropic_model,
                 "max_tokens": self.max_tokens,
                 "temperature": self.temperature,
@@ -252,15 +246,6 @@ class AIConfig(BaseSettings):
                 "api_key": self.google_api_key,
                 "base_url": self.google_base_url,
                 "model": self.google_model,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-            },
-            "azure_openai": {
-                "api_key": self.azure_openai_api_key,
-                "endpoint": self.azure_openai_endpoint,
-                "api_version": self.azure_openai_api_version,
-                "deployment_name": self.azure_openai_deployment_name,
                 "max_tokens": self.max_tokens,
                 "temperature": self.temperature,
                 "top_p": self.top_p,
@@ -295,8 +280,6 @@ class AIConfig(BaseSettings):
             return bool(config.get("api_key"))
         elif provider == "google" or provider == "gemini":
             return bool(config.get("api_key"))
-        elif provider == "azure_openai":
-            return bool(config.get("api_key") and config.get("endpoint"))
         elif provider == "ollama":
             return self.enable_local_models
         elif provider == "302ai":
@@ -309,7 +292,7 @@ class AIConfig(BaseSettings):
         providers = []
 
         # Add built-in providers
-        for provider in ["openai", "anthropic", "google", "gemini", "azure_openai", "ollama", "302ai"]:
+        for provider in ["openai", "anthropic", "google", "gemini", "ollama", "302ai"]:
             if self.is_provider_available(provider):
                 providers.append(provider)
 
@@ -324,9 +307,19 @@ def reload_ai_config():
     # Force reload environment variables with error handling
     from dotenv import load_dotenv
     import os
-    env_file = os.path.join(os.getcwd(), '.env')
+    from pathlib import Path
+
+    # Use the same .env file path as config_service (relative to project root)
+    # Try to find the project root by looking for pyproject.toml or .env
+    project_root = Path(__file__).parent.parent.parent
+    env_file = project_root / '.env'
+
+    # Fallback to cwd if the project root .env doesn't exist
+    if not env_file.exists():
+        env_file = Path('.env')
+
     try:
-        load_dotenv(env_file, override=True)
+        load_dotenv(str(env_file), override=True)
     except (PermissionError, FileNotFoundError) as e:
         # Silently continue if .env file is not accessible
         pass
@@ -339,6 +332,7 @@ def reload_ai_config():
     ai_config.openai_base_url = os.environ.get('OPENAI_BASE_URL', ai_config.openai_base_url)
     ai_config.openai_api_key = os.environ.get('OPENAI_API_KEY', ai_config.openai_api_key)
     ai_config.anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY', ai_config.anthropic_api_key)
+    ai_config.anthropic_base_url = os.environ.get('ANTHROPIC_BASE_URL', ai_config.anthropic_base_url)
     ai_config.anthropic_model = os.environ.get('ANTHROPIC_MODEL', ai_config.anthropic_model)
     ai_config.google_api_key = os.environ.get('GOOGLE_API_KEY', ai_config.google_api_key)
     ai_config.google_base_url = os.environ.get('GOOGLE_BASE_URL', ai_config.google_base_url)
