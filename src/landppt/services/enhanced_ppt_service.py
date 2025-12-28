@@ -3238,11 +3238,17 @@ Please fully utilize the above research information to enrich the PPT content, e
                 
                 for idx in range(i, batch_end):
                     slide = slides[idx]
+                    page_number = idx + 1  # page_number 从1开始
                     
-                    # 检查是否已存在
+                    # 检查是否已存在 - 使用 page_number 查找，而不是列表索引
+                    # 这是因为 slides_data 可能是紧凑列表（某些幻灯片缺失时没有占位符）
                     existing_slide = None
-                    if project.slides_data and idx < len(project.slides_data):
-                        existing_slide = project.slides_data[idx]
+                    if project.slides_data:
+                        # 查找具有匹配 page_number 的幻灯片
+                        for s in project.slides_data:
+                            if s and s.get('page_number') == page_number:
+                                existing_slide = s
+                                break
                     
                     if existing_slide and existing_slide.get('html_content'):
                         # 幻灯片已存在，跳过
