@@ -5193,6 +5193,99 @@
         // 幻灯片多选（Ctrl+点击）- 用于批量重新生成等操作
         let selectedSlideIndices = new Set();
 
+        function getOutlineSlidesCount() {
+            const outlineSlides = projectOutline && Array.isArray(projectOutline.slides) ? projectOutline.slides : null;
+            if (outlineSlides && outlineSlides.length > 0) return outlineSlides.length;
+            return Array.isArray(slidesData) ? slidesData.length : 0;
+        }
+
+        function ensureSlidesDataLength(targetLen) {
+            if (!Array.isArray(slidesData)) {
+                slidesData = [];
+                window.slidesData = slidesData;
+            }
+            const len = Math.max(0, parseInt(targetLen, 10) || 0);
+            while (slidesData.length < len) {
+                const pageNumber = slidesData.length + 1;
+                slidesData.push({
+                    page_number: pageNumber,
+                    title: `第${pageNumber}页`,
+                    html_content: '<div style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;font-family:Microsoft YaHei,Arial,sans-serif;color:#6c757d;">待生成</div>'
+                });
+            }
+        }
+
+        let slidesDataWasNormalized = false;
+        function normalizeSlidesDataToOutline() {
+            if (!Array.isArray(slidesData) || slidesData.length === 0) {
+                return false;
+            }
+
+            const outlineTotal = getOutlineSlidesCount();
+            if (!Number.isInteger(outlineTotal) || outlineTotal <= 0) {
+                return false;
+            }
+
+            let maxPageNumber = 0;
+            slidesData.forEach((s) => {
+                const pn = s && (typeof s.page_number === 'number' ? s.page_number : parseInt(s.page_number, 10));
+                if (Number.isInteger(pn) && pn > maxPageNumber) maxPageNumber = pn;
+            });
+
+            const targetLen = Math.max(outlineTotal, maxPageNumber, slidesData.length);
+            const normalized = new Array(targetLen).fill(null);
+            const unplaced = [];
+
+            slidesData.forEach((slide) => {
+                if (!slide || typeof slide !== 'object') {
+                    return;
+                }
+                const pn = typeof slide.page_number === 'number' ? slide.page_number : parseInt(slide.page_number, 10);
+                if (Number.isInteger(pn) && pn >= 1 && pn <= targetLen && !normalized[pn - 1]) {
+                    normalized[pn - 1] = slide;
+                } else {
+                    unplaced.push(slide);
+                }
+            });
+
+            // 依次填充未能通过page_number定位的内容（兼容历史数据）
+            unplaced.forEach((slide) => {
+                const idx = normalized.indexOf(null);
+                if (idx === -1) return;
+                normalized[idx] = slide;
+            });
+
+            // 填充缺失页为占位符，确保索引与大纲序号对齐
+            for (let i = 0; i < normalized.length; i++) {
+                if (!normalized[i]) {
+                    const outlineSlide = (projectOutline && projectOutline.slides && projectOutline.slides[i]) ? projectOutline.slides[i] : null;
+                    const title = outlineSlide && outlineSlide.title ? outlineSlide.title : `第${i + 1}页`;
+                    normalized[i] = {
+                        page_number: i + 1,
+                        title,
+                        html_content: '<div style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;font-family:Microsoft YaHei,Arial,sans-serif;color:#6c757d;">待生成</div>',
+                        slide_type: outlineSlide && (outlineSlide.slide_type || outlineSlide.type) ? (outlineSlide.slide_type || outlineSlide.type) : 'content',
+                        content_points: outlineSlide && Array.isArray(outlineSlide.content_points) ? outlineSlide.content_points : [],
+                        is_user_edited: false
+                    };
+                }
+                // 强制page_number与数组索引一致，避免再次错位
+                if (normalized[i] && typeof normalized[i] === 'object') {
+                    normalized[i].page_number = i + 1;
+                }
+            }
+
+            const changed =
+                normalized.length !== slidesData.length ||
+                normalized.some((s, i) => slidesData[i] !== s);
+
+            if (changed) {
+                slidesData = normalized;
+                window.slidesData = slidesData;
+            }
+            return changed;
+        }
+
         function sanitizeSelectedSlides() {
             if (!slidesData || slidesData.length === 0) {
                 selectedSlideIndices.clear();
@@ -5250,6 +5343,7 @@
         let projectStatus = projectMeta.status || '';
         let projectOutline = projectMeta.outline || null;
         window.projectOutline = projectOutline;
+        slidesDataWasNormalized = normalizeSlidesDataToOutline();
 
         // AI编辑相关变量
         let aiChatHistory = {}; // 改为对象，按幻灯片索引存储对话历史
@@ -6152,7 +6246,7 @@
             }
         }
 
-        function saveSlide() {
+        async function saveSlide() {
             const codeEditor = document.getElementById('codeEditor');
             let newContent;
 
@@ -6183,9 +6277,20 @@
                 }
 
                 // Save to server
-                saveToServer();
+                try {
+                    // 如果当前项目存在缺页并已做归一化，为避免“批量保存把占位页写入数据库”，这里改为只保存当前页
+                    const saved = slidesDataWasNormalized
+                        ? await saveSingleSlideToServer(currentSlideIndex, newContent)
+                        : await saveToServer();
 
-                showNotification('幻灯片已保存！', 'success');
+                    if (saved) {
+                        showNotification('幻灯片已保存！', 'success');
+                    } else {
+                        showNotification('保存失败，请重试', 'error');
+                    }
+                } catch (e) {
+                    showNotification('保存失败：' + (e?.message || e), 'error');
+                }
             }
         }
 
@@ -8827,7 +8932,7 @@
             }
         }
 
-        // 同步更新大纲（插入、删除幻灯片时调用）
+        // 同步更新大纲（插入、删除、排序时调用）
         async function updateOutlineForSlideOperation(operation, slideIndex, slideData = null) {
             try {
                 if (!projectOutline) {
@@ -8850,6 +8955,18 @@
                             projectOutline.slides.splice(slideIndex, 1);
                         }
                         break;
+                    case 'move': {
+                        // 调整大纲顺序（拖拽排序时调用）
+                        const toIndex = slideData && Number.isInteger(slideData.to_index) ? slideData.to_index : null;
+                        if (toIndex === null) break;
+                        if (slideIndex < 0 || slideIndex >= projectOutline.slides.length) break;
+                        if (toIndex < 0 || toIndex > projectOutline.slides.length) break;
+                        if (slideIndex === toIndex) break;
+
+                        const moved = projectOutline.slides.splice(slideIndex, 1)[0];
+                        projectOutline.slides.splice(toIndex, 0, moved);
+                        break;
+                    }
                 }
 
                 // 保存更新后的大纲到数据库
@@ -9396,6 +9513,9 @@
         // 应用AI更改
         async function applyAIChanges(newHtmlContent) {
             try {
+                // 防御：若slides_data存在缺页导致错位，先按page_number/大纲归一化，避免错页写入
+                normalizeSlidesDataToOutline();
+
                 // 验证当前索引状态
                 if (!validateCurrentSlideIndex('applyAIChanges')) {
                     throw new Error(`无效的幻灯片索引: ${currentSlideIndex}，总页数: ${slidesData ? slidesData.length : 'undefined'}`);
@@ -9470,12 +9590,20 @@
         }
 
         function regenerateSlideByIndex(slideIndex) {
-            if (slideIndex < 0 || slideIndex >= slidesData.length) {
+            // 防御：若slides_data存在缺页导致错位，先按page_number/大纲归一化，避免错页写入
+            normalizeSlidesDataToOutline();
+
+            const outlineTotal = getOutlineSlidesCount();
+            if (slideIndex < 0 || slideIndex >= outlineTotal) {
                 alert('无效的幻灯片索引');
                 return;
             }
 
-            const slideTitle = slidesData[slideIndex].title || `第${slideIndex + 1}页`;
+            ensureSlidesDataLength(outlineTotal);
+            const outlineTitle = (projectOutline && projectOutline.slides && projectOutline.slides[slideIndex])
+                ? projectOutline.slides[slideIndex].title
+                : null;
+            const slideTitle = (slidesData[slideIndex] && slidesData[slideIndex].title) || outlineTitle || `第${slideIndex + 1}页`;
             if (confirm(`确定要重新生成"${slideTitle}"吗？这将覆盖现有内容。`)) {
                 // Show loading indicator
                 const loadingDiv = document.createElement('div');
@@ -9520,8 +9648,13 @@
                                 // 更新slidesData中的对应幻灯片
                                 slidesData[slideIndex] = data.slide_data;
 
-                                // 更新缩略图显示
-                                updateThumbnailDisplay(slideIndex, data.slide_data);
+                                // 更新缩略图显示（如本次补齐了大纲页数，则需要刷新侧边栏）
+                                const thumbnailsCount = document.querySelectorAll('.slide-thumbnail').length;
+                                if (thumbnailsCount !== slidesData.length) {
+                                    refreshSidebar();
+                                } else {
+                                    updateThumbnailDisplay(slideIndex, data.slide_data);
+                                }
 
                                 // 如果当前正在查看这个幻灯片，更新主预览区域
                                 if (currentSlideIndex === slideIndex) {
@@ -9556,7 +9689,8 @@
         }
 
         async function regenerateAllSlides() {
-            if (!slidesData || slidesData.length === 0) {
+            const outlineTotal = getOutlineSlidesCount();
+            if (outlineTotal <= 0) {
                 showNotification('没有可用的幻灯片', 'warning');
                 return;
             }
@@ -9564,12 +9698,19 @@
         }
 
         async function batchRegenerateSlides({ slideIndices, regenerateAll }) {
-            if (!slidesData || slidesData.length === 0) {
+            const outlineTotal = getOutlineSlidesCount();
+            if (outlineTotal <= 0) {
                 showNotification('没有可用的幻灯片', 'warning');
                 return;
             }
 
-            const total = regenerateAll ? slidesData.length : (slideIndices ? slideIndices.length : 0);
+            const normalizedSlideIndices = regenerateAll
+                ? null
+                : (Array.isArray(slideIndices)
+                    ? slideIndices.filter(i => Number.isInteger(i) && i >= 0 && i < outlineTotal)
+                    : []);
+
+            const total = regenerateAll ? outlineTotal : normalizedSlideIndices.length;
             if (total <= 0) {
                 showNotification('未选择任何幻灯片', 'warning');
                 return;
@@ -9606,12 +9747,14 @@
             document.body.appendChild(loadingDiv);
 
             try {
+                ensureSlidesDataLength(outlineTotal);
+
                 const response = await fetch(`/api/projects/{{ project.project_id }}/slides/batch-regenerate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         regenerate_all: !!regenerateAll,
-                        slide_indices: regenerateAll ? null : slideIndices,
+                        slide_indices: regenerateAll ? null : normalizedSlideIndices,
                         scenario: '{{ project.scenario }}',
                         topic: `{{ project.topic }}`,
                         requirements: `{{ (project.requirements or "") }}`,
@@ -9642,6 +9785,12 @@
                         failCount += 1;
                     }
                 });
+
+                // 如果本次是按大纲补齐生成，或缩略图数量不足，刷新侧边栏以显示完整页数
+                const thumbnailsCount = document.querySelectorAll('.slide-thumbnail').length;
+                if (thumbnailsCount !== slidesData.length) {
+                    refreshSidebar();
+                }
 
                 updateSelectedSlidesUI();
 
@@ -10843,9 +10992,33 @@
             const movedSlide = slidesData.splice(fromIndex, 1)[0];
             slidesData.splice(toIndex, 0, movedSlide);
 
+            // 更新已选中的索引（保持选中的是同一组幻灯片，而不是同一组位置）
+            if (selectedSlideIndices && selectedSlideIndices.size > 0) {
+                const nextSelected = new Set();
+                selectedSlideIndices.forEach((idx) => {
+                    if (!Number.isInteger(idx)) return;
+                    let nextIdx = idx;
+                    if (idx === fromIndex) {
+                        nextIdx = toIndex;
+                    } else if (fromIndex < toIndex) {
+                        if (idx > fromIndex && idx <= toIndex) nextIdx = idx - 1;
+                    } else if (fromIndex > toIndex) {
+                        if (idx >= toIndex && idx < fromIndex) nextIdx = idx + 1;
+                    }
+                    nextSelected.add(nextIdx);
+                });
+                selectedSlideIndices = nextSelected;
+            }
+
             // 更新页码
             slidesData.forEach((slide, index) => {
                 slide.page_number = index + 1;
+            });
+
+            // 同步更新大纲顺序（避免重新生成等操作按编辑器序号写入错误页）
+            updateOutlineForSlideOperation('move', fromIndex, { to_index: toIndex }).catch((e) => {
+                console.error('Outline move failed:', e);
+                showNotification('同步更新大纲顺序失败：' + (e?.message || e), 'warning');
             });
 
             // 更新当前选中的索引
@@ -11967,6 +12140,17 @@
 
         // 页面加载完成后应用响应式缩放和绑定事件
         document.addEventListener('DOMContentLoaded', function () {
+            // 关键：如果服务端返回了缺页的slides_data（例如只存在第2、3页），这里先按page_number/大纲进行归一化，
+            // 避免后续编辑/保存把内容写到错误的页（如第2页覆盖第1页）。
+            if (normalizeSlidesDataToOutline()) {
+                slidesDataWasNormalized = true;
+            }
+
+            // 如果归一化导致页数/顺序变化，刷新侧边栏缩略图以对齐 slidesData 的索引
+            if (slidesDataWasNormalized && slidesData && slidesData.length > 0) {
+                refreshSidebar();
+            }
+
             // 为所有现有的iframe应用响应式缩放
             const iframes = document.querySelectorAll('.slide-preview iframe');
             iframes.forEach(iframe => {

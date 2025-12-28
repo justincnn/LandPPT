@@ -281,9 +281,14 @@ async def web_ai_config(
     config_service = get_config_service()
     current_config = config_service.get_all_config()
 
+    # "gemini" is an alias for the Google provider; the UI exposes it as "google".
+    current_provider = ai_config.default_ai_provider
+    if (isinstance(current_provider, str) and current_provider.strip().lower() == "gemini"):
+        current_provider = "google"
+
     return templates.TemplateResponse("ai_config.html", {
         "request": request,
-        "current_provider": ai_config.default_ai_provider,
+        "current_provider": current_provider,
         "available_providers": ai_config.get_available_providers(),
         "provider_status": {
             provider: ai_config.is_provider_available(provider)
@@ -2329,6 +2334,59 @@ async def regenerate_slide(project_id: str, slide_number: int):
         if slide_number < 1 or slide_number > len(slides):
             raise HTTPException(status_code=400, detail="Invalid slide number")
 
+        # 关键修复：当 slides_data 缺页（例如只存在第2、3页）时，列表索引会错位，
+        # 可能导致重新生成第2页时覆盖第1页。这里按 outline/page_number 归一化 slides_data。
+        try:
+            outline_total = len(slides)
+            if outline_total > 0:
+                if project.slides_data is None:
+                    project.slides_data = []
+
+                normalized = [None] * outline_total
+                unplaced = []
+
+                for s in (project.slides_data or []):
+                    if not isinstance(s, dict):
+                        continue
+                    pn = s.get("page_number", None)
+                    if isinstance(pn, str):
+                        try:
+                            pn = int(pn)
+                        except Exception:
+                            pn = None
+                    if isinstance(pn, int) and 1 <= pn <= outline_total and normalized[pn - 1] is None:
+                        normalized[pn - 1] = s
+                    else:
+                        unplaced.append(s)
+
+                for s in unplaced:
+                    try:
+                        idx = normalized.index(None)
+                    except ValueError:
+                        break
+                    normalized[idx] = s
+
+                for i in range(outline_total):
+                    if normalized[i] is None:
+                        oslide = slides[i] if i < len(slides) else {}
+                        title = oslide.get("title") if isinstance(oslide, dict) else None
+                        slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
+                        content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
+                        normalized[i] = {
+                            "page_number": i + 1,
+                            "title": title or f"Slide {i + 1}",
+                            "html_content": "<div>Pending</div>",
+                            "slide_type": slide_type or "content",
+                            "content_points": content_points if isinstance(content_points, list) else [],
+                            "is_user_edited": False,
+                        }
+                    else:
+                        normalized[i]["page_number"] = i + 1
+
+                project.slides_data = normalized
+        except Exception as normalize_err:
+            logger.warning(f"Slides normalization skipped for regenerate_slide {project_id}: {normalize_err}")
+
         slide_data = slides[slide_number - 1]
 
         # Load system prompt
@@ -2458,6 +2516,56 @@ async def batch_regenerate_slides(project_id: str, payload: SlideBatchRegenerate
         total_slides = len(outline_slides)
         if total_slides <= 0:
             raise HTTPException(status_code=400, detail="No slides found in outline")
+
+        # 关键修复：当 slides_data 缺页时，按 outline/page_number 归一化，避免批量重新生成错页写入。
+        try:
+            if project.slides_data is None:
+                project.slides_data = []
+
+            normalized = [None] * total_slides
+            unplaced = []
+
+            for s in (project.slides_data or []):
+                if not isinstance(s, dict):
+                    continue
+                pn = s.get("page_number", None)
+                if isinstance(pn, str):
+                    try:
+                        pn = int(pn)
+                    except Exception:
+                        pn = None
+                if isinstance(pn, int) and 1 <= pn <= total_slides and normalized[pn - 1] is None:
+                    normalized[pn - 1] = s
+                else:
+                    unplaced.append(s)
+
+            for s in unplaced:
+                try:
+                    idx = normalized.index(None)
+                except ValueError:
+                    break
+                normalized[idx] = s
+
+            for i in range(total_slides):
+                if normalized[i] is None:
+                    oslide = outline_slides[i] if i < len(outline_slides) else {}
+                    title = oslide.get("title") if isinstance(oslide, dict) else None
+                    slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
+                    content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
+                    normalized[i] = {
+                        "page_number": i + 1,
+                        "title": title or f"Slide {i + 1}",
+                        "html_content": "<div>Pending</div>",
+                        "slide_type": slide_type or "content",
+                        "content_points": content_points if isinstance(content_points, list) else [],
+                        "is_user_edited": False
+                    }
+                else:
+                    normalized[i]["page_number"] = i + 1
+
+            project.slides_data = normalized
+        except Exception as normalize_err:
+            logger.warning(f"Slides normalization skipped for batch_regenerate {project_id}: {normalize_err}")
 
         # Determine target indices (0-based).
         if payload.regenerate_all or not payload.slide_indices:
@@ -4937,6 +5045,66 @@ async def save_single_slide_content(
         if not project:
             logger.error(f"❌ 项目 {project_id} 不存在")
             raise HTTPException(status_code=404, detail="Project not found")
+
+        # 关键修复：当 slides_data 缺页（例如只存在第2、3页）时，列表索引会错位，
+        # 导致保存/编辑第2页时覆盖第1页。这里按 outline / page_number 归一化 slides_data。
+        try:
+            outline_slides = []
+            if getattr(project, "outline", None):
+                if isinstance(project.outline, dict):
+                    outline_slides = project.outline.get("slides", []) or []
+                else:
+                    outline_slides = project.outline.slides if hasattr(project.outline, "slides") else []
+
+            outline_total = len(outline_slides) if outline_slides else 0
+            if outline_total > 0:
+                if project.slides_data is None:
+                    project.slides_data = []
+
+                normalized = [None] * outline_total
+                unplaced = []
+
+                for s in (project.slides_data or []):
+                    if not isinstance(s, dict):
+                        continue
+                    pn = s.get("page_number", None)
+                    if isinstance(pn, str):
+                        try:
+                            pn = int(pn)
+                        except Exception:
+                            pn = None
+                    if isinstance(pn, int) and 1 <= pn <= outline_total and normalized[pn - 1] is None:
+                        normalized[pn - 1] = s
+                    else:
+                        unplaced.append(s)
+
+                for s in unplaced:
+                    try:
+                        idx = normalized.index(None)
+                    except ValueError:
+                        break
+                    normalized[idx] = s
+
+                for i in range(outline_total):
+                    if normalized[i] is None:
+                        oslide = outline_slides[i] if i < len(outline_slides) else {}
+                        title = oslide.get("title") if isinstance(oslide, dict) else None
+                        slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
+                        content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
+                        normalized[i] = {
+                            "page_number": i + 1,
+                            "title": title or f"Slide {i + 1}",
+                            "html_content": "<div>Pending</div>",
+                            "slide_type": slide_type or "content",
+                            "content_points": content_points if isinstance(content_points, list) else [],
+                            "is_user_edited": False,
+                        }
+                    else:
+                        normalized[i]["page_number"] = i + 1
+
+                project.slides_data = normalized
+        except Exception as normalize_err:
+            logger.warning(f"Slides normalization skipped for project {project_id}: {normalize_err}")
 
         # 详细验证幻灯片索引
         total_slides = len(project.slides_data) if project.slides_data else 0

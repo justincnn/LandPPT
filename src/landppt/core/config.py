@@ -289,12 +289,21 @@ class AIConfig(BaseSettings):
     
     def get_available_providers(self) -> list[str]:
         """Get list of available AI providers"""
-        providers = []
+        providers: list[str] = []
+        seen: set[str] = set()
 
-        # Add built-in providers
+        # Add built-in providers. Note: "gemini" is an alias for "google" (same config),
+        # so we only expose a single canonical provider name here to avoid duplicates in UIs.
         for provider in ["openai", "anthropic", "google", "gemini", "ollama", "302ai"]:
-            if self.is_provider_available(provider):
-                providers.append(provider)
+            if not self.is_provider_available(provider):
+                continue
+
+            canonical = "google" if provider == "gemini" else provider
+            if canonical in seen:
+                continue
+
+            providers.append(canonical)
+            seen.add(canonical)
 
         return providers
 
