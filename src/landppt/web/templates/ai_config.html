@@ -593,17 +593,47 @@
                         style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                         其他配置
                     </h4>
-                    <div class="form-group">
-                        <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
-                            Apryse License Key (PPT导出)
-                        </label>
-                        <input type="password" name="apryse_license_key" placeholder="your-apryse-license-key"
-                            value="{{ current_config.get('apryse_license_key', '') }}"
-                            style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
-                        <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
-                            用于PPTX导出功能的Apryse SDK许可证密钥，可在 <a href="https://www.pdftron.com/" target="_blank"
-                                style="color: #111111; text-decoration: underline;">Apryse官网</a> 获取
-                        </small>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <!-- MinerU API 配置 -->
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                MinerU API Key (PDF高质量解析)
+                            </label>
+                            <input type="password" name="mineru_api_key" placeholder="your-mineru-api-key"
+                                value="{{ current_config.get('mineru_api_key', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                                用于高质量PDF解析的MinerU API密钥，可在 <a href="https://mineru.net/apiManage" target="_blank"
+                                    style="color: #111111; text-decoration: underline;">MinerU官网</a> 获取
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                MinerU API Base URL
+                            </label>
+                            <input type="url" name="mineru_base_url" placeholder="https://mineru.net/api/v4"
+                                value="{{ current_config.get('mineru_base_url', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                                MinerU API的基础URL地址，默认为官方API地址，可自定义私有部署地址
+                            </small>
+                        </div>
+
+                        <!-- Apryse License Key -->
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Apryse License Key (PPT导出)
+                            </label>
+                            <input type="password" name="apryse_license_key" placeholder="your-apryse-license-key"
+                                value="{{ current_config.get('apryse_license_key', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                                用于PPTX导出功能的Apryse SDK许可证密钥，可在 <a href="https://www.pdftron.com/" target="_blank"
+                                    style="color: #111111; text-decoration: underline;">Apryse官网</a> 获取
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1123,9 +1153,13 @@
                                         style="color: #6c757d; margin-top: 5px; display: block;">更高质量的图片需要更多时间和成本</small>
                                 </div>
                                 <div class="form-group" style="grid-column: span 2;">
-                                    <div style="display: flex; align-items: center; gap: 10px; justify-content: space-between;">
-                                        <label style="font-weight: 500; color: #495057; margin: 0;">自定义分辨率组（JSON，可按提供商配置）</label>
-                                        <button type="button" class="btn btn-secondary btn-sm" title="重置为默认" onclick="resetResolutionPresets()" style="padding: 4px 8px; min-width: 0; width: 32px; text-align: center;">&#8635;</button>
+                                    <div
+                                        style="display: flex; align-items: center; gap: 10px; justify-content: space-between;">
+                                        <label
+                                            style="font-weight: 500; color: #495057; margin: 0;">自定义分辨率组（JSON，可按提供商配置）</label>
+                                        <button type="button" class="btn btn-secondary btn-sm" title="重置为默认"
+                                            onclick="resetResolutionPresets()"
+                                            style="padding: 4px 8px; min-width: 0; width: 32px; text-align: center;">&#8635;</button>
                                     </div>
                                     <textarea name="ai_image_resolution_presets" rows="3"
                                         style="margin-top: 5px; font-family: monospace; font-size: 0.9em;">{{ current_config.get('ai_image_resolution_presets', '') }}</textarea>

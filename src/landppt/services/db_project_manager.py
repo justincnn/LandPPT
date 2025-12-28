@@ -208,16 +208,40 @@ class DatabaseProjectManager:
         finally:
             await db_service.session.close()
 
-    async def save_single_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any]) -> bool:
-        """Save a single slide to database immediately"""
+    async def save_single_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any], skip_if_user_edited: bool = False) -> bool:
+        """Save a single slide to database immediately
+        
+        Args:
+            skip_if_user_edited: If True, skip updating slides that have is_user_edited=True.
+                                 Generator should pass True, editor should pass False.
+        """
         db_service = await self._get_db_service()
         try:
-            success = await db_service.save_single_slide(project_id, slide_index, slide_data)
+            success = await db_service.save_single_slide(project_id, slide_index, slide_data, skip_if_user_edited=skip_if_user_edited)
 
             if success:
                 logger.info(f"Saved slide {slide_index + 1} for project {project_id}")
 
             return success
+        finally:
+            await db_service.session.close()
+
+    async def get_single_slide(self, project_id: str, slide_index: int) -> Optional[Dict[str, Any]]:
+        """Get a single slide from database by project_id and slide_index"""
+        db_service = await self._get_db_service()
+        try:
+            slide = await db_service.slide_repo.get_slide_by_index(project_id, slide_index)
+            if slide:
+                return {
+                    "page_number": slide.slide_index + 1,
+                    "title": slide.title,
+                    "html_content": slide.html_content,
+                    "slide_type": slide.content_type,
+                    "is_user_edited": slide.is_user_edited,
+                    "slide_id": slide.slide_id,
+                    "metadata": slide.slide_metadata
+                }
+            return None
         finally:
             await db_service.session.close()
 

@@ -220,12 +220,20 @@ class SlideDataRepository:
         await self.session.refresh(slide)
         return slide
 
-    async def upsert_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any]) -> SlideData:
-        """Insert or update a single slide"""
+    async def upsert_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any], skip_if_user_edited: bool = False) -> SlideData:
+        """Insert or update a single slide
+        
+        Args:
+            project_id: Project ID
+            slide_index: Slide index (0-based)
+            slide_data: Slide data dictionary
+            skip_if_user_edited: If True, skip updating slides that have is_user_edited=True.
+                                 This allows generator to not overwrite user edits.
+        """
         import logging
         logger = logging.getLogger(__name__)
 
-        logger.info(f"🔄 数据库仓库开始upsert幻灯片: 项目ID={project_id}, 索引={slide_index}")
+        logger.info(f"🔄 数据库仓库开始upsert幻灯片: 项目ID={project_id}, 索引={slide_index}, 跳过用户编辑={skip_if_user_edited}")
 
         # Check if slide already exists
         stmt = select(SlideData).where(
@@ -236,6 +244,11 @@ class SlideDataRepository:
         existing_slide = result.scalar_one_or_none()
 
         if existing_slide:
+            # 如果skip_if_user_edited=True且现有幻灯片已被用户编辑，跳过更新
+            if skip_if_user_edited and existing_slide.is_user_edited:
+                logger.info(f"⏭️ 跳过更新用户编辑的幻灯片: 项目ID={project_id}, 索引={slide_index}")
+                return existing_slide
+            
             # Update existing slide
             logger.info(f"📝 更新现有幻灯片: 数据库ID={existing_slide.id}, 项目ID={project_id}, 索引={slide_index}")
             slide_data['updated_at'] = time.time()
@@ -267,6 +280,15 @@ class SlideDataRepository:
         stmt = select(SlideData).where(SlideData.project_id == project_id).order_by(SlideData.slide_index)
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def get_slide_by_index(self, project_id: str, slide_index: int) -> Optional[SlideData]:
+        """Get a single slide by project_id and slide_index"""
+        stmt = select(SlideData).where(
+            SlideData.project_id == project_id,
+            SlideData.slide_index == slide_index
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
     
     async def update_slide(self, slide_id: str, update_data: Dict[str, Any]) -> bool:
         """Update a specific slide"""

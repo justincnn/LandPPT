@@ -3329,7 +3329,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                                 from .db_project_manager import DatabaseProjectManager
                                 db_manager = DatabaseProjectManager()
                                 project.updated_at = time.time()
-                                await db_manager.save_single_slide(project_id, idx, slide_data)
+                                await db_manager.save_single_slide(project_id, idx, slide_data, skip_if_user_edited=True)
                                 logger.info(f"💾 第{idx+1}页已保存到数据库")
                             except Exception as save_error:
                                 logger.error(f"保存第{idx+1}页失败: {save_error}")
@@ -3376,7 +3376,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                                     from .db_project_manager import DatabaseProjectManager
                                     db_manager = DatabaseProjectManager()
                                     project.updated_at = time.time()
-                                    await db_manager.save_single_slide(project_id, idx, slide_data)
+                                    await db_manager.save_single_slide(project_id, idx, slide_data, skip_if_user_edited=True)
                                     logger.info(f"Successfully saved slide {idx+1} to database for project {project_id}")
                                 except Exception as save_error:
                                     logger.error(f"Failed to save slide {idx+1} to database: {save_error}")

@@ -6298,6 +6298,7 @@
                 // 更新幻灯片数据
                 if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
                     slidesData[currentSlideIndex].html_content = updatedHtml;
+                    slidesData[currentSlideIndex].is_user_edited = true;
 
                     // 更新代码编辑器
                     if (typeof codeMirrorEditor !== 'undefined' && codeMirrorEditor && typeof isCodeMirrorInitialized !== 'undefined' && isCodeMirrorInitialized) {
@@ -6315,12 +6316,18 @@
                         setSafeIframeContent(thumbnailIframe, updatedHtml);
                     }
 
-                    // 保存到服务器
-                    if (typeof saveToServer === 'function') {
-                        saveToServer();
-                    }
-                    if (typeof showNotification === 'function') {
-                        showNotification('内容已更新并保存！', 'success');
+                    // 只保存当前编辑的幻灯片，而不是保存所有幻灯片
+                    // 这样可以避免在生成过程中覆盖其他正在生成的幻灯片
+                    if (typeof saveSingleSlideToServer === 'function') {
+                        saveSingleSlideToServer(currentSlideIndex, updatedHtml).then(success => {
+                            if (success && typeof showNotification === 'function') {
+                                showNotification('内容已更新并保存！', 'success');
+                            }
+                        }).catch(err => {
+                            if (typeof showNotification === 'function') {
+                                showNotification('保存失败：' + err.message, 'error');
+                            }
+                        });
                     }
                 }
             }
@@ -6838,6 +6845,7 @@
             // 更新数据
             if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
                 slidesData[currentSlideIndex].html_content = updatedHtml;
+                slidesData[currentSlideIndex].is_user_edited = true;
 
                 // 更新代码编辑器
                 if (typeof codeMirrorEditor !== 'undefined' && codeMirrorEditor && isCodeMirrorInitialized) {
@@ -6850,9 +6858,9 @@
                     setSafeIframeContent(thumbnailIframe, updatedHtml);
                 }
 
-                // 保存到服务器
-                if (typeof saveToServer === 'function') {
-                    saveToServer();
+                // 只保存当前编辑的幻灯片，避免覆盖生成器正在生成的其他页面
+                if (typeof saveSingleSlideToServer === 'function') {
+                    saveSingleSlideToServer(currentSlideIndex, updatedHtml);
                 }
             }
         }
@@ -10582,40 +10590,36 @@
         }
 
         async function saveToServer() {
+            // 改用逐个保存，避免在生成过程中覆盖新生成的幻灯片数据
+            // 原batch-save会用前端旧数据覆盖后端新生成的数据，导致数据丢失
             try {
+                let saveSuccessCount = 0;
+                let saveFailureCount = 0;
 
-                // 标记所有幻灯片为用户编辑状态
-                slidesData.forEach(slide => {
-                    slide.is_user_edited = true;
-                });
+                for (let i = 0; i < slidesData.length; i++) {
+                    try {
+                        const slide = slidesData[i];
+                        if (!slide || !slide.html_content) continue;
 
-                // 使用批量保存API
-                const response = await fetch(`/api/projects/{{ project.project_id }}/slides/batch-save`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        slides_data: slidesData
-                    })
-                });
+                        // 标记为用户编辑状态
+                        slide.is_user_edited = true;
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        const success = await saveSingleSlideToServer(i, slide.html_content);
+                        if (success) {
+                            saveSuccessCount++;
+                        } else {
+                            saveFailureCount++;
+                        }
+                    } catch (error) {
+                        saveFailureCount++;
+                        console.error(`保存第${i + 1}页异常:`, error);
+                    }
                 }
 
-                const data = await response.json();
-
-                if (data.success) {
-                    return true;
-                } else {
-                    throw new Error(data.error || 'Unknown batch save error');
-                }
-
+                return saveSuccessCount > 0;
             } catch (error) {
-                // 如果批量保存失败，回退到逐个保存
-                return await saveToServerFallback();
+                console.error('保存失败:', error);
+                return false;
             }
         }
 

@@ -5016,6 +5016,201 @@ async def adjust_project_free_template(
         }
     except HTTPException:
         raise
+async def generate_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Generate (or regenerate) a project's free-template via AI."""
+    try:
+        payload = {}
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+
+        force = bool(payload.get("force", False))
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        if force:
+            metadata.pop("free_template_html", None)
+            metadata.pop("free_template_name", None)
+            metadata.pop("free_template_generated_at", None)
+            metadata.pop("free_template_prompt", None)
+            metadata["free_template_status"] = "pending"
+            metadata["free_template_confirmed"] = False
+            metadata.pop("free_template_confirmed_at", None)
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+            ppt_service.clear_cached_style_genes(project_id)
+
+        template = await ppt_service.get_selected_global_template(project_id)
+        if not template:
+            raise HTTPException(status_code=500, detail="Failed to generate free template")
+
+        # Mark status ready (generation is synchronous here)
+        project = await ppt_service.project_manager.get_project(project_id)
+        if project and project.project_metadata:
+            metadata = project.project_metadata
+            metadata["free_template_status"] = "ready"
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+
+        return {
+            "success": True,
+            "template": template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/confirm")
+async def confirm_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Confirm using the generated free-template; optionally save it into global template list."""
+    try:
+        data = await request.json()
+        save_to_library = bool(data.get("save_to_library", False))
+        requested_name = (data.get("template_name") or "").strip()
+        requested_description = (data.get("description") or "").strip()
+        requested_tags = data.get("tags") or []
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        html = metadata.get("free_template_html")
+        if not (isinstance(html, str) and html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+
+        metadata["free_template_confirmed"] = True
+        metadata["free_template_confirmed_at"] = time.time()
+        metadata["free_template_status"] = "ready"
+
+        saved_template = None
+        if save_to_library:
+            base_name = requested_name or f"自由模板-{(project.topic or 'PPT')[:20]}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            description = requested_description or "由自由模板功能生成并确认的模板"
+            tags: List[str] = []
+            if isinstance(requested_tags, list):
+                tags = [str(t).strip() for t in requested_tags if str(t).strip()]
+            tags = tags or ["自由模板", "AI生成"]
+
+            # Ensure unique name
+            final_name = base_name
+            for i in range(1, 6):
+                try:
+                    saved_template = await ppt_service.global_template_service.create_template({
+                        "template_name": final_name,
+                        "description": description,
+                        "html_template": html,
+                        "tags": tags,
+                        "is_default": False,
+                        "is_active": True,
+                        "created_by": f"free_template:{project_id}"
+                    })
+                    break
+                except ValueError:
+                    final_name = f"{base_name}-{i}"
+
+            if not saved_template:
+                raise HTTPException(status_code=409, detail="Failed to save template to library (name conflict)")
+
+            metadata["saved_global_template_id"] = saved_template.get("id")
+            metadata["saved_global_template_name"] = saved_template.get("template_name")
+
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+
+        return {
+            "success": True,
+            "saved_template": saved_template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error confirming free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/adjust")
+async def adjust_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Adjust the generated free-template based on user feedback."""
+    try:
+        data = await request.json()
+        adjustment_request = (data.get("adjustment_request") or "").strip()
+        
+        if not adjustment_request:
+            raise HTTPException(status_code=400, detail="Adjustment request is required")
+        
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+        
+        current_html = metadata.get("free_template_html")
+        if not (isinstance(current_html, str) and current_html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+        
+        template_name = metadata.get("free_template_name") or "自由模板"
+        
+        # Use the global template service to adjust the template
+        adjusted_html = None
+        async for chunk in ppt_service.global_template_service.adjust_template_with_ai_stream(
+            current_html=current_html,
+            adjustment_request=adjustment_request,
+            template_name=template_name
+        ):
+            if chunk.get('type') == 'complete':
+                adjusted_html = chunk.get('html_template')
+                break
+            elif chunk.get('type') == 'error':
+                raise HTTPException(status_code=500, detail=chunk.get('message', 'Template adjustment failed'))
+        
+        if not adjusted_html:
+            raise HTTPException(status_code=500, detail="Failed to adjust template")
+        
+        # Update project metadata with adjusted template
+        metadata["free_template_html"] = adjusted_html
+        metadata["free_template_adjusted_at"] = time.time()
+        metadata["free_template_adjustment_request"] = adjustment_request
+        metadata["free_template_confirmed"] = False  # Reset confirmation after adjustment
+        
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+        
+        return {
+            "success": True,
+            "template": {
+                "template_name": template_name,
+                "html_template": adjusted_html,
+                "description": "AI 根据用户建议调整后的模板"
+            }
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adjusting free template for project {project_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -5028,7 +5223,11 @@ async def save_single_slide_content(
     request: Request,
     user: User = Depends(get_current_user_required)
 ):
-    """保存单个幻灯片内容到数据库"""
+    """保存单个幻灯片内容到数据库
+    
+    重要：此函数只保存被编辑的单个幻灯片，不会触碰其他幻灯片数据，
+    以避免与正在进行的PPT生成过程产生冲突。
+    """
     try:
         logger.info(f"🔄 开始保存项目 {project_id} 的第 {slide_index + 1} 页 (索引: {slide_index})")
 
@@ -5041,143 +5240,58 @@ async def save_single_slide_content(
             logger.error("❌ HTML内容为空")
             raise HTTPException(status_code=400, detail="HTML content is required")
 
+        if slide_index < 0:
+            logger.error(f"❌ 幻灯片索引不能为负数: {slide_index}")
+            raise HTTPException(status_code=400, detail=f"Slide index cannot be negative: {slide_index}")
+
+        # 直接从数据库获取该幻灯片的当前数据
+        from ..services.db_project_manager import DatabaseProjectManager
+        db_manager = DatabaseProjectManager()
+        
+        # 获取项目基本信息确认项目存在
         project = await ppt_service.project_manager.get_project(project_id)
         if not project:
             logger.error(f"❌ 项目 {project_id} 不存在")
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # 关键修复：当 slides_data 缺页（例如只存在第2、3页）时，列表索引会错位，
-        # 导致保存/编辑第2页时覆盖第1页。这里按 outline / page_number 归一化 slides_data。
-        try:
-            outline_slides = []
-            if getattr(project, "outline", None):
-                if isinstance(project.outline, dict):
-                    outline_slides = project.outline.get("slides", []) or []
-                else:
-                    outline_slides = project.outline.slides if hasattr(project.outline, "slides") else []
-
-            outline_total = len(outline_slides) if outline_slides else 0
-            if outline_total > 0:
-                if project.slides_data is None:
-                    project.slides_data = []
-
-                normalized = [None] * outline_total
-                unplaced = []
-
-                for s in (project.slides_data or []):
-                    if not isinstance(s, dict):
-                        continue
-                    pn = s.get("page_number", None)
-                    if isinstance(pn, str):
-                        try:
-                            pn = int(pn)
-                        except Exception:
-                            pn = None
-                    if isinstance(pn, int) and 1 <= pn <= outline_total and normalized[pn - 1] is None:
-                        normalized[pn - 1] = s
-                    else:
-                        unplaced.append(s)
-
-                for s in unplaced:
-                    try:
-                        idx = normalized.index(None)
-                    except ValueError:
-                        break
-                    normalized[idx] = s
-
-                for i in range(outline_total):
-                    if normalized[i] is None:
-                        oslide = outline_slides[i] if i < len(outline_slides) else {}
-                        title = oslide.get("title") if isinstance(oslide, dict) else None
-                        slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
-                        content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
-                        normalized[i] = {
-                            "page_number": i + 1,
-                            "title": title or f"Slide {i + 1}",
-                            "html_content": "<div>Pending</div>",
-                            "slide_type": slide_type or "content",
-                            "content_points": content_points if isinstance(content_points, list) else [],
-                            "is_user_edited": False,
-                        }
-                    else:
-                        normalized[i]["page_number"] = i + 1
-
-                project.slides_data = normalized
-        except Exception as normalize_err:
-            logger.warning(f"Slides normalization skipped for project {project_id}: {normalize_err}")
-
-        # 详细验证幻灯片索引
-        total_slides = len(project.slides_data) if project.slides_data else 0
-        logger.debug(f"📊 项目幻灯片信息: 总页数={total_slides}, 请求索引={slide_index}")
-
-        if slide_index < 0:
-            logger.error(f"❌ 幻灯片索引不能为负数: {slide_index}")
-            raise HTTPException(status_code=400, detail=f"Slide index cannot be negative: {slide_index}")
-
-        if slide_index >= total_slides:
-            logger.error(f"❌ 幻灯片索引超出范围: {slide_index}，项目共有 {total_slides} 页")
-            raise HTTPException(status_code=400, detail=f"Slide index {slide_index} out of range (total: {total_slides})")
+        # 获取当前幻灯片数据（如果存在）
+        existing_slide = await db_manager.get_single_slide(project_id, slide_index)
+        
+        # 构建要保存的幻灯片数据
+        # 保留现有数据的其他字段，只更新html_content和is_user_edited
+        if existing_slide:
+            slide_data = existing_slide.copy()
+            slide_data['html_content'] = html_content
+            slide_data['is_user_edited'] = True
+        else:
+            # 如果幻灯片不存在（理论上不应该发生，但做防御处理）
+            slide_data = {
+                "page_number": slide_index + 1,
+                "title": f"Slide {slide_index + 1}",
+                "html_content": html_content,
+                "is_user_edited": True
+            }
 
         logger.debug(f"📝 更新第 {slide_index + 1} 页的内容")
+        logger.debug(f"📊 幻灯片数据: 标题='{slide_data.get('title', '无标题')}', 用户编辑=True, 索引={slide_index}")
 
-        # 更新幻灯片数据
-        project.slides_data[slide_index]['html_content'] = html_content
-        project.slides_data[slide_index]['is_user_edited'] = True
-        project.updated_at = time.time()
+        # 只保存这一个幻灯片到数据库，不影响其他幻灯片
+        save_success = await db_manager.save_single_slide(project_id, slide_index, slide_data)
 
-        # 重新生成组合HTML
-        if project.slides_data:
-            outline_title = project.title
-            if isinstance(project.outline, dict):
-                outline_title = project.outline.get('title', project.title)
-            elif hasattr(project.outline, 'title'):
-                outline_title = project.outline.title
+        if save_success:
+            logger.debug(f"✅ 第 {slide_index + 1} 页已成功保存到数据库")
 
-            project.slides_html = ppt_service._combine_slides_to_full_html(
-                project.slides_data, outline_title
-            )
-
-        # 保存到数据库
-        try:
-            logger.debug(f"💾 开始保存到数据库... (第{slide_index + 1}页)")
-
-            from ..services.db_project_manager import DatabaseProjectManager
-            db_manager = DatabaseProjectManager()
-
-            # 保存单个幻灯片
-            slide_data = project.slides_data[slide_index]
-            slide_title = slide_data.get('title', '无标题')
-            is_user_edited = slide_data.get('is_user_edited', False)
-
-            logger.debug(f"📊 幻灯片数据: 标题='{slide_title}', 用户编辑={is_user_edited}, 索引={slide_index}")
-            logger.debug(f"🔍 保存前验证: 项目ID={project_id}, 幻灯片索引={slide_index}")
-
-            save_success = await db_manager.save_single_slide(project_id, slide_index, slide_data)
-
-            if save_success:
-                logger.debug(f"✅ 第 {slide_index + 1} 页已成功保存到数据库")
-
-                return {
-                    "success": True,
-                    "message": f"Slide {slide_index + 1} saved successfully to database",
-                    "slide_data": slide_data,
-                    "database_saved": True
-                }
-            else:
-                logger.error(f"❌ 保存第 {slide_index + 1} 页到数据库失败")
-                return {
-                    "success": False,
-                    "error": "Failed to save slide to database",
-                    "database_saved": False
-                }
-
-        except Exception as save_error:
-            logger.error(f"❌ 保存第 {slide_index + 1} 页时发生异常: {save_error}")
-            import traceback
-            traceback.print_exc()
+            return {
+                "success": True,
+                "message": f"Slide {slide_index + 1} saved successfully to database",
+                "slide_data": slide_data,
+                "database_saved": True
+            }
+        else:
+            logger.error(f"❌ 保存第 {slide_index + 1} 页到数据库失败")
             return {
                 "success": False,
-                "error": f"Database error: {str(save_error)}",
+                "error": "Failed to save slide to database",
                 "database_saved": False
             }
 

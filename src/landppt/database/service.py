@@ -366,49 +366,71 @@ class DatabaseService:
         result = await self.project_repo.update(project_id, update_data)
         return result is not None
 
-    async def save_single_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any]) -> bool:
-        """Save a single slide to database immediately"""
-        try:
-            logger.debug(f"🔄 数据库服务开始保存幻灯片: 项目ID={project_id}, 索引={slide_index}")
+    async def save_single_slide(self, project_id: str, slide_index: int, slide_data: Dict[str, Any], skip_if_user_edited: bool = False) -> bool:
+        """Save a single slide to database immediately with retry logic for SQLite locks
+        
+        Args:
+            skip_if_user_edited: If True, skip updating slides that have is_user_edited=True.
+                                 Generator should pass True, editor should pass False.
+        """
+        import asyncio
+        
+        max_retries = 5
+        base_delay = 0.1  # 100ms
+        
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"🔄 数据库服务开始保存幻灯片: 项目ID={project_id}, 索引={slide_index}, 尝试={attempt + 1}")
 
-            # 验证输入参数
-            if not project_id:
-                raise ValueError("项目ID不能为空")
-            if slide_index < 0:
-                raise ValueError(f"幻灯片索引不能为负数: {slide_index}")
-            if not slide_data:
-                raise ValueError("幻灯片数据不能为空")
+                # 验证输入参数
+                if not project_id:
+                    raise ValueError("项目ID不能为空")
+                if slide_index < 0:
+                    raise ValueError(f"幻灯片索引不能为负数: {slide_index}")
+                if not slide_data:
+                    raise ValueError("幻灯片数据不能为空")
 
-            # Prepare slide record for database
-            slide_record = {
-                "project_id": project_id,
-                "slide_index": slide_index,
-                "slide_id": slide_data.get("slide_id", f"slide_{slide_index}"),
-                "title": slide_data.get("title", f"Slide {slide_index + 1}"),
-                "content_type": slide_data.get("content_type", "content"),
-                "html_content": slide_data.get("html_content", ""),
-                "slide_metadata": slide_data.get("metadata", {}),
-                "is_user_edited": slide_data.get("is_user_edited", False)
-            }
+                # Prepare slide record for database
+                slide_record = {
+                    "project_id": project_id,
+                    "slide_index": slide_index,
+                    "slide_id": slide_data.get("slide_id", f"slide_{slide_index}"),
+                    "title": slide_data.get("title", f"Slide {slide_index + 1}"),
+                    "content_type": slide_data.get("content_type", "content"),
+                    "html_content": slide_data.get("html_content", ""),
+                    "slide_metadata": slide_data.get("metadata", {}),
+                    "is_user_edited": slide_data.get("is_user_edited", False)
+                }
 
-            logger.debug(f"📊 准备保存的幻灯片记录: 标题='{slide_record['title']}', 用户编辑={slide_record['is_user_edited']}")
-            logger.debug(f"📄 HTML内容长度: {len(slide_record['html_content'])} 字符")
+                logger.debug(f"📊 准备保存的幻灯片记录: 标题='{slide_record['title']}', 跳过用户编辑={skip_if_user_edited}")
 
-            # Use upsert to insert or update the slide
-            result_slide = await self.slide_repo.upsert_slide(project_id, slide_index, slide_record)
+                # Use upsert to insert or update the slide, passing skip_if_user_edited
+                result_slide = await self.slide_repo.upsert_slide(project_id, slide_index, slide_record, skip_if_user_edited=skip_if_user_edited)
 
-            if result_slide:
-                logger.debug(f"✅ 幻灯片保存成功: 项目ID={project_id}, 索引={slide_index}, 数据库ID={result_slide.id}")
-            else:
-                logger.error(f"❌ 幻灯片保存失败: upsert_slide返回None")
+                if result_slide:
+                    logger.debug(f"✅ 幻灯片保存成功: 项目ID={project_id}, 索引={slide_index}, 数据库ID={result_slide.id}")
+                    return True
+                else:
+                    logger.error(f"❌ 幻灯片保存失败: upsert_slide返回None")
+                    return False
+                    
+            except Exception as e:
+                error_str = str(e).lower()
+                # Check if it's a database locked error - retry with backoff
+                if "database is locked" in error_str or "locked" in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)  # Exponential backoff
+                        logger.warning(f"⏳ 数据库锁定，{delay:.2f}秒后重试... (尝试 {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(delay)
+                        continue
+                
+                logger.error(f"❌ 保存单个幻灯片失败: 项目ID={project_id}, 索引={slide_index}, 错误={str(e)}")
+                import traceback
+                logger.error(f"❌ 错误堆栈: {traceback.format_exc()}")
                 return False
-
-            return True
-        except Exception as e:
-            logger.error(f"❌ 保存单个幻灯片失败: 项目ID={project_id}, 索引={slide_index}, 错误={str(e)}")
-            import traceback
-            logger.error(f"❌ 错误堆栈: {traceback.format_exc()}")
-            return False
+        
+        logger.error(f"❌ 保存单个幻灯片失败: 重试次数用尽, 项目ID={project_id}, 索引={slide_index}")
+        return False
 
     async def update_project(self, project_id: str, update_data: Dict[str, Any]) -> bool:
         """Update project data"""
