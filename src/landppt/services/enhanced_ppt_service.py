@@ -7124,7 +7124,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                     confirmed = project.confirmed_requirements or {}
 
                     slide_lines: List[str] = []
-                    for idx, s in enumerate(slides[:20], start=1):
+                    for idx, s in enumerate(slides[:5], start=1):
                         if not isinstance(s, dict):
                             continue
                         t = s.get('title') or f"第{idx}页"
@@ -7161,22 +7161,20 @@ Please fully utilize the above research information to enrich the PPT content, e
                         f"受众：{target_audience}" if target_audience else "",
                         f"风格偏好：{ppt_style}" if ppt_style else "",
                         f"自定义风格补充：{custom_style_prompt}" if custom_style_prompt else "",
-                        f"页数：{len(slides)}" if slides else "",
                         "",
-                        "===== PPT大纲（最多展示前20页）=====",
+                        "===== PPT大纲（最多展示前5页）=====",
                         "\n".join(slide_lines) if slide_lines else "(无)",
                         "",
                         "===== 设计要求 =====",
                         "1. **严格尺寸控制**：页面尺寸必须为1280x720像素（16:9比例）",
                         "2. **完整HTML结构**：包含<!DOCTYPE html>、head、body等完整结构",
                         "3. **内联样式**：所有CSS样式必须内联，确保自包含性",
-                        "4. **响应式设计**：适配不同屏幕尺寸但保持16:9比例",
-                        "5. **占位符支持**：在适当位置使用占位符：",
-                        "   - {{ page_title }} - 页面标题，默认居左",
+                        "4. **占位符支持**：在适当位置使用占位符：",
+                        "   - {{ page_title }} - 页面标题",
                         "   - {{ page_content }} - 页面内容",
                         "   - {{ current_page_number }} - 当前页码",
                         "   - {{ total_page_count }} - 总页数",
-                        "6. **技术要求**：",
+                        "5. **技术要求**：",
                         "   - 使用内联CSS样式（支持Tailwind CSS风格）",
                         "   - 支持Font Awesome图标",
                         "   - 支持Chart.js、ECharts.js、D3.js等图表库",
