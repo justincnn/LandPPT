@@ -2211,53 +2211,6 @@
             cursor: pointer;
         }
 
-        .quick-edit-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(79, 172, 254, 0.05);
-            border: 2px dashed rgba(79, 172, 254, 0.3);
-            border-radius: var(--border-radius-md);
-            display: none;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .quick-edit-mode .quick-edit-overlay {
-            display: block;
-        }
-
-        .quick-edit-overlay::before {
-            content: ' 点击文本直接编辑 | Enter保存 | ESC取消 | 再次点击修改退出';
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(79, 172, 254, 0.9);
-            color: white;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: var(--border-radius-sm);
-            font-size: 0.60rem;
-            font-weight: 500;
-            white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
-            animation: fadeInDown 0.5s ease;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-
         /* 可编辑元素高亮样式 */
         .quick-edit-highlight {
             outline: 2px solid rgba(67, 233, 123, 0.6) !important;
@@ -2459,22 +2412,7 @@
             color: var(--accent-contrast) !important;
         }
 
-        .direct-editing::before {
-            content: ' 正在编辑... (Enter保存 / ESC取消)';
-            position: absolute !important;
-            top: -30px !important;
-            left: 0 !important;
-            background: rgba(79, 172, 254, 0.9) !important;
-            color: white !important;
-            padding: 4px 8px !important;
-            border-radius: 4px !important;
-            font-size: 11px !important;
-            font-weight: 600 !important;
-            white-space: nowrap !important;
-            z-index: 1001 !important;
-            box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3) !important;
-            animation: fadeInDown 0.3s ease !important;
-        }
+        /* 直接编辑样式 - 简化版，无悬浮提示 */
 
         .direct-editing:focus {
             outline-color: #2980b9 !important;
@@ -2545,6 +2483,137 @@
             background: rgba(67, 233, 123, 0.2);
             border-color: rgba(67, 233, 123, 0.5);
             color: rgba(67, 233, 123, 1);
+        }
+
+        /* ========== 快速编辑工具栏样式 ========== */
+        .quick-edit-toolbar {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 1500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .quick-edit-toolbar.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .quick-edit-toolbar .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border-color);
+            margin: 0 6px;
+        }
+
+        .quick-edit-tool-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .quick-edit-tool-btn:hover {
+            background: var(--surface-muted);
+            color: var(--text-primary);
+        }
+
+        .quick-edit-tool-btn:active {
+            transform: scale(0.95);
+        }
+
+        .quick-edit-tool-btn.danger:hover {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .quick-edit-tool-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 选中元素样式 */
+        .quick-edit-element-selected {
+            outline: 2px solid #4facfe !important;
+            outline-offset: 2px !important;
+            position: relative !important;
+            cursor: move !important;
+        }
+
+        /* 调整大小手柄 */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #4facfe;
+            border: 2px solid white;
+            border-radius: 2px;
+            z-index: 1001;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .resize-handle.nw {
+            top: -5px;
+            left: -5px;
+            cursor: nw-resize;
+        }
+
+        .resize-handle.ne {
+            top: -5px;
+            right: -5px;
+            cursor: ne-resize;
+        }
+
+        .resize-handle.sw {
+            bottom: -5px;
+            left: -5px;
+            cursor: sw-resize;
+        }
+
+        .resize-handle.se {
+            bottom: -5px;
+            right: -5px;
+            cursor: se-resize;
+        }
+
+        /* 拖拽中状态 */
+        .quick-edit-dragging {
+            opacity: 0.7 !important;
+            cursor: grabbing !important;
+        }
+
+        /* 快速编辑模式提示 */
+        .quick-edit-mode-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-contrast);
+            color: var(--surface);
+            padding: 10px 20px;
+            border-radius: var(--border-radius-lg);
+            font-size: 13px;
+            z-index: 1500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
 
         @keyframes spin {
@@ -4793,7 +4862,6 @@
                                 <iframe class="slide-frame" id="slideFrame"
                                     srcdoc="{{ project.slides_data[0].html_content | e }}"
                                     title="Slide Preview"></iframe>
-                                <div class="quick-edit-overlay" id="quickEditOverlay"></div>
 
                                 <button class="preview-nav-btn right" id="previewNextBtn"
                                     onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
@@ -4855,6 +4923,40 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- 快速编辑工具栏 -->
+    <div class="quick-edit-toolbar" id="quickEditToolbar">
+        <button class="quick-edit-tool-btn" onclick="quickEditUndo()" title="撤销 (Ctrl+Z)" id="undoBtn" disabled>
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditRedo()" title="重做 (Ctrl+Y)" id="redoBtn" disabled>
+            <i class="fas fa-redo"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn danger" onclick="quickEditDelete()" title="删除元素">
+            <i class="fas fa-trash"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditDuplicate()" title="复制元素">
+            <i class="fas fa-copy"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn" onclick="quickEditMoveUp()" title="上移层级">
+            <i class="fas fa-layer-group"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditMoveDown()" title="下移层级">
+            <i class="fas fa-level-down-alt"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignLeft()" title="左对齐">
+            <i class="fas fa-align-left"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignCenter()" title="居中对齐">
+            <i class="fas fa-align-center"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignRight()" title="右对齐">
+            <i class="fas fa-align-right"></i>
+        </button>
     </div>
 
     <!-- Slideshow Overlay -->
@@ -5664,9 +5766,53 @@
             }
 
             const newIndex = currentSlideIndex + direction;
+
             if (newIndex >= 0 && newIndex < slidesData.length) {
-                selectSlide(newIndex);
+                // 先更新currentSlideIndex
+                currentSlideIndex = newIndex;
+
+                // 显式更新侧边栏缩略图选中状态（放在最前面确保执行）
+                const thumbnails = document.querySelectorAll('.slide-thumbnail');
+
+                thumbnails.forEach((thumb, i) => {
+                    if (i === newIndex) {
+                        thumb.classList.add('active');
+                        thumb.classList.add('selected');  // 添加选中状态（对勾）
+                        thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        thumb.classList.remove('active');
+                        thumb.classList.remove('selected');  // 移除选中状态（对勾）
+                    }
+                });
+
+                // 更新预览和编辑器
+                if (slidesData[newIndex]) {
+                    const slideFrame = document.getElementById('slideFrame');
+                    const codeEditor = document.getElementById('codeEditor');
+
+                    if (slideFrame) {
+                        slideFrame.style.opacity = '0.8';
+                        slideFrame.style.transition = 'opacity 0.2s ease';
+                        setSafeIframeContent(slideFrame, slidesData[newIndex].html_content);
+                        setTimeout(() => {
+                            slideFrame.style.opacity = '1';
+                            forceReinitializeIframeJS(slideFrame);
+                        }, 150);
+                    }
+
+                    if (codeEditor) {
+                        if (codeMirrorEditor && isCodeMirrorInitialized) {
+                            codeMirrorEditor.setValue(slidesData[newIndex].html_content);
+                        } else {
+                            codeEditor.value = slidesData[newIndex].html_content;
+                        }
+                    }
+                }
+
                 updatePreviewNavButtons();
+                updateAICurrentSlideInfo();
+                clearAIMessagesForSlideSwitch();
+                clearImageSelection();
             }
         }
 
@@ -5816,9 +5962,16 @@
                 previewPane.classList.add('quick-edit-mode');
             }
 
+            // 显示快速编辑工具栏
+            showQuickEditToolbar();
+
+            // 保存初始状态用于撤销
+            saveStateForUndo();
+
             // 等待iframe加载完成后初始化可编辑元素
             setTimeout(() => {
                 initEditableElements();
+                initQuickEditElementSelection();
 
                 // 重新初始化图像选择功能
                 const slideFrame = document.getElementById('slideFrame');
@@ -5845,6 +5998,17 @@
             if (previewPane) {
                 previewPane.classList.remove('quick-edit-mode');
             }
+
+            // 隐藏快速编辑工具栏
+            hideQuickEditToolbar();
+
+            // 取消选择的元素
+            deselectQuickEditElement();
+
+            // 清除撤销/重做栈
+            undoStack = [];
+            redoStack = [];
+            updateUndoRedoButtons();
 
             // 清除所有编辑标识
             clearEditableHighlights();
@@ -6162,7 +6326,567 @@
             }
         }
 
+        // ==================== 增强快速编辑功能 ====================
+
+        // 撤销/重做系统
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STEPS = 50;
+        let selectedQuickEditElement = null;
+        let isDragging = false;
+        let isResizing = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let elementStartX = 0;
+        let elementStartY = 0;
+        let resizeHandle = null;
+        let elementStartWidth = 0;
+        let elementStartHeight = 0;
+
+        // 保存状态用于撤销
+        function saveStateForUndo() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const currentHtml = slideFrame.contentDocument.documentElement.outerHTML;
+
+            // 如果当前状态和最后保存的状态相同，不保存
+            if (undoStack.length > 0 && undoStack[undoStack.length - 1] === currentHtml) {
+                return;
+            }
+
+            undoStack.push(currentHtml);
+
+            // 限制栈大小
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift();
+            }
+
+            // 新操作后清空重做栈
+            redoStack = [];
+
+            updateUndoRedoButtons();
+        }
+
+        // 更新撤销/重做按钮状态
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+
+            if (undoBtn) {
+                undoBtn.disabled = undoStack.length <= 1;
+            }
+            if (redoBtn) {
+                redoBtn.disabled = redoStack.length === 0;
+            }
+        }
+
+        // 撤销操作
+        function quickEditUndo() {
+            if (undoStack.length <= 1) {
+                showNotification('没有可撤销的操作', 'info');
+                return;
+            }
+
+            const currentState = undoStack.pop();
+            redoStack.push(currentState);
+
+            const previousState = undoStack[undoStack.length - 1];
+            applyHtmlState(previousState);
+
+            updateUndoRedoButtons();
+            showNotification('已撤销', 'success');
+        }
+
+        // 重做操作
+        function quickEditRedo() {
+            if (redoStack.length === 0) {
+                showNotification('没有可重做的操作', 'info');
+                return;
+            }
+
+            const nextState = redoStack.pop();
+            undoStack.push(nextState);
+
+            applyHtmlState(nextState);
+
+            updateUndoRedoButtons();
+            showNotification('已重做', 'success');
+        }
+
+        // 应用HTML状态
+        function applyHtmlState(html) {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame) return;
+
+            setSafeIframeContent(slideFrame, html);
+
+            // 更新数据
+            if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
+                slidesData[currentSlideIndex].html_content = html;
+            }
+
+            // 更新缩略图
+            const thumbnailIframe = document.querySelectorAll('.slide-thumbnail .slide-preview iframe')[currentSlideIndex];
+            if (thumbnailIframe) {
+                setSafeIframeContent(thumbnailIframe, html);
+            }
+
+            // 重新初始化编辑元素
+            setTimeout(() => {
+                initEditableElements();
+                initQuickEditElementSelection();
+            }, 300);
+        }
+
+        // 显示/隐藏快速编辑工具栏
+        function showQuickEditToolbar() {
+            const toolbar = document.getElementById('quickEditToolbar');
+            if (toolbar) {
+                toolbar.classList.add('visible');
+            }
+        }
+
+        function hideQuickEditToolbar() {
+            const toolbar = document.getElementById('quickEditToolbar');
+            if (toolbar) {
+                toolbar.classList.remove('visible');
+            }
+        }
+
+        // 初始化快速编辑元素选择
+        function initQuickEditElementSelection() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            // 为所有可选择的元素添加点击事件
+            const selectableElements = iframeDoc.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6, span, ul, ol, li, table');
+
+            selectableElements.forEach(element => {
+                // 排除body和html
+                if (element.tagName === 'BODY' || element.tagName === 'HTML') return;
+
+                element.addEventListener('click', function (e) {
+                    if (!quickEditMode) return;
+                    // 如果点击的是图片，不处理，让图片替换功能接管
+                    if (e.target.tagName === 'IMG') return;
+                    e.stopPropagation();
+                    selectQuickEditElement(element);
+                });
+            });
+
+            // 点击空白区域取消选择
+            iframeDoc.addEventListener('click', function (e) {
+                if (e.target === iframeDoc.body || e.target === iframeDoc.documentElement) {
+                    deselectQuickEditElement();
+                }
+            });
+        }
+
+        // 选择元素
+        function selectQuickEditElement(element) {
+            // 先取消之前的选择
+            deselectQuickEditElement();
+
+            selectedQuickEditElement = element;
+            element.classList.add('quick-edit-element-selected');
+
+            // 保存原始位置样式
+            if (!element.style.position || element.style.position === 'static') {
+                element.style.position = 'relative';
+            }
+
+            // 添加调整大小手柄
+            addResizeHandles(element);
+
+            // 初始化拖拽
+            initElementDrag(element);
+        }
+
+        // 取消选择元素
+        function deselectQuickEditElement() {
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.remove('quick-edit-element-selected');
+                removeResizeHandles(selectedQuickEditElement);
+                selectedQuickEditElement = null;
+            }
+        }
+
+        // 添加调整大小手柄
+        function addResizeHandles(element) {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            const positions = ['nw', 'ne', 'sw', 'se'];
+            positions.forEach(pos => {
+                const handle = iframeDoc.createElement('div');
+                handle.className = `resize-handle ${pos}`;
+                handle.setAttribute('data-resize-handle', pos);
+                handle.style.cssText = `
+                    position: absolute;
+                    width: 10px;
+                    height: 10px;
+                    background: #4facfe;
+                    border: 2px solid white;
+                    border-radius: 2px;
+                    z-index: 1001;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                `;
+
+                // 设置位置
+                switch (pos) {
+                    case 'nw': handle.style.top = '-5px'; handle.style.left = '-5px'; handle.style.cursor = 'nw-resize'; break;
+                    case 'ne': handle.style.top = '-5px'; handle.style.right = '-5px'; handle.style.cursor = 'ne-resize'; break;
+                    case 'sw': handle.style.bottom = '-5px'; handle.style.left = '-5px'; handle.style.cursor = 'sw-resize'; break;
+                    case 'se': handle.style.bottom = '-5px'; handle.style.right = '-5px'; handle.style.cursor = 'se-resize'; break;
+                }
+
+                handle.addEventListener('mousedown', function (e) {
+                    e.stopPropagation();
+                    startResize(e, pos);
+                });
+
+                element.appendChild(handle);
+            });
+        }
+
+        // 移除调整大小手柄
+        function removeResizeHandles(element) {
+            if (!element) return;
+            const handles = element.querySelectorAll('[data-resize-handle]');
+            handles.forEach(h => h.remove());
+        }
+
+        // 开始调整大小
+        function startResize(e, handlePos) {
+            if (!selectedQuickEditElement) return;
+
+            isResizing = true;
+            resizeHandle = handlePos;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartWidth = selectedQuickEditElement.offsetWidth;
+            elementStartHeight = selectedQuickEditElement.offsetHeight;
+
+            saveStateForUndo();
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.addEventListener('mousemove', handleResize);
+                slideFrame.contentDocument.addEventListener('mouseup', stopResize);
+            }
+        }
+
+        // 处理调整大小
+        function handleResize(e) {
+            if (!isResizing || !selectedQuickEditElement) return;
+
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+
+            let newWidth = elementStartWidth;
+            let newHeight = elementStartHeight;
+
+            switch (resizeHandle) {
+                case 'se':
+                    newWidth = elementStartWidth + dx;
+                    newHeight = elementStartHeight + dy;
+                    break;
+                case 'sw':
+                    newWidth = elementStartWidth - dx;
+                    newHeight = elementStartHeight + dy;
+                    break;
+                case 'ne':
+                    newWidth = elementStartWidth + dx;
+                    newHeight = elementStartHeight - dy;
+                    break;
+                case 'nw':
+                    newWidth = elementStartWidth - dx;
+                    newHeight = elementStartHeight - dy;
+                    break;
+            }
+
+            // 最小尺寸限制
+            newWidth = Math.max(50, newWidth);
+            newHeight = Math.max(30, newHeight);
+
+            selectedQuickEditElement.style.width = newWidth + 'px';
+            selectedQuickEditElement.style.height = newHeight + 'px';
+        }
+
+        // 停止调整大小
+        function stopResize(e) {
+            isResizing = false;
+            resizeHandle = null;
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.removeEventListener('mousemove', handleResize);
+                slideFrame.contentDocument.removeEventListener('mouseup', stopResize);
+            }
+
+            saveQuickEditChanges();
+        }
+
+        // 初始化元素拖拽
+        function initElementDrag(element) {
+            element.addEventListener('mousedown', function (e) {
+                // 如果点击的是调整大小手柄，不启动拖拽
+                if (e.target.hasAttribute('data-resize-handle')) return;
+                if (!quickEditMode || element !== selectedQuickEditElement) return;
+
+                startDrag(e);
+            });
+        }
+
+        // 开始拖拽
+        function startDrag(e) {
+            if (!selectedQuickEditElement) return;
+
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartX = parseInt(selectedQuickEditElement.style.left) || 0;
+            elementStartY = parseInt(selectedQuickEditElement.style.top) || 0;
+
+            selectedQuickEditElement.classList.add('quick-edit-dragging');
+
+            saveStateForUndo();
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.addEventListener('mousemove', handleDrag);
+                slideFrame.contentDocument.addEventListener('mouseup', stopDrag);
+            }
+        }
+
+        // 处理拖拽
+        function handleDrag(e) {
+            if (!isDragging || !selectedQuickEditElement) return;
+
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+
+            selectedQuickEditElement.style.left = (elementStartX + dx) + 'px';
+            selectedQuickEditElement.style.top = (elementStartY + dy) + 'px';
+        }
+
+        // 停止拖拽
+        function stopDrag(e) {
+            isDragging = false;
+
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.remove('quick-edit-dragging');
+            }
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.removeEventListener('mousemove', handleDrag);
+                slideFrame.contentDocument.removeEventListener('mouseup', stopDrag);
+            }
+
+            saveQuickEditChanges();
+        }
+
+        // 删除元素
+        function quickEditDelete() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择要删除的元素', 'warning');
+                return;
+            }
+
+            if (confirm('确定要删除此元素吗？')) {
+                saveStateForUndo();
+                selectedQuickEditElement.remove();
+                selectedQuickEditElement = null;
+                saveQuickEditChanges();
+                showNotification('元素已删除', 'success');
+            }
+        }
+
+        // 复制元素
+        function quickEditDuplicate() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择要复制的元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const clone = selectedQuickEditElement.cloneNode(true);
+            clone.classList.remove('quick-edit-element-selected');
+            removeResizeHandles(clone);
+
+            // 偏移位置
+            const currentLeft = parseInt(selectedQuickEditElement.style.left) || 0;
+            const currentTop = parseInt(selectedQuickEditElement.style.top) || 0;
+            clone.style.left = (currentLeft + 20) + 'px';
+            clone.style.top = (currentTop + 20) + 'px';
+
+            selectedQuickEditElement.parentNode.insertBefore(clone, selectedQuickEditElement.nextSibling);
+
+            // 选择新元素
+            selectQuickEditElement(clone);
+
+            saveQuickEditChanges();
+            showNotification('元素已复制', 'success');
+        }
+
+        // 上移层级
+        function quickEditMoveUp() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const currentZIndex = parseInt(window.getComputedStyle(selectedQuickEditElement).zIndex) || 0;
+            selectedQuickEditElement.style.zIndex = currentZIndex + 1;
+
+            saveQuickEditChanges();
+            showNotification('层级已上移', 'success');
+        }
+
+        // 下移层级
+        function quickEditMoveDown() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const currentZIndex = parseInt(window.getComputedStyle(selectedQuickEditElement).zIndex) || 0;
+            selectedQuickEditElement.style.zIndex = Math.max(0, currentZIndex - 1);
+
+            saveQuickEditChanges();
+            showNotification('层级已下移', 'success');
+        }
+
+        // 左对齐
+        function quickEditAlignLeft() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'left';
+            saveQuickEditChanges();
+            showNotification('已左对齐', 'success');
+        }
+
+        // 居中对齐
+        function quickEditAlignCenter() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'center';
+            saveQuickEditChanges();
+            showNotification('已居中对齐', 'success');
+        }
+
+        // 右对齐
+        function quickEditAlignRight() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'right';
+            saveQuickEditChanges();
+            showNotification('已右对齐', 'success');
+        }
+
+        // 保存快速编辑更改
+        function saveQuickEditChanges() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            // 临时移除选中状态和调整手柄，避免保存到HTML中
+            const selectedElements = iframeDoc.querySelectorAll('.quick-edit-element-selected');
+            const resizeHandles = iframeDoc.querySelectorAll('[data-resize-handle]');
+            const draggingElements = iframeDoc.querySelectorAll('.quick-edit-dragging');
+
+            // 临时移除类名
+            selectedElements.forEach(el => el.classList.remove('quick-edit-element-selected'));
+            draggingElements.forEach(el => el.classList.remove('quick-edit-dragging'));
+
+            // 临时移除调整手柄
+            resizeHandles.forEach(h => h.remove());
+
+            // 获取干净的HTML
+            const updatedHtml = iframeDoc.documentElement.outerHTML;
+
+            // 恢复选中状态
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.add('quick-edit-element-selected');
+                addResizeHandles(selectedQuickEditElement);
+            }
+
+            // 更新数据
+            if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
+                slidesData[currentSlideIndex].html_content = updatedHtml;
+
+                // 更新代码编辑器
+                if (typeof codeMirrorEditor !== 'undefined' && codeMirrorEditor && isCodeMirrorInitialized) {
+                    codeMirrorEditor.setValue(updatedHtml);
+                }
+
+                // 更新缩略图
+                const thumbnailIframe = document.querySelectorAll('.slide-thumbnail .slide-preview iframe')[currentSlideIndex];
+                if (thumbnailIframe) {
+                    setSafeIframeContent(thumbnailIframe, updatedHtml);
+                }
+
+                // 保存到服务器
+                if (typeof saveToServer === 'function') {
+                    saveToServer();
+                }
+            }
+        }
+
+        // 键盘快捷键支持
+        document.addEventListener('keydown', function (e) {
+            if (!quickEditMode) return;
+
+            // Ctrl+Z 撤销
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                quickEditUndo();
+            }
+
+            // Ctrl+Y 重做
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                quickEditRedo();
+            }
+
+            // Delete 删除
+            if (e.key === 'Delete' && selectedQuickEditElement) {
+                e.preventDefault();
+                quickEditDelete();
+            }
+
+            // Escape 取消选择
+            if (e.key === 'Escape') {
+                deselectQuickEditElement();
+            }
+        });
+
         function setMode(mode) {
+
             currentMode = mode;
 
             // Update button states
@@ -12095,7 +12819,6 @@
 
                             <iframe class="slide-frame" id="slideFrame"
                                     title="Slide Preview"></iframe>
-                            <div class="quick-edit-overlay" id="quickEditOverlay"></div>
 
                             <button class="preview-nav-btn right" id="previewNextBtn" onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
                                 <i class="fas fa-chevron-right"></i>
