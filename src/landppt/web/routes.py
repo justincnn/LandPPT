@@ -78,9 +78,18 @@ class AISlideEditRequest(BaseModel):
     projectInfo: Dict[str, Any]
     slideOutline: Optional[Dict[str, Any]] = None
     chatHistory: Optional[List[Dict[str, str]]] = None
-    images: Optional[List[Dict[str, str]]] = None  # 新增：图片信息列表
+    images: Optional[List[Dict[str, Any]]] = None  # 新增：图片信息列表（url/id/name/size 等）
     visionEnabled: Optional[bool] = False  # 新增：视觉模式启用状态
-    slideScreenshot: Optional[str] = None  # 新增：幻灯片截图数据（base64格式）
+    slideScreenshot: Optional[str] = None  # 新增：幻灯片截图数据（data URL / base64）
+
+# AI自由对话请求数据模型（不设系统提示词，仅当前页）
+class AISlideNativeDialogRequest(BaseModel):
+    slideIndex: int
+    slideTitle: str
+    slideContent: str
+    userRequest: str
+    chatHistory: Optional[List[Dict[str, str]]] = None
+    images: Optional[List[Dict[str, str]]] = None  # 粘贴/上传图片信息列表（url/id/name/size）
 
 # AI要点增强请求数据模型
 class AIBulletPointEnhanceRequest(BaseModel):
@@ -128,6 +137,15 @@ class SpeechScriptExportRequest(BaseModel):
 class ImagePPTXExportRequest(BaseModel):
     slides: Optional[List[Dict[str, Any]]] = None  # 包含index, html_content, title
     images: Optional[List[Dict[str, Any]]] = None  # 包含index, data(base64), width, height (向后兼容)
+
+class SlideBatchRegenerateRequest(BaseModel):
+    """Batch slide regeneration request (0-based indices)."""
+    slide_indices: Optional[List[int]] = None
+    regenerate_all: bool = False
+    scenario: Optional[str] = None
+    topic: Optional[str] = None
+    requirements: Optional[str] = None
+    language: str = "zh"
 
 # Helper function to extract slides from HTML content
 async def _extract_slides_from_html(slides_html: str, existing_slides_data: list) -> list:
@@ -263,9 +281,14 @@ async def web_ai_config(
     config_service = get_config_service()
     current_config = config_service.get_all_config()
 
+    # "gemini" is an alias for the Google provider; the UI exposes it as "google".
+    current_provider = ai_config.default_ai_provider
+    if (isinstance(current_provider, str) and current_provider.strip().lower() == "gemini"):
+        current_provider = "google"
+
     return templates.TemplateResponse("ai_config.html", {
         "request": request,
-        "current_provider": ai_config.default_ai_provider,
+        "current_provider": current_provider,
         "available_providers": ai_config.get_available_providers(),
         "provider_status": {
             provider: ai_config.is_provider_available(provider)
@@ -437,12 +460,112 @@ async def test_openai_provider_proxy(
                         "status": "error",  # Add status field for compatibility
                         "error": error_message
                     }
-                    
+
     except Exception as e:
         logger.error(f"Error testing OpenAI provider with frontend config: {e}")
         return {
             "success": False,
             "status": "error",  # Add status field for compatibility
+            "error": str(e)
+        }
+
+@router.post("/api/ai/providers/anthropic/test")
+async def test_anthropic_provider_proxy(
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Proxy endpoint to test Anthropic provider, avoiding CORS issues - uses frontend provided config"""
+    try:
+        import aiohttp
+
+        # Get configuration from frontend request
+        data = await request.json()
+        base_url = data.get('base_url', 'https://api.anthropic.com')
+        api_key = data.get('api_key', '')
+        model = data.get('model', 'claude-3-5-sonnet-20241022')
+
+        logger.info(f"Frontend requested Anthropic test with: base_url={base_url}, model={model}")
+
+        if not api_key:
+            return {"success": False, "error": "API Key is required"}
+
+        # Ensure base URL format
+        base_url = base_url.rstrip('/')
+        if not base_url.endswith('/v1'):
+            base_url = base_url + '/v1'
+
+        messages_url = f"{base_url}/messages"
+        logger.info(f"Testing Anthropic provider at: {messages_url}")
+
+        # Make test request to Anthropic API using frontend provided credentials
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'x-api-key': api_key,
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01'
+            }
+
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Say 'Hello, I am working!' in exactly 5 words."
+                    }
+                ],
+                "max_tokens": 1024,
+                "temperature": 0
+            }
+
+            async with session.post(messages_url, headers=headers, json=payload, timeout=30) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    logger.info(f"Anthropic test successful for {base_url} with model {model}")
+
+                    # Anthropic response format: data.content[0].text
+                    content = data.get('content', [])
+                    response_text = content[0].get('text', '') if content else ''
+
+                    # Anthropic usage format: input_tokens, output_tokens
+                    # Frontend expects: prompt_tokens, completion_tokens, total_tokens
+                    anthropic_usage = data.get('usage', {})
+                    usage = {
+                        "prompt_tokens": anthropic_usage.get('input_tokens', 0),
+                        "completion_tokens": anthropic_usage.get('output_tokens', 0),
+                        "total_tokens": anthropic_usage.get('input_tokens', 0) + anthropic_usage.get('output_tokens', 0)
+                    }
+
+                    # Return with consistent format that frontend expects
+                    return {
+                        "success": True,
+                        "status": "success",
+                        "provider": "anthropic",
+                        "model": model,
+                        "response_preview": response_text,
+                        "usage": usage
+                    }
+                else:
+                    error_text = await response.text()
+                    try:
+                        error_data = json.loads(error_text)
+                        error_message = error_data.get('error', {}).get('message', f"API returned status {response.status}")
+                    except:
+                        error_message = f"API returned status {response.status}: {error_text}"
+
+                    logger.error(f"Anthropic test failed for {base_url}: {error_message}")
+
+                    return {
+                        "success": False,
+                        "status": "error",
+                        "error": error_message
+                    }
+
+    except Exception as e:
+        logger.error(f"Error testing Anthropic provider with frontend config: {e}")
+        return {
+            "success": False,
+            "status": "error",
             "error": str(e)
         }
 
@@ -2211,6 +2334,59 @@ async def regenerate_slide(project_id: str, slide_number: int):
         if slide_number < 1 or slide_number > len(slides):
             raise HTTPException(status_code=400, detail="Invalid slide number")
 
+        # 关键修复：当 slides_data 缺页（例如只存在第2、3页）时，列表索引会错位，
+        # 可能导致重新生成第2页时覆盖第1页。这里按 outline/page_number 归一化 slides_data。
+        try:
+            outline_total = len(slides)
+            if outline_total > 0:
+                if project.slides_data is None:
+                    project.slides_data = []
+
+                normalized = [None] * outline_total
+                unplaced = []
+
+                for s in (project.slides_data or []):
+                    if not isinstance(s, dict):
+                        continue
+                    pn = s.get("page_number", None)
+                    if isinstance(pn, str):
+                        try:
+                            pn = int(pn)
+                        except Exception:
+                            pn = None
+                    if isinstance(pn, int) and 1 <= pn <= outline_total and normalized[pn - 1] is None:
+                        normalized[pn - 1] = s
+                    else:
+                        unplaced.append(s)
+
+                for s in unplaced:
+                    try:
+                        idx = normalized.index(None)
+                    except ValueError:
+                        break
+                    normalized[idx] = s
+
+                for i in range(outline_total):
+                    if normalized[i] is None:
+                        oslide = slides[i] if i < len(slides) else {}
+                        title = oslide.get("title") if isinstance(oslide, dict) else None
+                        slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
+                        content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
+                        normalized[i] = {
+                            "page_number": i + 1,
+                            "title": title or f"Slide {i + 1}",
+                            "html_content": "<div>Pending</div>",
+                            "slide_type": slide_type or "content",
+                            "content_points": content_points if isinstance(content_points, list) else [],
+                            "is_user_edited": False,
+                        }
+                    else:
+                        normalized[i]["page_number"] = i + 1
+
+                project.slides_data = normalized
+        except Exception as normalize_err:
+            logger.warning(f"Slides normalization skipped for regenerate_slide {project_id}: {normalize_err}")
+
         slide_data = slides[slide_number - 1]
 
         # Load system prompt
@@ -2313,6 +2489,199 @@ async def regenerate_slide(project_id: str, slide_number: int):
             "slide_data": project.slides_data[slide_number - 1]
         }
 
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@router.post("/api/projects/{project_id}/slides/batch-regenerate")
+async def batch_regenerate_slides(project_id: str, payload: SlideBatchRegenerateRequest):
+    """Regenerate multiple slides (or all slides) in one request."""
+    try:
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        if not project.outline:
+            raise HTTPException(status_code=400, detail="Project outline not found")
+
+        if not project.confirmed_requirements:
+            raise HTTPException(status_code=400, detail="Project requirements not confirmed")
+
+        if isinstance(project.outline, dict):
+            outline_slides = project.outline.get("slides", [])
+            outline_title = project.outline.get("title", project.title)
+        else:
+            outline_slides = project.outline.slides if hasattr(project.outline, "slides") else []
+            outline_title = project.outline.title if hasattr(project.outline, "title") else project.title
+
+        total_slides = len(outline_slides)
+        if total_slides <= 0:
+            raise HTTPException(status_code=400, detail="No slides found in outline")
+
+        # 关键修复：当 slides_data 缺页时，按 outline/page_number 归一化，避免批量重新生成错页写入。
+        try:
+            if project.slides_data is None:
+                project.slides_data = []
+
+            normalized = [None] * total_slides
+            unplaced = []
+
+            for s in (project.slides_data or []):
+                if not isinstance(s, dict):
+                    continue
+                pn = s.get("page_number", None)
+                if isinstance(pn, str):
+                    try:
+                        pn = int(pn)
+                    except Exception:
+                        pn = None
+                if isinstance(pn, int) and 1 <= pn <= total_slides and normalized[pn - 1] is None:
+                    normalized[pn - 1] = s
+                else:
+                    unplaced.append(s)
+
+            for s in unplaced:
+                try:
+                    idx = normalized.index(None)
+                except ValueError:
+                    break
+                normalized[idx] = s
+
+            for i in range(total_slides):
+                if normalized[i] is None:
+                    oslide = outline_slides[i] if i < len(outline_slides) else {}
+                    title = oslide.get("title") if isinstance(oslide, dict) else None
+                    slide_type = (oslide.get("slide_type") or oslide.get("type")) if isinstance(oslide, dict) else None
+                    content_points = oslide.get("content_points") if isinstance(oslide, dict) else None
+                    normalized[i] = {
+                        "page_number": i + 1,
+                        "title": title or f"Slide {i + 1}",
+                        "html_content": "<div>Pending</div>",
+                        "slide_type": slide_type or "content",
+                        "content_points": content_points if isinstance(content_points, list) else [],
+                        "is_user_edited": False
+                    }
+                else:
+                    normalized[i]["page_number"] = i + 1
+
+            project.slides_data = normalized
+        except Exception as normalize_err:
+            logger.warning(f"Slides normalization skipped for batch_regenerate {project_id}: {normalize_err}")
+
+        # Determine target indices (0-based).
+        if payload.regenerate_all or not payload.slide_indices:
+            target_indices = list(range(total_slides))
+        else:
+            target_indices = sorted(set(payload.slide_indices))
+
+        invalid_indices = [i for i in target_indices if i < 0 or i >= total_slides]
+        if invalid_indices:
+            raise HTTPException(status_code=400, detail=f"Invalid slide indices: {invalid_indices}")
+
+        # Prepare generation context once.
+        system_prompt = ppt_service._load_prompts_md_system_prompt()
+        selected_template = await ppt_service._ensure_global_master_template_selected(project_id)
+
+        if project.slides_data is None:
+            project.slides_data = []
+
+        # Ensure slides_data has enough entries for all slides.
+        while len(project.slides_data) < total_slides:
+            page_number = len(project.slides_data) + 1
+            project.slides_data.append({
+                "page_number": page_number,
+                "title": f"Slide {page_number}",
+                "html_content": "<div>Pending</div>",
+                "slide_type": "content",
+                "content_points": [],
+                "is_user_edited": False
+            })
+
+        results: List[Dict[str, Any]] = []
+
+        for slide_index in target_indices:
+            slide_number = slide_index + 1  # 1-based for prompts/templates
+            slide_outline = outline_slides[slide_index]
+            try:
+                if selected_template:
+                    new_html_content = await ppt_service._generate_slide_with_template(
+                        slide_outline,
+                        selected_template,
+                        slide_number,
+                        total_slides,
+                        project.confirmed_requirements
+                    )
+                else:
+                    new_html_content = await ppt_service._generate_single_slide_html_with_prompts(
+                        slide_outline,
+                        project.confirmed_requirements,
+                        system_prompt,
+                        slide_number,
+                        total_slides,
+                        outline_slides,
+                        project.slides_data,
+                        project_id=project_id
+                    )
+
+                existing_slide = project.slides_data[slide_index] if slide_index < len(project.slides_data) else {}
+                updated_slide = {
+                    "page_number": slide_number,
+                    "title": slide_outline.get("title", existing_slide.get("title", f"Slide {slide_number}")),
+                    "html_content": new_html_content,
+                    "slide_type": slide_outline.get("slide_type", existing_slide.get("slide_type", "content")),
+                    "content_points": slide_outline.get("content_points", existing_slide.get("content_points", [])),
+                    "is_user_edited": existing_slide.get("is_user_edited", False),
+                    **{k: v for k, v in (existing_slide or {}).items() if k not in ["page_number", "title", "html_content", "slide_type", "content_points", "is_user_edited"]}
+                }
+
+                project.slides_data[slide_index] = updated_slide
+
+                results.append({
+                    "slide_index": slide_index,
+                    "slide_number": slide_number,
+                    "success": True,
+                    "slide_data": updated_slide
+                })
+            except Exception as e:
+                logger.error(f"Batch regenerate failed for project {project_id} slide {slide_number}: {e}")
+                results.append({
+                    "slide_index": slide_index,
+                    "slide_number": slide_number,
+                    "success": False,
+                    "error": str(e)
+                })
+
+        # Rebuild combined HTML once.
+        project.slides_html = ppt_service._combine_slides_to_full_html(project.slides_data, outline_title)
+        project.updated_at = time.time()
+
+        updated_count = len([r for r in results if r.get("success")])
+
+        # Persist: save regenerated slides and update project HTML.
+        try:
+            from ..services.db_project_manager import DatabaseProjectManager
+            db_manager = DatabaseProjectManager()
+
+            for r in results:
+                if not r.get("success") or not r.get("slide_data"):
+                    continue
+                await db_manager.save_single_slide(project_id, int(r["slide_index"]), r["slide_data"])
+
+            await db_manager.update_project_data(project_id, {
+                "slides_html": project.slides_html,
+                "updated_at": project.updated_at
+            })
+        except Exception as save_error:
+            logger.error(f"Batch regenerate DB save failed for project {project_id}: {save_error}")
+
+        return {
+            "success": updated_count > 0,
+            "updated_count": updated_count,
+            "total_requested": len(target_indices),
+            "results": results
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -2541,9 +2910,16 @@ async def ai_slide_edit_stream(
 用户上传的图片信息：
 """
             for i, image in enumerate(request.images, 1):
+                url = image.get("url", "") if isinstance(image, dict) else ""
+                # 避免把 data URL/base64 整段塞进文本上下文（图片会以多模态内容附带）
+                if isinstance(url, str) and url.startswith("data:image"):
+                    url_display = "（data URL 已随消息附带）"
+                else:
+                    url_display = url
+
                 images_info += f"""
 - 图片{i}：{image.get('name', '未知')}
-  - URL：{image.get('url', '')}
+  - URL：{url_display}
   - 大小：{image.get('size', '未知')}
   - 说明：请分析这张图片的内容，理解用户的意图，并根据编辑要求进行相应的处理
 """
@@ -2605,17 +2981,23 @@ async def ai_slide_edit_stream(
         else:
             logger.info("AI流式编辑未接收到对话历史")
 
-        # 添加当前用户请求（支持多模态内容）
-        if request.visionEnabled and request.slideScreenshot:
-            # 创建多模态消息，包含文本和图片
+        # 添加当前用户请求（视觉模式：支持截图 + 上传图片的多模态内容）
+        if request.visionEnabled:
             from ..ai.base import TextContent, ImageContent
-            user_content = [
-                TextContent(text=context),
-                ImageContent(image_url={"url": request.slideScreenshot})
-            ]
+
+            user_content = [TextContent(text=context)]
+
+            if request.slideScreenshot:
+                user_content.append(ImageContent(image_url={"url": request.slideScreenshot}))
+
+            if request.images:
+                for img in request.images:
+                    url = (img or {}).get("url")
+                    if url:
+                        user_content.append(ImageContent(image_url={"url": url}))
+
             messages.append(AIMessage(role=MessageRole.USER, content=user_content))
         else:
-            # 普通文本消息
             messages.append(AIMessage(role=MessageRole.USER, content=context))
 
         async def generate_ai_stream():
@@ -2696,6 +3078,118 @@ async def ai_slide_edit_stream(
             "response": "抱歉，AI编辑服务暂时不可用。请稍后重试。"
         }
 
+@router.post("/api/ai/slide-native-dialog/stream")
+async def ai_slide_native_dialog_stream(
+    request: AISlideNativeDialogRequest,
+    user: User = Depends(get_current_user_required)
+):
+    """AI自由对话流式接口（不设系统提示词，仅当前页）"""
+    try:
+        provider, settings = get_role_provider("editor")
+
+        images_info = ""
+        if request.images:
+            images_info = f"\n用户上传/粘贴的图片数量：{len(request.images)}（图片内容在消息中以多模态形式附带）\n"
+
+        context = f"""
+当前页面信息（仅此页）：
+- 页码：第{request.slideIndex}页
+- 标题：{request.slideTitle}
+
+当前页面HTML内容：
+{request.slideContent}
+
+用户问题：
+{request.userRequest}
+{images_info}
+"""
+
+        messages: List[AIMessage] = []
+
+        # 添加对话历史（忽略 system 角色，避免“系统提示词”进入模型）
+        if request.chatHistory:
+            for chat_msg in request.chatHistory:
+                role_str = (chat_msg.get("role") or "").lower()
+                if role_str == "system":
+                    continue
+
+                if role_str == "assistant":
+                    role = MessageRole.ASSISTANT
+                else:
+                    role = MessageRole.USER
+
+                messages.append(AIMessage(role=role, content=chat_msg.get("content", "")))
+
+        # 添加当前用户请求（支持粘贴/上传图片的多模态内容）
+        if request.images and len(request.images) > 0:
+            from ..ai.base import TextContent, ImageContent
+
+            user_content = [TextContent(text=context)]
+            for img in request.images:
+                url = img.get("url")
+                if url:
+                    user_content.append(ImageContent(image_url={"url": url}))
+
+            messages.append(AIMessage(role=MessageRole.USER, content=user_content))
+        else:
+            messages.append(AIMessage(role=MessageRole.USER, content=context))
+
+        async def generate_ai_stream():
+            try:
+                yield f"data: {json.dumps({'type': 'start', 'content': ''})}\n\n"
+
+                full_response = ""
+                if hasattr(provider, "stream_chat_completion"):
+                    async for chunk in provider.stream_chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get("model"),
+                    ):
+                        if chunk:
+                            full_response += chunk
+                            yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
+                else:
+                    response = await provider.chat_completion(
+                        messages=messages,
+                        max_tokens=ai_config.max_tokens,
+                        temperature=0.7,
+                        model=settings.get("model"),
+                    )
+                    if response.content:
+                        full_response = response.content
+                        yield f"data: {json.dumps({'type': 'content', 'content': response.content})}\n\n"
+
+                yield f"data: {json.dumps({'type': 'complete', 'content': '', 'fullResponse': full_response})}\n\n"
+
+            except Exception as e:
+                logger.error(f"AI自由对话流式请求失败: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'content': '', 'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            generate_ai_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"AI自由对话请求失败: {e}")
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'type': 'error', 'content': '', 'error': str(e)})}\n\n"]),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+            },
+        )
+
 # 大纲AI优化请求数据模型
 class OutlineAIOptimizeRequest(BaseModel):
     outline_content: str  # JSON格式的大纲内容
@@ -2703,6 +3197,7 @@ class OutlineAIOptimizeRequest(BaseModel):
     project_info: Dict[str, Any]  # 项目信息
     optimization_type: str = "full"  # full=全大纲优化, single=单页优化
     slide_index: Optional[int] = None  # 当optimization_type=single时使用
+    language: Optional[str] = None  # 目标语言（如 zh/en/ja...），优先级高于大纲metadata.language
 
 @router.post("/api/ai/optimize-outline")
 async def ai_optimize_outline(
@@ -2722,6 +3217,43 @@ async def ai_optimize_outline(
                 "success": False,
                 "error": f"大纲JSON格式错误: {str(e)}"
             }
+
+        def _normalize_language_code(value: Any) -> Optional[str]:
+            if not isinstance(value, str):
+                return None
+            code = value.strip().lower()
+            if not code:
+                return None
+            # Normalize common variants (zh-cn -> zh, en-us -> en, etc.)
+            if code.startswith("zh"):
+                return "zh"
+            if code.startswith("en"):
+                return "en"
+            if code.startswith("ja"):
+                return "ja"
+            if code.startswith("ko"):
+                return "ko"
+            if code.startswith("fr"):
+                return "fr"
+            if code.startswith("de"):
+                return "de"
+            if code.startswith("es"):
+                return "es"
+            return code
+
+        outline_language = None
+        if isinstance(outline_data, dict):
+            metadata = outline_data.get("metadata")
+            if isinstance(metadata, dict):
+                outline_language = metadata.get("language") or outline_data.get("language")
+            else:
+                outline_language = outline_data.get("language")
+
+        target_language = (
+            _normalize_language_code(request.language)
+            or _normalize_language_code(outline_language)
+            or "zh"
+        )
         
         # 根据优化类型构建不同的提示词
         if request.optimization_type == "single" and request.slide_index is not None:
@@ -2734,7 +3266,7 @@ async def ai_optimize_outline(
             
             slide = outline_data['slides'][request.slide_index]
             
-            context = f"""
+            context = f"""Output language: {target_language}
 你是一位专业的PPT大纲设计专家。用户想要优化PPT大纲中的第{request.slide_index + 1}页内容。
 
 项目信息：
@@ -2774,7 +3306,7 @@ async def ai_optimize_outline(
 """
         else:
             # 全大纲优化
-            context = f"""
+            context = f"""Output language: {target_language}
 你是一位专业的PPT大纲设计专家。用户想要优化整个PPT大纲。
 
 项目信息：
@@ -2808,7 +3340,7 @@ async def ai_optimize_outline(
   ],
   "metadata": {{
     "scenario": "{request.project_info.get('scenario', '通用')}",
-    "language": "zh",
+    "language": "{target_language}",
     "target_audience": "{request.project_info.get('target_audience', '普通大众')}",
     "optimized": true
   }}
@@ -2825,6 +3357,7 @@ async def ai_optimize_outline(
         # 构建AI消息
         messages = [
             AIMessage(role=MessageRole.SYSTEM, content="你是一位专业的PPT大纲设计专家，擅长优化和改进PPT大纲结构和内容。你的回复必须是纯JSON格式，不要包含任何解释性文字、markdown标记或注释。"),
+            AIMessage(role=MessageRole.SYSTEM, content=f"Output language: {target_language}. Return pure JSON only."),
             AIMessage(role=MessageRole.USER, content=context)
         ]
         
@@ -4483,6 +5016,201 @@ async def adjust_project_free_template(
         }
     except HTTPException:
         raise
+async def generate_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Generate (or regenerate) a project's free-template via AI."""
+    try:
+        payload = {}
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+
+        force = bool(payload.get("force", False))
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        if force:
+            metadata.pop("free_template_html", None)
+            metadata.pop("free_template_name", None)
+            metadata.pop("free_template_generated_at", None)
+            metadata.pop("free_template_prompt", None)
+            metadata["free_template_status"] = "pending"
+            metadata["free_template_confirmed"] = False
+            metadata.pop("free_template_confirmed_at", None)
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+            ppt_service.clear_cached_style_genes(project_id)
+
+        template = await ppt_service.get_selected_global_template(project_id)
+        if not template:
+            raise HTTPException(status_code=500, detail="Failed to generate free template")
+
+        # Mark status ready (generation is synchronous here)
+        project = await ppt_service.project_manager.get_project(project_id)
+        if project and project.project_metadata:
+            metadata = project.project_metadata
+            metadata["free_template_status"] = "ready"
+            await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+
+        return {
+            "success": True,
+            "template": template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/confirm")
+async def confirm_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Confirm using the generated free-template; optionally save it into global template list."""
+    try:
+        data = await request.json()
+        save_to_library = bool(data.get("save_to_library", False))
+        requested_name = (data.get("template_name") or "").strip()
+        requested_description = (data.get("description") or "").strip()
+        requested_tags = data.get("tags") or []
+
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+
+        html = metadata.get("free_template_html")
+        if not (isinstance(html, str) and html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+
+        metadata["free_template_confirmed"] = True
+        metadata["free_template_confirmed_at"] = time.time()
+        metadata["free_template_status"] = "ready"
+
+        saved_template = None
+        if save_to_library:
+            base_name = requested_name or f"自由模板-{(project.topic or 'PPT')[:20]}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            description = requested_description or "由自由模板功能生成并确认的模板"
+            tags: List[str] = []
+            if isinstance(requested_tags, list):
+                tags = [str(t).strip() for t in requested_tags if str(t).strip()]
+            tags = tags or ["自由模板", "AI生成"]
+
+            # Ensure unique name
+            final_name = base_name
+            for i in range(1, 6):
+                try:
+                    saved_template = await ppt_service.global_template_service.create_template({
+                        "template_name": final_name,
+                        "description": description,
+                        "html_template": html,
+                        "tags": tags,
+                        "is_default": False,
+                        "is_active": True,
+                        "created_by": f"free_template:{project_id}"
+                    })
+                    break
+                except ValueError:
+                    final_name = f"{base_name}-{i}"
+
+            if not saved_template:
+                raise HTTPException(status_code=409, detail="Failed to save template to library (name conflict)")
+
+            metadata["saved_global_template_id"] = saved_template.get("id")
+            metadata["saved_global_template_name"] = saved_template.get("template_name")
+
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+
+        return {
+            "success": True,
+            "saved_template": saved_template
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error confirming free template for project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/projects/{project_id}/free-template/adjust")
+async def adjust_project_free_template(
+    project_id: str,
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Adjust the generated free-template based on user feedback."""
+    try:
+        data = await request.json()
+        adjustment_request = (data.get("adjustment_request") or "").strip()
+        
+        if not adjustment_request:
+            raise HTTPException(status_code=400, detail="Adjustment request is required")
+        
+        project = await ppt_service.project_manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        metadata = project.project_metadata or {}
+        if metadata.get("template_mode") != "free":
+            raise HTTPException(status_code=400, detail="Project is not using free template mode")
+        
+        current_html = metadata.get("free_template_html")
+        if not (isinstance(current_html, str) and current_html.strip()):
+            raise HTTPException(status_code=400, detail="Free template is not generated yet")
+        
+        template_name = metadata.get("free_template_name") or "自由模板"
+        
+        # Use the global template service to adjust the template
+        adjusted_html = None
+        async for chunk in ppt_service.global_template_service.adjust_template_with_ai_stream(
+            current_html=current_html,
+            adjustment_request=adjustment_request,
+            template_name=template_name
+        ):
+            if chunk.get('type') == 'complete':
+                adjusted_html = chunk.get('html_template')
+                break
+            elif chunk.get('type') == 'error':
+                raise HTTPException(status_code=500, detail=chunk.get('message', 'Template adjustment failed'))
+        
+        if not adjusted_html:
+            raise HTTPException(status_code=500, detail="Failed to adjust template")
+        
+        # Update project metadata with adjusted template
+        metadata["free_template_html"] = adjusted_html
+        metadata["free_template_adjusted_at"] = time.time()
+        metadata["free_template_adjustment_request"] = adjustment_request
+        metadata["free_template_confirmed"] = False  # Reset confirmation after adjustment
+        
+        await ppt_service.project_manager.update_project_metadata(project_id, metadata)
+        ppt_service.clear_cached_style_genes(project_id)
+        
+        return {
+            "success": True,
+            "template": {
+                "template_name": template_name,
+                "html_template": adjusted_html,
+                "description": "AI 根据用户建议调整后的模板"
+            }
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adjusting free template for project {project_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -4495,7 +5223,11 @@ async def save_single_slide_content(
     request: Request,
     user: User = Depends(get_current_user_required)
 ):
-    """保存单个幻灯片内容到数据库"""
+    """保存单个幻灯片内容到数据库
+    
+    重要：此函数只保存被编辑的单个幻灯片，不会触碰其他幻灯片数据，
+    以避免与正在进行的PPT生成过程产生冲突。
+    """
     try:
         logger.info(f"🔄 开始保存项目 {project_id} 的第 {slide_index + 1} 页 (索引: {slide_index})")
 
@@ -4508,83 +5240,58 @@ async def save_single_slide_content(
             logger.error("❌ HTML内容为空")
             raise HTTPException(status_code=400, detail="HTML content is required")
 
+        if slide_index < 0:
+            logger.error(f"❌ 幻灯片索引不能为负数: {slide_index}")
+            raise HTTPException(status_code=400, detail=f"Slide index cannot be negative: {slide_index}")
+
+        # 直接从数据库获取该幻灯片的当前数据
+        from ..services.db_project_manager import DatabaseProjectManager
+        db_manager = DatabaseProjectManager()
+        
+        # 获取项目基本信息确认项目存在
         project = await ppt_service.project_manager.get_project(project_id)
         if not project:
             logger.error(f"❌ 项目 {project_id} 不存在")
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # 详细验证幻灯片索引
-        total_slides = len(project.slides_data) if project.slides_data else 0
-        logger.debug(f"📊 项目幻灯片信息: 总页数={total_slides}, 请求索引={slide_index}")
-
-        if slide_index < 0:
-            logger.error(f"❌ 幻灯片索引不能为负数: {slide_index}")
-            raise HTTPException(status_code=400, detail=f"Slide index cannot be negative: {slide_index}")
-
-        if slide_index >= total_slides:
-            logger.error(f"❌ 幻灯片索引超出范围: {slide_index}，项目共有 {total_slides} 页")
-            raise HTTPException(status_code=400, detail=f"Slide index {slide_index} out of range (total: {total_slides})")
+        # 获取当前幻灯片数据（如果存在）
+        existing_slide = await db_manager.get_single_slide(project_id, slide_index)
+        
+        # 构建要保存的幻灯片数据
+        # 保留现有数据的其他字段，只更新html_content和is_user_edited
+        if existing_slide:
+            slide_data = existing_slide.copy()
+            slide_data['html_content'] = html_content
+            slide_data['is_user_edited'] = True
+        else:
+            # 如果幻灯片不存在（理论上不应该发生，但做防御处理）
+            slide_data = {
+                "page_number": slide_index + 1,
+                "title": f"Slide {slide_index + 1}",
+                "html_content": html_content,
+                "is_user_edited": True
+            }
 
         logger.debug(f"📝 更新第 {slide_index + 1} 页的内容")
+        logger.debug(f"📊 幻灯片数据: 标题='{slide_data.get('title', '无标题')}', 用户编辑=True, 索引={slide_index}")
 
-        # 更新幻灯片数据
-        project.slides_data[slide_index]['html_content'] = html_content
-        project.slides_data[slide_index]['is_user_edited'] = True
-        project.updated_at = time.time()
+        # 只保存这一个幻灯片到数据库，不影响其他幻灯片
+        save_success = await db_manager.save_single_slide(project_id, slide_index, slide_data)
 
-        # 重新生成组合HTML
-        if project.slides_data:
-            outline_title = project.title
-            if isinstance(project.outline, dict):
-                outline_title = project.outline.get('title', project.title)
-            elif hasattr(project.outline, 'title'):
-                outline_title = project.outline.title
+        if save_success:
+            logger.debug(f"✅ 第 {slide_index + 1} 页已成功保存到数据库")
 
-            project.slides_html = ppt_service._combine_slides_to_full_html(
-                project.slides_data, outline_title
-            )
-
-        # 保存到数据库
-        try:
-            logger.debug(f"💾 开始保存到数据库... (第{slide_index + 1}页)")
-
-            from ..services.db_project_manager import DatabaseProjectManager
-            db_manager = DatabaseProjectManager()
-
-            # 保存单个幻灯片
-            slide_data = project.slides_data[slide_index]
-            slide_title = slide_data.get('title', '无标题')
-            is_user_edited = slide_data.get('is_user_edited', False)
-
-            logger.debug(f"📊 幻灯片数据: 标题='{slide_title}', 用户编辑={is_user_edited}, 索引={slide_index}")
-            logger.debug(f"🔍 保存前验证: 项目ID={project_id}, 幻灯片索引={slide_index}")
-
-            save_success = await db_manager.save_single_slide(project_id, slide_index, slide_data)
-
-            if save_success:
-                logger.debug(f"✅ 第 {slide_index + 1} 页已成功保存到数据库")
-
-                return {
-                    "success": True,
-                    "message": f"Slide {slide_index + 1} saved successfully to database",
-                    "slide_data": slide_data,
-                    "database_saved": True
-                }
-            else:
-                logger.error(f"❌ 保存第 {slide_index + 1} 页到数据库失败")
-                return {
-                    "success": False,
-                    "error": "Failed to save slide to database",
-                    "database_saved": False
-                }
-
-        except Exception as save_error:
-            logger.error(f"❌ 保存第 {slide_index + 1} 页时发生异常: {save_error}")
-            import traceback
-            traceback.print_exc()
+            return {
+                "success": True,
+                "message": f"Slide {slide_index + 1} saved successfully to database",
+                "slide_data": slide_data,
+                "database_saved": True
+            }
+        else:
+            logger.error(f"❌ 保存第 {slide_index + 1} 页到数据库失败")
             return {
                 "success": False,
-                "error": f"Database error: {str(save_error)}",
+                "error": "Failed to save slide to database",
                 "database_saved": False
             }
 

@@ -4,334 +4,341 @@
 
 {% block extra_css %}
 <style>
-/* Monochrome project detail presentation */
-.project-detail-hero {
-    background: var(--glass-bg);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    padding: var(--spacing-2xl) var(--spacing-lg);
-    margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-2xl) calc(-1 * var(--spacing-lg));
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    border-radius: 0 0 var(--border-radius-xl) var(--border-radius-xl);
-}
+    /* Monochrome project detail presentation */
+    .project-detail-hero {
+        background: var(--glass-bg);
+        backdrop-filter: blur(24px);
+        border: 1px solid var(--glass-border);
+        color: var(--text-primary);
+        padding: var(--spacing-2xl) var(--spacing-lg);
+        margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-2xl) calc(-1 * var(--spacing-lg));
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border-radius: 0 0 var(--border-radius-xl) var(--border-radius-xl);
+    }
 
-.project-detail-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle at 20% 30%, rgba(17, 17, 17, 0.1) 0%, transparent 55%),
-        radial-gradient(circle at 80% 70%, rgba(17, 17, 17, 0.08) 0%, transparent 55%);
-    animation: projectDetailFloat 22s ease-in-out infinite;
-}
+    .project-detail-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 30%, rgba(17, 17, 17, 0.1) 0%, transparent 55%),
+            radial-gradient(circle at 80% 70%, rgba(17, 17, 17, 0.08) 0%, transparent 55%);
+        animation: projectDetailFloat 22s ease-in-out infinite;
+    }
 
-@keyframes projectDetailFloat {
-    0%, 100% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.02) rotate(-1deg); }
-}
+    @keyframes projectDetailFloat {
 
-.project-detail-hero h2 {
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin-bottom: var(--spacing-md);
-    color: var(--text-primary);
-    letter-spacing: -0.02em;
-    position: relative;
-    z-index: 1;
-}
+        0%,
+        100% {
+            transform: scale(1) rotate(0deg);
+        }
 
-.project-detail-hero p {
-    font-size: 1.05rem;
-    color: var(--text-secondary);
-    margin: 0;
-    position: relative;
-    z-index: 1;
-    font-weight: 500;
-}
+        50% {
+            transform: scale(1.02) rotate(-1deg);
+        }
+    }
 
-.project-detail-hero code {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    padding: var(--spacing-xs) var(--spacing-md);
-    border-radius: var(--border-radius-sm);
-    font-family: 'Consolas', monospace;
-    color: var(--text-primary);
-}
+    .project-detail-hero h2 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-md);
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        position: relative;
+        z-index: 1;
+    }
 
-.status-indicator {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--surface);
-    font-size: 1rem;
-    letter-spacing: 0.08em;
-    margin-right: var(--spacing-xl);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
-    position: relative;
-    text-transform: uppercase;
-}
+    .project-detail-hero p {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        font-weight: 500;
+    }
 
-.status-indicator.completed {
-    background: #1f2933;
-}
+    .project-detail-hero code {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        padding: var(--spacing-xs) var(--spacing-md);
+        border-radius: var(--border-radius-sm);
+        font-family: 'Consolas', monospace;
+        color: var(--text-primary);
+    }
 
-.status-indicator.in_progress {
-    background: #2d2d2d;
-}
+    .status-indicator {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--surface);
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        margin-right: var(--spacing-xl);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+        position: relative;
+        text-transform: uppercase;
+    }
 
-.status-indicator.draft {
-    background: #4b5563;
-}
+    .status-indicator.completed {
+        background: #1f2933;
+    }
 
-.status-indicator.error {
-    background: #111111;
-}
+    .status-indicator.in_progress {
+        background: #2d2d2d;
+    }
 
-.status-indicator::after {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.08);
-}
+    .status-indicator.draft {
+        background: #4b5563;
+    }
 
-.status-indicator__text {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-}
+    .status-indicator.error {
+        background: #111111;
+    }
 
-.project-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-lg);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    padding: var(--spacing-xl);
-    border-radius: var(--border-radius-lg);
-    margin-bottom: var(--spacing-xl);
-}
+    .status-indicator::after {
+        content: '';
+        position: absolute;
+        inset: -3px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
 
-.project-info-item {
-    text-align: center;
-}
+    .status-indicator__text {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+    }
 
-.project-info-item strong {
-    display: block;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    margin-bottom: var(--spacing-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+    .project-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-lg);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        padding: var(--spacing-xl);
+        border-radius: var(--border-radius-lg);
+        margin-bottom: var(--spacing-xl);
+    }
 
-.project-info-item p {
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 1.05rem;
-    margin: 0;
-}
+    .project-info-item {
+        text-align: center;
+    }
 
-.section-heading {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 var(--spacing-lg) 0;
-}
+    .project-info-item strong {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: var(--spacing-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-.section-subheading {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin: 0 0 var(--spacing-sm) 0;
-}
+    .project-info-item p {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin: 0;
+    }
 
-.status-summary {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-}
+    .section-heading {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-lg) 0;
+    }
 
-.status-details {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+    .section-subheading {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin: 0 0 var(--spacing-sm) 0;
+    }
 
-.status-title {
-    color: var(--text-primary);
-    margin: 0;
-    font-size: 1.05rem;
-}
+    .status-summary {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-lg);
+    }
 
-.status-meta {
-    color: var(--text-muted);
-    margin: 0;
-    font-size: 0.9rem;
-}
+    .status-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
-.action-group {
-    display: flex;
-    gap: var(--spacing-sm);
-    flex-wrap: wrap;
-}
+    .status-title {
+        color: var(--text-primary);
+        margin: 0;
+        font-size: 1.05rem;
+    }
 
-.action-button {
-    flex: 1 1 180px;
-    min-width: 160px;
-}
+    .status-meta {
+        color: var(--text-muted);
+        margin: 0;
+        font-size: 0.9rem;
+    }
 
-.progress-track {
-    height: 16px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-}
+    .action-group {
+        display: flex;
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
+    }
 
-.progress-fill {
-    height: 100%;
-    background: #1f2933;
-    transition: width 0.4s ease;
-}
+    .action-button {
+        flex: 1 1 180px;
+        min-width: 160px;
+    }
 
-.progress-meta {
-    text-align: center;
-    margin-top: 10px;
-    color: var(--text-primary);
-    font-weight: 600;
-}
+    .progress-track {
+        height: 16px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+    }
 
-.stage-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-    padding: 12px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    gap: 15px;
-}
+    .progress-fill {
+        height: 100%;
+        background: #1f2933;
+        transition: width 0.4s ease;
+    }
 
-.stage-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    .progress-meta {
+        text-align: center;
+        margin-top: 10px;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
 
-.status-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.85rem;
-}
+    .stage-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 12px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        gap: 15px;
+    }
 
-.status-icon--completed {
-    background: #1f2933;
-}
+    .stage-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-.status-icon--running {
-    background: #2d2d2d;
-}
+    .status-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.85rem;
+    }
 
-.status-icon--failed {
-    background: #4b5563;
-}
+    .status-icon--completed {
+        background: #1f2933;
+    }
 
-.status-icon--pending {
-    background: #6b7280;
-}
+    .status-icon--running {
+        background: #2d2d2d;
+    }
 
-.stage-title {
-    color: var(--text-primary);
-    font-size: 0.95rem;
-}
+    .status-icon--failed {
+        background: #4b5563;
+    }
 
-.stage-description {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    margin: 2px 0 0 0;
-}
+    .status-icon--pending {
+        background: #6b7280;
+    }
 
-.mini-progress {
-    background: var(--glass-bg);
-    border-radius: 4px;
-    overflow: hidden;
-    height: 4px;
-    margin-top: 6px;
-}
+    .stage-title {
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
 
-.mini-progress__fill {
-    height: 100%;
-    background: #1f2933;
-    transition: width 0.3s ease;
-}
+    .stage-description {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin: 2px 0 0 0;
+    }
 
-.btn-sm {
-    font-size: 0.8rem;
-    padding: 6px 12px;
-}
+    .mini-progress {
+        background: var(--glass-bg);
+        border-radius: 4px;
+        overflow: hidden;
+        height: 4px;
+        margin-top: 6px;
+    }
 
-.modal-close-button {
-    background: var(--surface-subtle);
-    border: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease;
-}
+    .mini-progress__fill {
+        height: 100%;
+        background: #1f2933;
+        transition: width 0.3s ease;
+    }
 
-.modal-close-button:hover {
-    background: var(--surface);
-    transform: scale(1.05);
-}
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
 
-.modal-btn-primary {
-    background: var(--surface-contrast);
-    color: var(--surface);
-    border-color: var(--surface-contrast);
-}
+    .modal-close-button {
+        background: var(--surface-subtle);
+        border: 1px solid var(--glass-border);
+        color: var(--text-primary);
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
 
-.modal-btn-primary:hover {
-    background: #000;
-}
+    .modal-close-button:hover {
+        background: var(--surface);
+        transform: scale(1.05);
+    }
 
-.modal-btn-neutral {
-    background: var(--surface-subtle);
-    color: var(--text-primary);
-    border-color: var(--glass-border);
-}
+    .modal-btn-primary {
+        background: var(--surface-contrast);
+        color: var(--surface);
+        border-color: var(--surface-contrast);
+    }
 
-.modal-btn-neutral:hover {
-    background: var(--surface);
-}
+    .modal-btn-primary:hover {
+        background: #000;
+    }
 
-.modal-btn-outline {
-    background: transparent;
-    border-color: var(--glass-border);
-    color: var(--text-primary);
-}
+    .modal-btn-neutral {
+        background: var(--surface-subtle);
+        color: var(--text-primary);
+        border-color: var(--glass-border);
+    }
 
-.modal-btn-outline:hover {
-    background: var(--surface-subtle);
-}
+    .modal-btn-neutral:hover {
+        background: var(--surface);
+    }
+
+    .modal-btn-outline {
+        background: transparent;
+        border-color: var(--glass-border);
+        color: var(--text-primary);
+    }
+
+    .modal-btn-outline:hover {
+        background: var(--surface-subtle);
+    }
 </style>
 {% endblock %}
 
@@ -343,503 +350,532 @@
 
 <div style="max-width: 1400px; margin: 0 auto; padding: var(--spacing-lg);">
 
-<div class="grid">
-    <!-- Project Information -->
-    <div class="card">
-        <h3 class="section-heading">项目信息</h3>
-        
-        <div style="margin-bottom: var(--spacing-xl);">
-            <div class="status-summary">
-                {% if project.status == 'completed' %}
+    <div class="grid">
+        <!-- Project Information -->
+        <div class="card">
+            <h3 class="section-heading">项目信息</h3>
+
+            <div style="margin-bottom: var(--spacing-xl);">
+                <div class="status-summary">
+                    {% if project.status == 'completed' %}
                     <div class="status-indicator completed">
                         <span class="status-indicator__text">完成</span>
                     </div>
-                {% elif project.status == 'in_progress' %}
+                    {% elif project.status == 'in_progress' %}
                     <div class="status-indicator in_progress">
                         <span class="status-indicator__text">进行</span>
                     </div>
-                {% elif project.status == 'draft' %}
+                    {% elif project.status == 'draft' %}
                     <div class="status-indicator draft">
                         <span class="status-indicator__text">草稿</span>
                     </div>
-                {% else %}
+                    {% else %}
                     <div class="status-indicator error">
                         <span class="status-indicator__text">异常</span>
                     </div>
-                {% endif %}
-                
-                <div class="status-details">
-                    {% if project.status == 'completed' %}
+                    {% endif %}
+
+                    <div class="status-details">
+                        {% if project.status == 'completed' %}
                         <h4 class="status-title">项目已完成</h4>
                         <p class="status-meta">所有阶段已完成</p>
-                    {% elif project.status == 'in_progress' %}
+                        {% elif project.status == 'in_progress' %}
                         {% if todo_board %}
-                            {% set current_stage = todo_board.stages | selectattr('status', 'equalto', 'running') | first %}
-                            {% if current_stage %}
-                                <h4 class="status-title">{{ current_stage.name }}中</h4>
-                                <p class="status-meta">当前正在执行</p>
-                            {% else %}
-                                {% set next_stage = todo_board.stages | selectattr('status', 'equalto', 'pending') | first %}
-                                {% if next_stage %}
-                                    <h4 class="status-title">等待{{ next_stage.name }}</h4>
-                                    <p class="status-meta">下一个阶段</p>
-                                {% else %}
-                                    <h4 class="status-title">项目进行中</h4>
-                                    <p class="status-meta">正在处理中</p>
-                                {% endif %}
-                            {% endif %}
+                        {% set current_stage = todo_board.stages | selectattr('status', 'equalto', 'running') | first %}
+                        {% if current_stage %}
+                        <h4 class="status-title">{{ current_stage.name }}中</h4>
+                        <p class="status-meta">当前正在执行</p>
                         {% else %}
-                            <h4 class="status-title">项目进行中</h4>
-                            <p class="status-meta">正在处理中</p>
+                        {% set next_stage = todo_board.stages | selectattr('status', 'equalto', 'pending') | first %}
+                        {% if next_stage %}
+                        <h4 class="status-title">等待{{ next_stage.name }}</h4>
+                        <p class="status-meta">下一个阶段</p>
+                        {% else %}
+                        <h4 class="status-title">项目进行中</h4>
+                        <p class="status-meta">正在处理中</p>
                         {% endif %}
-                    {% elif project.status == 'draft' %}
+                        {% endif %}
+                        {% else %}
+                        <h4 class="status-title">项目进行中</h4>
+                        <p class="status-meta">正在处理中</p>
+                        {% endif %}
+                        {% elif project.status == 'draft' %}
                         <h4 class="status-title">草稿状态</h4>
                         <p class="status-meta">等待开始</p>
-                    {% else %}
+                        {% else %}
                         <h4 class="status-title">{{ project.status | title }}</h4>
                         <p class="status-meta">当前项目状态</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="project-info-grid">
-            <div class="project-info-item">
-                <strong>主题</strong>
-                <p>{{ project.topic }}</p>
-            </div>
-            <div class="project-info-item">
-                <strong>场景</strong>
-                <p>{{ project.scenario }}</p>
-            </div>
-            <div class="project-info-item">
-                <strong>版本</strong>
-                <p>v{{ project.version }}</p>
-            </div>
-            <div class="project-info-item">
-                <strong>创建时间</strong>
-                <p>{{ project.created_at | strftime('%Y-%m-%d %H:%M') }}</p>
-            </div>
-        </div>
-
-        {% if project.requirements %}
-        <div class="card" style="background: var(--surface); border: 1px solid var(--glass-border);">
-            <strong style="color: var(--text-secondary); display: block; margin-bottom: var(--spacing-md); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.9rem;">特殊要求</strong>
-            <p style="color: var(--text-primary); margin: 0; line-height: 1.6; font-size: 1.05rem;">{{ project.requirements }}</p>
-        </div>
-        {% endif %}
-        
-        <!-- Project Actions -->
-        <div class="action-group">
-            {% if project.status == 'in_progress' and todo_board %}
-            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary action-button">
-                查看 TODO 看板
-            </a>
-            {% endif %}
-
-            {% if project.status == 'completed' and project.slides_html %}
-            <a href="/projects/{{ project.project_id }}/fullscreen" class="btn btn-success action-button" target="_blank">
-                预览 PPT
-            </a>
-            {% endif %}
-            
-            <button onclick="archiveProject()" class="btn btn-warning action-button">
-                归档项目
-            </button>
-            
-            <button onclick="deleteProject()" class="btn btn-danger action-button">
-                删除项目
-            </button>
-        </div>
-    </div>
-    
-    <!-- TODO Board Progress -->
-    {% if todo_board %}
-    <div class="card">
-        <h3 class="section-heading">进度概览</h3>
-        
-        <div style="margin-bottom: 20px;">
-            <div class="progress-track">
-                <div class="progress-fill" style="width: {{ todo_board.overall_progress }}%"></div>
-            </div>
-            <p class="progress-meta">
-                总体进度: {{ "%.1f" | format(todo_board.overall_progress) }}%
-            </p>
-        </div>
-        
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
-            <h4 class="section-subheading">阶段状态</h4>
-            {% for stage in todo_board.stages %}
-            <div class="stage-row">
-                <div class="stage-icon">
-                    {% if stage.status == 'completed' %}
-                        <span class="status-icon status-icon--completed"><i class="fas fa-check"></i></span>
-                    {% elif stage.status == 'running' %}
-                        <span class="status-icon status-icon--running"><i class="fas fa-spinner"></i></span>
-                    {% elif stage.status == 'failed' %}
-                        <span class="status-icon status-icon--failed"><i class="fas fa-times"></i></span>
-                    {% else %}
-                        <span class="status-icon status-icon--pending"><i class="fas fa-clock"></i></span>
-                    {% endif %}
-                </div>
-                <div style="flex: 1;">
-                    <strong class="stage-title">{{ stage.name }}</strong>
-                    <p class="stage-description">{{ stage.description }}</p>
-                    {% if stage.status == 'running' and stage.progress is defined %}
-                    <div class="mini-progress">
-                        <div class="mini-progress__fill" style="width: {{ stage.progress }}%"></div>
-                    </div>
-                    {% endif %}
-                </div>
-                <div style="margin-left: 15px;">
-                    {% if stage.status == 'pending' %}
-                        {% if stage.id == 'requirements_confirmation' %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                开始
-                            </a>
-                        {% elif stage.id == 'outline_generation' %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;">
-                                生成大纲
-                            </a>
-                        {% elif stage.id == 'ppt_creation' %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
-                                生成PPT
-                            </a>
-                        {% else %}
-                            <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
-                                开始
-                            </a>
                         {% endif %}
-                    {% elif stage.status == 'running' %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="project-info-grid">
+                <div class="project-info-item">
+                    <strong>主题</strong>
+                    <p>{{ project.topic }}</p>
+                </div>
+                <div class="project-info-item">
+                    <strong>场景</strong>
+                    <p>{{ project.scenario }}</p>
+                </div>
+                <div class="project-info-item">
+                    <strong>版本</strong>
+                    <p>v{{ project.version }}</p>
+                </div>
+                <div class="project-info-item">
+                    <strong>创建时间</strong>
+                    <p>{{ project.created_at | strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+            </div>
+
+            {% if project.requirements %}
+            <div class="card" style="background: var(--surface); border: 1px solid var(--glass-border);">
+                <strong
+                    style="color: var(--text-secondary); display: block; margin-bottom: var(--spacing-md); text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.9rem;">特殊要求</strong>
+                <p style="color: var(--text-primary); margin: 0; line-height: 1.6; font-size: 1.05rem;">{{
+                    project.requirements }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Project Actions -->
+            <div class="action-group">
+                {% if project.status == 'in_progress' and todo_board %}
+                <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary action-button">
+                    查看 TODO 看板
+                </a>
+                {% endif %}
+
+                {% if project.status == 'completed' and project.slides_html %}
+                <a href="/projects/{{ project.project_id }}/fullscreen" class="btn btn-success action-button"
+                    target="_blank">
+                    预览 PPT
+                </a>
+                {% endif %}
+
+                <button onclick="archiveProject()" class="btn btn-warning action-button">
+                    归档项目
+                </button>
+
+                <button onclick="deleteProject()" class="btn btn-danger action-button">
+                    删除项目
+                </button>
+            </div>
+        </div>
+
+        <!-- TODO Board Progress -->
+        {% if todo_board %}
+        <div class="card">
+            <h3 class="section-heading">进度概览</h3>
+
+            <div style="margin-bottom: 20px;">
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ todo_board.overall_progress }}%"></div>
+                </div>
+                <p class="progress-meta">
+                    总体进度: {{ "%.1f" | format(todo_board.overall_progress) }}%
+                </p>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                <h4 class="section-subheading">阶段状态</h4>
+                {% for stage in todo_board.stages %}
+                <div class="stage-row">
+                    <div class="stage-icon">
+                        {% if stage.status == 'completed' %}
+                        <span class="status-icon status-icon--completed"><i class="fas fa-check"></i></span>
+                        {% elif stage.status == 'running' %}
+                        <span class="status-icon status-icon--running"><i class="fas fa-spinner"></i></span>
+                        {% elif stage.status == 'failed' %}
+                        <span class="status-icon status-icon--failed"><i class="fas fa-times"></i></span>
+                        {% else %}
+                        <span class="status-icon status-icon--pending"><i class="fas fa-clock"></i></span>
+                        {% endif %}
+                    </div>
+                    <div style="flex: 1;">
+                        <strong class="stage-title">{{ stage.name }}</strong>
+                        <p class="stage-description">{{ stage.description }}</p>
+                        {% if stage.status == 'running' and stage.progress is defined %}
+                        <div class="mini-progress">
+                            <div class="mini-progress__fill" style="width: {{ stage.progress }}%"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div style="margin-left: 15px;">
+                        {% if stage.status == 'pending' %}
+                        {% if stage.id == 'requirements_confirmation' %}
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary"
+                            style="font-size: 0.8em; padding: 6px 12px;">
+                            开始
+                        </a>
+                        {% elif stage.id == 'outline_generation' %}
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary"
+                            style="font-size: 0.8em; padding: 6px 12px;">
+                            生成大纲
+                        </a>
+                        {% elif stage.id == 'ppt_creation' %}
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
+                            生成PPT
+                        </a>
+                        {% else %}
+                        <a href="/projects/{{ project.project_id }}/todo" class="btn btn-primary btn-sm">
+                            开始
+                        </a>
+                        {% endif %}
+                        {% elif stage.status == 'running' %}
                         <a href="/projects/{{ project.project_id }}/todo" class="btn btn-info btn-sm">
                             查看进度
                         </a>
-                    {% elif stage.status == 'completed' %}
+                        {% elif stage.status == 'completed' %}
                         <a href="/projects/{{ project.project_id }}/todo" class="btn btn-success btn-sm">
                             已完成
                         </a>
-                    {% elif stage.status == 'failed' %}
+                        {% elif stage.status == 'failed' %}
                         <a href="/projects/{{ project.project_id }}/todo" class="btn btn-warning btn-sm">
                             重试
                         </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PPT Outline Preview -->
+    {% if project.outline and project.outline is not none and project.outline.get('slides') %}
+    <div style="margin-top: 40px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 class="section-heading" style="margin: 0;">PPT 大纲</h3>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="toggleOutlineView()" class="btn btn-info" style="font-size: 0.9em;">
+                    切换视图
+                </button>
+                <button onclick="editOutline()" class="btn btn-primary" style="font-size: 0.9em;">
+                    编辑大纲
+                </button>
+                <button onclick="exportOutlineJSON()" class="btn btn-success" style="font-size: 0.9em;">
+                    导出JSON
+                </button>
+            </div>
+        </div>
+
+        <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title',
+                    project.topic or '未命名大纲') }}</h4>
+                <p style="color: var(--text-secondary);">
+                    总共 {{ project.outline.get('slides', [])|length }} 页幻灯片 |
+                    场景: {{ project.outline.get('metadata', {}).get('scenario', project.scenario) }} |
+                    语言: {{ project.outline.get('metadata', {}).get('language', 'zh') }}
+                </p>
+            </div>
+
+            <!-- 简洁视图 -->
+            <div id="compactView" style="display: block;">
+                <div style="background: var(--surface-muted); border-radius: 10px; padding: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                        {% for slide in project.outline.get('slides', []) %}
+                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #1f2933; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;"
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+
+                            <!-- 操作按钮 -->
+                            <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
+                                <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary"
+                                    style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="编辑此页">
+                                    编辑
+                                </button>
+                                <button onclick="viewSlideDetail({{ loop.index0 }})" class="btn btn-info"
+                                    style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="查看详情">
+                                    详情
+                                </button>
+                            </div>
+
+                            <div onclick="viewSlideDetail({{ loop.index0 }})"
+                                style="cursor: pointer; margin-right: 60px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                    <span
+                                        style="background: #1f2933; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
+                                        {{ slide.get('page_number', loop.index) }}
+                                    </span>
+                                    <strong style="color: var(--text-primary); font-size: 0.9em;">{{ slide.get('title',
+                                        '未命名幻灯片') }}</strong>
+                                </div>
+                                {% if slide.get('subtitle') %}
+                                <p
+                                    style="color: var(--text-secondary); font-size: 0.8em; margin: 5px 0; font-style: italic;">
+                                    {{ slide.get('subtitle') }}</p>
+                                {% endif %}
+                                <div style="color: var(--text-secondary); font-size: 0.8em; line-height: 1.4;">
+                                    {% if slide.get('content_points') and slide.get('content_points')|length > 0 %}
+                                    {{ slide.get('content_points')[0][:80] }}{% if slide.get('content_points')[0]|length
+                                    > 80 %}...{% endif %}
+                                    {% if slide.get('content_points')|length > 1 %}
+                                    <br><span style="color: var(--text-muted);">+{{ slide.get('content_points')|length -
+                                        1 }} 个要点</span>
+                                    {% endif %}
+                                    {% elif slide.get('content') %}
+                                    {{ slide.get('content')[:80] }}{% if slide.get('content')|length > 80 %}...{% endif
+                                    %}
+                                    {% else %}
+                                    <span style="color: var(--text-muted);">暂无内容</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 详细视图 -->
+            <div id="detailView" style="display: none; max-height: 500px; overflow-y: auto;">
+                {% for slide in project.outline.get('slides', []) %}
+                <div
+                    style="padding: 20px; margin-bottom: 15px; background: var(--surface-muted); border-radius: 10px; border-left: 4px solid #1f2933; position: relative;">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <span
+                            style="background: #1f2933; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
+                            {{ slide.get('page_number', loop.index) }}
+                        </span>
+                        <div style="flex: 1;">
+                            <strong class="stage-title">{{ slide.get('title', '未命名幻灯片') }}</strong>
+                            {% if slide.get('subtitle') %}
+                            <br><em style="color: var(--text-secondary); font-size: 0.9em;">{{ slide.get('subtitle')
+                                }}</em>
+                            {% endif %}
+                        </div>
+                        <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary"
+                            style="font-size: 0.8em; padding: 6px 12px;" title="编辑此页">
+                            编辑
+                        </button>
+                    </div>
+
+                    {% if slide.get('content_points') %}
+                    <div style="margin-top: 10px;">
+                        <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容要点：</h5>
+                        <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.6;">
+                            {% for point in slide.get('content_points', []) %}
+                            <li style="margin-bottom: 5px;">{{ point }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% elif slide.get('content') %}
+                    <div style="margin-top: 10px;">
+                        <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容：</h5>
+                        <div
+                            style="background: white; padding: 15px; border-radius: 6px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">
+                            {{ slide.get('content') }}</div>
+                    </div>
                     {% endif %}
+
+                    {% if slide.get('slide_type') %}
+                    <div style="margin-top: 10px;">
+                        <span
+                            style="background: var(--surface); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
+                            类型: {{ slide.get('slide_type') }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% elif project.outline and project.outline is not none %}
+    <!-- Show outline content if it exists but doesn't have slides structure -->
+    <div style="margin-top: 40px;">
+        <h3 class="section-heading" style="text-align: center;">PPT 大纲</h3>
+
+        <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title',
+                    project.topic or '未命名大纲') if project.outline else (project.topic or '未命名大纲') }}</h4>
+                <p style="color: #7f8c8d;">大纲内容</p>
+            </div>
+
+            <div
+                style="background: var(--surface-muted); padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto;">
+                {% if project.outline and project.outline.get('content') %}
+                <pre
+                    style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; margin: 0; color: var(--text-secondary);">{{ project.outline.get('content') }}</pre>
+                {% else %}
+                <p style="color: var(--text-muted); text-align: center; margin: 0;">大纲内容正在生成中...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Version History -->
+    {% if versions %}
+    <div style="margin-top: 40px;">
+        <h3 class="section-heading" style="text-align: center;">版本历史</h3>
+
+        <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+            {% for version in versions %}
+            <div
+                style="display: flex; align-items: center; padding: 15px; margin-bottom: 10px; background: var(--surface-muted); border-radius: 8px;">
+                <div style="margin-right: 20px;">
+                    <div
+                        style="width: 40px; height: 40px; background: #1f2933; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        v{{ version.version }}
+                    </div>
+                </div>
+
+                <div style="flex: 1;">
+                    <strong style="color: var(--text-primary);">{{ version.description }}</strong>
+                    <p style="color: var(--text-secondary); margin: 5px 0 0 0; font-size: 0.9em;">
+                        {{ version.timestamp | strftime('%Y-%m-%d %H:%M:%S') }}
+                    </p>
+                </div>
+
+                <div style="margin-left: 15px;">
+                    <button onclick="restoreVersion({{ version.version }})" class="btn btn-primary"
+                        style="font-size: 0.9em;">
+                        恢复此版本
+                    </button>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
-</div>
 
-<!-- PPT Outline Preview -->
-{% if project.outline and project.outline is not none and project.outline.get('slides') %}
-<div style="margin-top: 40px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 class="section-heading" style="margin: 0;">PPT 大纲</h3>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="toggleOutlineView()" class="btn btn-info" style="font-size: 0.9em;">
-                切换视图
-            </button>
-            <button onclick="editOutline()" class="btn btn-primary" style="font-size: 0.9em;">
-                编辑大纲
-            </button>
-            <button onclick="exportOutlineJSON()" class="btn btn-success" style="font-size: 0.9em;">
-                导出JSON
-            </button>
-        </div>
+    <!-- Navigation -->
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="/projects" class="btn" style="background: #1f2933; color: white; margin: 0 10px;">
+            返回项目列表
+        </a>
+        <a href="/dashboard" class="btn btn-primary" style="margin: 0 10px;">
+            项目仪表板
+        </a>
     </div>
+    {% endblock %}
 
-    <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') }}</h4>
-            <p style="color: var(--text-secondary);">
-                总共 {{ project.outline.get('slides', [])|length }} 页幻灯片 |
-                场景: {{ project.outline.get('metadata', {}).get('scenario', project.scenario) }} |
-                语言: {{ project.outline.get('metadata', {}).get('language', 'zh') }}
-            </p>
-        </div>
+    {% block extra_js %}
+    <script>
+        const projectId = '{{ project.project_id }}';
+        const projectOutline = {{ project.outline | tojson if project.outline else 'null' }};
+        const projectSlides = {{ project.outline.get('slides', []) | tojson if project.outline else '[]' }};
 
-        <!-- 简洁视图 -->
-        <div id="compactView" style="display: block;">
-            <div style="background: var(--surface-muted); border-radius: 10px; padding: 20px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-                    {% for slide in project.outline.get('slides', []) %}
-                    <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #1f2933; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;"
-                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
-                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+        async function archiveProject() {
+            if (confirm('确定要归档这个项目吗？归档后项目将不会显示在活跃项目列表中。')) {
+                try {
+                    const response = await fetch(`/api/projects/${projectId}/archive`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
 
-                        <!-- 操作按钮 -->
-                        <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px;">
-                            <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary" style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="编辑此页">
-                                编辑
-                            </button>
-                            <button onclick="viewSlideDetail({{ loop.index0 }})" class="btn btn-info" style="font-size: 0.7em; padding: 4px 8px; border-radius: 4px;" title="查看详情">
-                                详情
-                            </button>
-                        </div>
-
-                        <div onclick="viewSlideDetail({{ loop.index0 }})" style="cursor: pointer; margin-right: 60px;">
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <span style="background: #1f2933; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; margin-right: 10px;">
-                                    {{ slide.get('page_number', loop.index) }}
-                                </span>
-                                <strong style="color: var(--text-primary); font-size: 0.9em;">{{ slide.get('title', '未命名幻灯片') }}</strong>
-                            </div>
-                            {% if slide.get('subtitle') %}
-                            <p style="color: var(--text-secondary); font-size: 0.8em; margin: 5px 0; font-style: italic;">{{ slide.get('subtitle') }}</p>
-                            {% endif %}
-                            <div style="color: var(--text-secondary); font-size: 0.8em; line-height: 1.4;">
-                                {% if slide.get('content_points') and slide.get('content_points')|length > 0 %}
-                                    {{ slide.get('content_points')[0][:80] }}{% if slide.get('content_points')[0]|length > 80 %}...{% endif %}
-                                    {% if slide.get('content_points')|length > 1 %}
-                                    <br><span style="color: var(--text-muted);">+{{ slide.get('content_points')|length - 1 }} 个要点</span>
-                                    {% endif %}
-                                {% elif slide.get('content') %}
-                                    {{ slide.get('content')[:80] }}{% if slide.get('content')|length > 80 %}...{% endif %}
-                                {% else %}
-                                    <span style="color: var(--text-muted);">暂无内容</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- 详细视图 -->
-        <div id="detailView" style="display: none; max-height: 500px; overflow-y: auto;">
-            {% for slide in project.outline.get('slides', []) %}
-            <div style="padding: 20px; margin-bottom: 15px; background: var(--surface-muted); border-radius: 10px; border-left: 4px solid #1f2933; position: relative;">
-                <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                    <span style="background: #1f2933; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px;">
-                        {{ slide.get('page_number', loop.index) }}
-                    </span>
-                    <div style="flex: 1;">
-                        <strong class="stage-title">{{ slide.get('title', '未命名幻灯片') }}</strong>
-                        {% if slide.get('subtitle') %}
-                        <br><em style="color: var(--text-secondary); font-size: 0.9em;">{{ slide.get('subtitle') }}</em>
-                        {% endif %}
-                    </div>
-                    <button onclick="editSingleSlide({{ loop.index0 }})" class="btn btn-primary" style="font-size: 0.8em; padding: 6px 12px;" title="编辑此页">
-                        编辑
-                    </button>
-                </div>
-
-                {% if slide.get('content_points') %}
-                <div style="margin-top: 10px;">
-                    <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容要点：</h5>
-                    <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.6;">
-                        {% for point in slide.get('content_points', []) %}
-                        <li style="margin-bottom: 5px;">{{ point }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% elif slide.get('content') %}
-                <div style="margin-top: 10px;">
-                    <h5 style="color: var(--text-secondary); margin-bottom: 8px; font-size: 0.9em;">内容：</h5>
-                    <div style="background: white; padding: 15px; border-radius: 6px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">{{ slide.get('content') }}</div>
-                </div>
-                {% endif %}
-
-                {% if slide.get('slide_type') %}
-                <div style="margin-top: 10px;">
-                    <span style="background: var(--surface); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8em;">
-                        类型: {{ slide.get('slide_type') }}
-                    </span>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% elif project.outline and project.outline is not none %}
-<!-- Show outline content if it exists but doesn't have slides structure -->
-<div style="margin-top: 40px;">
-    <h3 class="section-heading" style="text-align: center;">PPT 大纲</h3>
-
-    <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h4 style="color: var(--text-primary); margin-bottom: 10px;">{{ project.outline.get('title', project.topic or '未命名大纲') if project.outline else (project.topic or '未命名大纲') }}</h4>
-            <p style="color: #7f8c8d;">大纲内容</p>
-        </div>
-
-        <div style="background: var(--surface-muted); padding: 20px; border-radius: 8px; max-height: 400px; overflow-y: auto;">
-            {% if project.outline and project.outline.get('content') %}
-            <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; margin: 0; color: var(--text-secondary);">{{ project.outline.get('content') }}</pre>
-            {% else %}
-            <p style="color: var(--text-muted); text-align: center; margin: 0;">大纲内容正在生成中...</p>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Version History -->
-{% if versions %}
-<div style="margin-top: 40px;">
-    <h3 class="section-heading" style="text-align: center;">版本历史</h3>
-    
-    <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
-        {% for version in versions %}
-        <div style="display: flex; align-items: center; padding: 15px; margin-bottom: 10px; background: var(--surface-muted); border-radius: 8px;">
-            <div style="margin-right: 20px;">
-                <div style="width: 40px; height: 40px; background: #1f2933; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                    v{{ version.version }}
-                </div>
-            </div>
-            
-            <div style="flex: 1;">
-                <strong style="color: var(--text-primary);">{{ version.description }}</strong>
-                <p style="color: var(--text-secondary); margin: 5px 0 0 0; font-size: 0.9em;">
-                    {{ version.timestamp | strftime('%Y-%m-%d %H:%M:%S') }}
-                </p>
-            </div>
-            
-            <div style="margin-left: 15px;">
-                <button onclick="restoreVersion({{ version.version }})" class="btn btn-primary" style="font-size: 0.9em;">
-                    恢复此版本
-                </button>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Navigation -->
-<div style="text-align: center; margin-top: 40px;">
-    <a href="/projects" class="btn" style="background: #1f2933; color: white; margin: 0 10px;">
-        返回项目列表
-    </a>
-    <a href="/dashboard" class="btn btn-primary" style="margin: 0 10px;">
-        项目仪表板
-    </a>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-const projectId = '{{ project.project_id }}';
-const projectOutline = {{ project.outline | tojson if project.outline else 'null' }};
-const projectSlides = {{ project.outline.get('slides', []) | tojson if project.outline else '[]' }};
-
-async function archiveProject() {
-    if (confirm('确定要归档这个项目吗？归档后项目将不会显示在活跃项目列表中。')) {
-        try {
-            const response = await fetch(`/api/projects/${projectId}/archive`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            if (response.ok) {
-                alert('项目已归档');
-                window.location.href = '/projects';
-            } else {
-                alert('归档失败，请重试');
-            }
-        } catch (error) {
-            console.error('Error archiving project:', error);
-            alert('归档失败: ' + error.message);
-        }
-    }
-}
-
-async function deleteProject() {
-    if (confirm('确定要删除这个项目吗？此操作不可撤销！')) {
-        if (confirm('请再次确认删除操作，所有数据将永久丢失！')) {
-            try {
-                // Show loading indicator
-                const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
-                const originalText = deleteBtn.innerHTML;
-                deleteBtn.innerHTML = '删除中...';
-                deleteBtn.disabled = true;
-
-                const response = await fetch(`/api/database/projects/${projectId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
+                    if (response.ok) {
+                        alert('项目已归档');
+                        window.location.href = '/projects';
+                    } else {
+                        alert('归档失败，请重试');
                     }
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    alert('项目删除成功！');
-                    window.location.href = '/projects';
-                } else {
-                    throw new Error(result.detail || '删除失败');
+                } catch (error) {
+                    console.error('Error archiving project:', error);
+                    alert('归档失败: ' + error.message);
                 }
-            } catch (error) {
-                console.error('Error deleting project:', error);
-                alert('删除失败: ' + error.message);
-
-                // Restore button state
-                const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
-                deleteBtn.innerHTML = '删除项目';
-                deleteBtn.disabled = false;
             }
         }
-    }
-}
 
-// 大纲视图切换
-let isDetailView = false;
+        async function deleteProject() {
+            if (confirm('确定要删除这个项目吗？此操作不可撤销！')) {
+                if (confirm('请再次确认删除操作，所有数据将永久丢失！')) {
+                    try {
+                        // Show loading indicator
+                        const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
+                        const originalText = deleteBtn.innerHTML;
+                        deleteBtn.innerHTML = '删除中...';
+                        deleteBtn.disabled = true;
 
-function toggleOutlineView() {
-    const compactView = document.getElementById('compactView');
-    const detailView = document.getElementById('detailView');
-    const toggleText = document.getElementById('viewToggleText');
+                        const response = await fetch(`/api/database/projects/${projectId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
 
-    if (isDetailView) {
-        compactView.style.display = 'block';
-        detailView.style.display = 'none';
-        toggleText.textContent = '详细视图';
-        isDetailView = false;
-    } else {
-        compactView.style.display = 'none';
-        detailView.style.display = 'block';
-        toggleText.textContent = '简洁视图';
-        isDetailView = true;
-    }
-}
+                        const result = await response.json();
 
-// 查看幻灯片详情
-function viewSlideDetail(slideIndex) {
-    const slide = projectSlides[slideIndex];
+                        if (response.ok) {
+                            alert('项目删除成功！');
+                            window.location.href = '/projects';
+                        } else {
+                            throw new Error(result.detail || '删除失败');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting project:', error);
+                        alert('删除失败: ' + error.message);
 
-    if (!slide) return;
+                        // Restore button state
+                        const deleteBtn = document.querySelector('button[onclick="deleteProject()"]');
+                        deleteBtn.innerHTML = '删除项目';
+                        deleteBtn.disabled = false;
+                    }
+                }
+            }
+        }
 
-    // 创建模态框显示详细信息
-    const modal = document.createElement('div');
-    modal.style.cssText = `
+        // 大纲视图切换
+        let isDetailView = false;
+
+        function toggleOutlineView() {
+            const compactView = document.getElementById('compactView');
+            const detailView = document.getElementById('detailView');
+            const toggleText = document.getElementById('viewToggleText');
+
+            if (isDetailView) {
+                compactView.style.display = 'block';
+                detailView.style.display = 'none';
+                toggleText.textContent = '详细视图';
+                isDetailView = false;
+            } else {
+                compactView.style.display = 'none';
+                detailView.style.display = 'block';
+                toggleText.textContent = '简洁视图';
+                isDetailView = true;
+            }
+        }
+
+        // 查看幻灯片详情
+        function viewSlideDetail(slideIndex) {
+            const slide = projectSlides[slideIndex];
+
+            if (!slide) return;
+
+            // 创建模态框显示详细信息
+            const modal = document.createElement('div');
+            modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
         align-items: center; justify-content: center; padding: 20px;
     `;
 
-    const content = document.createElement('div');
-    content.style.cssText = `
+            const content = document.createElement('div');
+            content.style.cssText = `
         background: white; border-radius: 15px; padding: 30px;
         max-width: 600px; max-height: 80vh; overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     `;
 
-    let contentPoints = '';
-    if (slide.content_points && slide.content_points.length > 0) {
-        contentPoints = '<h5 style="color: #555; margin: 15px 0 8px 0;">内容要点：</h5><ul style="margin: 0; padding-left: 20px; color: #555; line-height: 1.6;">';
-        slide.content_points.forEach(point => {
-            contentPoints += `<li style="margin-bottom: 5px;">${point}</li>`;
-        });
-        contentPoints += '</ul>';
-    } else if (slide.content) {
-        contentPoints = `<h5 style="color: #555; margin: 15px 0 8px 0;">内容：</h5><div style="background: #f8f9fa; padding: 15px; border-radius: 6px; color: #555; line-height: 1.6; white-space: pre-wrap;">${slide.content}</div>`;
-    }
+            let contentPoints = '';
+            if (slide.content_points && slide.content_points.length > 0) {
+                contentPoints = '<h5 style="color: #555; margin: 15px 0 8px 0;">内容要点：</h5><ul style="margin: 0; padding-left: 20px; color: #555; line-height: 1.6;">';
+                slide.content_points.forEach(point => {
+                    contentPoints += `<li style="margin-bottom: 5px;">${point}</li>`;
+                });
+                contentPoints += '</ul>';
+            } else if (slide.content) {
+                contentPoints = `<h5 style="color: #555; margin: 15px 0 8px 0;">内容：</h5><div style="background: #f8f9fa; padding: 15px; border-radius: 6px; color: #555; line-height: 1.6; white-space: pre-wrap;">${slide.content}</div>`;
+            }
 
-    content.innerHTML = `
+            content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="color: #2c3e50; margin: 0;">第${slide.page_number || slideIndex + 1}页详情</h3>
             <button onclick="this.closest('.modal').remove()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
@@ -850,41 +886,41 @@ function viewSlideDetail(slideIndex) {
         ${slide.slide_type ? `<div style="margin-top: 15px;"><span style="background: #e8f4fd; color: #3498db; padding: 6px 12px; border-radius: 6px; font-size: 0.9em;">类型: ${slide.slide_type}</span></div>` : ''}
     `;
 
-    modal.className = 'modal';
-    modal.appendChild(content);
-    document.body.appendChild(modal);
+            modal.className = 'modal';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
 
-    // 点击背景关闭
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
+            // 点击背景关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
         }
-    });
-}
 
-// 编辑大纲
-function editOutline() {
-    if (!projectOutline) {
-        alert('大纲数据不存在，无法编辑');
-        return;
-    }
+        // 编辑大纲
+        function editOutline() {
+            if (!projectOutline) {
+                alert('大纲数据不存在，无法编辑');
+                return;
+            }
 
-    // 创建编辑模态框
-    const modal = document.createElement('div');
-    modal.style.cssText = `
+            // 创建编辑模态框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
         align-items: center; justify-content: center; padding: 20px;
     `;
 
-    const content = document.createElement('div');
-    content.style.cssText = `
+            const content = document.createElement('div');
+            content.style.cssText = `
         background: white; border-radius: 15px; padding: 30px;
         width: 90%; max-width: 800px; height: 80vh; display: flex;
         flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     `;
 
-    content.innerHTML = `
+            content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="color: var(--text-primary); margin: 0;">编辑PPT大纲</h3>
             <button type="button" class="modal-close-button" onclick="this.closest('.modal').remove()" aria-label="关闭">×</button>
@@ -903,124 +939,124 @@ function editOutline() {
         </div>
     `;
 
-    modal.className = 'modal';
-    modal.appendChild(content);
-    document.body.appendChild(modal);
-}
-
-// 保存大纲修改
-async function saveOutlineChanges() {
-    const editor = document.getElementById('outlineEditor');
-    try {
-        const newOutline = JSON.parse(editor.value);
-
-        const response = await fetch(`/projects/${projectId}/update-outline`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ outline_content: JSON.stringify(newOutline, null, 2) })
-        });
-
-        if (response.ok) {
-            alert('大纲修改成功！');
-            window.location.reload();
-        } else {
-            const error = await response.json();
-            alert('保存失败: ' + (error.detail || '未知错误'));
+            modal.className = 'modal';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
         }
-    } catch (error) {
-        if (error instanceof SyntaxError) {
-            alert('JSON格式错误，请检查语法！');
-        } else {
-            console.error('Error saving outline:', error);
-            alert('保存失败: ' + error.message);
+
+        // 保存大纲修改
+        async function saveOutlineChanges() {
+            const editor = document.getElementById('outlineEditor');
+            try {
+                const newOutline = JSON.parse(editor.value);
+
+                const response = await fetch(`/projects/${projectId}/update-outline`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ outline_content: JSON.stringify(newOutline, null, 2) })
+                });
+
+                if (response.ok) {
+                    alert('大纲修改成功！');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('保存失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    alert('JSON格式错误，请检查语法！');
+                } else {
+                    console.error('Error saving outline:', error);
+                    alert('保存失败: ' + error.message);
+                }
+            }
         }
-    }
-}
 
-// 导出大纲为JSON文件
-function exportOutlineJSON() {
-    if (!projectOutline) {
-        alert('大纲数据不存在，无法导出');
-        return;
-    }
+        // 导出大纲为JSON文件
+        function exportOutlineJSON() {
+            if (!projectOutline) {
+                alert('大纲数据不存在，无法导出');
+                return;
+            }
 
-    const dataStr = JSON.stringify(projectOutline, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const dataStr = JSON.stringify(projectOutline, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
 
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `${(projectOutline.title || 'ppt_outline')}_${new Date().toISOString().split('T')[0]}.json`;
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `${(projectOutline.title || 'ppt_outline')}_${new Date().toISOString().split('T')[0]}.json`;
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-    // 显示成功提示
-    const toast = document.createElement('div');
-    toast.style.cssText = `
+            // 显示成功提示
+            const toast = document.createElement('div');
+            toast.style.cssText = `
         position: fixed; top: 20px; right: 20px; background: #27ae60;
         color: white; padding: 15px 20px; border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
         font-size: 14px; font-weight: bold;
     `;
-    toast.textContent = '✅ 大纲JSON文件已导出';
-    document.body.appendChild(toast);
+            toast.textContent = '✅ 大纲JSON文件已导出';
+            document.body.appendChild(toast);
 
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
 
-// 编辑单页幻灯片
-function editSingleSlide(slideIndex) {
-    if (!projectSlides || !projectSlides[slideIndex]) {
-        alert('幻灯片不存在');
-        return;
-    }
+        // 编辑单页幻灯片
+        function editSingleSlide(slideIndex) {
+            if (!projectSlides || !projectSlides[slideIndex]) {
+                alert('幻灯片不存在');
+                return;
+            }
 
-    const slide = projectSlides[slideIndex];
+            const slide = projectSlides[slideIndex];
 
-    // 创建编辑模态框
-    const modal = document.createElement('div');
-    modal.style.cssText = `
+            // 创建编辑模态框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
         align-items: center; justify-content: center; padding: 20px;
     `;
 
-    const content = document.createElement('div');
-    content.style.cssText = `
+            const content = document.createElement('div');
+            content.style.cssText = `
         background: white; border-radius: 15px; padding: 30px;
         width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     `;
 
-    // 构建内容要点的编辑界面
-    let contentPointsHtml = '<h5 style="color: var(--text-secondary); margin: 15px 0 8px 0; font-size: 0.9rem;">内容要点：</h5>';
-    contentPointsHtml += '<div id="contentPointsContainer">';
+            // 构建内容要点的编辑界面
+            let contentPointsHtml = '<h5 style="color: var(--text-secondary); margin: 15px 0 8px 0; font-size: 0.9rem;">内容要点：</h5>';
+            contentPointsHtml += '<div id="contentPointsContainer">';
 
-    if (slide.content_points && slide.content_points.length > 0) {
-        slide.content_points.forEach((point, index) => {
-            contentPointsHtml += `
+            if (slide.content_points && slide.content_points.length > 0) {
+                slide.content_points.forEach((point, index) => {
+                    contentPointsHtml += `
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <input type="text" id="point_${index}" value="${point.replace(/"/g, '&quot;')}"
                            style="flex: 1; padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: 8px; background: var(--surface); color: var(--text-primary);">
                     <button type="button" class="btn btn-sm modal-btn-outline" onclick="removeContentPoint(${index})">删除</button>
                 </div>
             `;
-        });
-    }
+                });
+            }
 
-    contentPointsHtml += '</div>';
-    contentPointsHtml += `
+            contentPointsHtml += '</div>';
+            contentPointsHtml += `
         <button type="button" class="btn btn-sm modal-btn-primary" onclick="addContentPoint()" style="margin-top: 10px;">
             添加要点
         </button>
     `;
 
-    content.innerHTML = `
+            content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="color: var(--text-primary); margin: 0;">编辑第${slide.page_number || slideIndex + 1}页</h3>
             <button type="button" class="modal-close-button" onclick="this.closest('.modal').remove()" aria-label="关闭">×</button>
@@ -1070,173 +1106,173 @@ function editSingleSlide(slideIndex) {
         </div>
     `;
 
-    modal.className = 'modal';
-    modal.appendChild(content);
-    document.body.appendChild(modal);
+            modal.className = 'modal';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
 
-    // 存储当前编辑的幻灯片索引
-    window.currentEditingSlideIndex = slideIndex;
-}
+            // 存储当前编辑的幻灯片索引
+            window.currentEditingSlideIndex = slideIndex;
+        }
 
-// 添加内容要点
-function addContentPoint() {
-    // 查找内容要点容器
-    const container = document.getElementById('contentPointsContainer');
+        // 添加内容要点
+        function addContentPoint() {
+            // 查找内容要点容器
+            const container = document.getElementById('contentPointsContainer');
 
-    if (!container) {
-        console.error('找不到内容要点容器');
-        alert('无法找到内容要点容器，请刷新页面重试');
-        return;
-    }
+            if (!container) {
+                console.error('找不到内容要点容器');
+                alert('无法找到内容要点容器，请刷新页面重试');
+                return;
+            }
 
-    // 计算当前要点数量
-    const existingPoints = document.querySelectorAll('input[id^="point_"]');
-    const pointIndex = existingPoints.length;
+            // 计算当前要点数量
+            const existingPoints = document.querySelectorAll('input[id^="point_"]');
+            const pointIndex = existingPoints.length;
 
-    const pointDiv = document.createElement('div');
-    pointDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px;';
-    pointDiv.innerHTML = `
+            const pointDiv = document.createElement('div');
+            pointDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px;';
+            pointDiv.innerHTML = `
         <input type="text" id="point_${pointIndex}" placeholder="输入要点内容..."
                style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 8px;">
         <button onclick="removeContentPoint(${pointIndex})" style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">删除</button>
     `;
 
-    // 直接添加到容器末尾
-    container.appendChild(pointDiv);
-}
+            // 直接添加到容器末尾
+            container.appendChild(pointDiv);
+        }
 
-// 删除内容要点
-function removeContentPoint(index) {
-    const pointElement = document.getElementById(`point_${index}`);
-    if (pointElement) {
-        pointElement.closest('div').remove();
-    }
-}
-
-// 保存单页幻灯片修改
-async function saveSingleSlideChanges(slideIndex) {
-    try {
-        const title = document.getElementById('slideTitle').value.trim();
-        const subtitle = document.getElementById('slideSubtitle').value.trim();
-        const slideType = document.getElementById('slideType').value;
-        const content = document.getElementById('slideContent')?.value.trim() || '';
-
-        // 收集所有内容要点
-        const contentPoints = [];
-        const pointInputs = document.querySelectorAll('input[id^="point_"]');
-        pointInputs.forEach(input => {
-            const value = input.value.trim();
-            if (value) {
-                contentPoints.push(value);
+        // 删除内容要点
+        function removeContentPoint(index) {
+            const pointElement = document.getElementById(`point_${index}`);
+            if (pointElement) {
+                pointElement.closest('div').remove();
             }
-        });
-
-        if (!title) {
-            alert('请输入幻灯片标题');
-            return;
         }
 
-        // 构建更新的幻灯片数据
-        const updatedSlide = {
-            ...projectSlides[slideIndex],
-            title: title,
-            subtitle: subtitle || undefined,
-            slide_type: slideType,
-            content_points: contentPoints.length > 0 ? contentPoints : undefined,
-            content: content || undefined
-        };
+        // 保存单页幻灯片修改
+        async function saveSingleSlideChanges(slideIndex) {
+            try {
+                const title = document.getElementById('slideTitle').value.trim();
+                const subtitle = document.getElementById('slideSubtitle').value.trim();
+                const slideType = document.getElementById('slideType').value;
+                const content = document.getElementById('slideContent')?.value.trim() || '';
 
-        // 更新本地数据
-        projectSlides[slideIndex] = updatedSlide;
+                // 收集所有内容要点
+                const contentPoints = [];
+                const pointInputs = document.querySelectorAll('input[id^="point_"]');
+                pointInputs.forEach(input => {
+                    const value = input.value.trim();
+                    if (value) {
+                        contentPoints.push(value);
+                    }
+                });
 
-        // 更新大纲中的幻灯片
-        if (!projectOutline) {
-            alert('大纲数据不存在，无法保存修改');
-            return;
-        }
-        const updatedOutline = { ...projectOutline };
-        updatedOutline.slides[slideIndex] = updatedSlide;
+                if (!title) {
+                    alert('请输入幻灯片标题');
+                    return;
+                }
 
-        // 发送到服务器
-        const response = await fetch(`/projects/${projectId}/update-outline`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ outline_content: JSON.stringify(updatedOutline, null, 2) })
-        });
+                // 构建更新的幻灯片数据
+                const updatedSlide = {
+                    ...projectSlides[slideIndex],
+                    title: title,
+                    subtitle: subtitle || undefined,
+                    slide_type: slideType,
+                    content_points: contentPoints.length > 0 ? contentPoints : undefined,
+                    content: content || undefined
+                };
 
-        if (response.ok) {
-            // 关闭模态框
-            document.querySelector('.modal').remove();
+                // 更新本地数据
+                projectSlides[slideIndex] = updatedSlide;
 
-            // 显示成功提示
-            const toast = document.createElement('div');
-            toast.style.cssText = `
+                // 更新大纲中的幻灯片
+                if (!projectOutline) {
+                    alert('大纲数据不存在，无法保存修改');
+                    return;
+                }
+                const updatedOutline = { ...projectOutline };
+                updatedOutline.slides[slideIndex] = updatedSlide;
+
+                // 发送到服务器
+                const response = await fetch(`/projects/${projectId}/update-outline`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ outline_content: JSON.stringify(updatedOutline, null, 2) })
+                });
+
+                if (response.ok) {
+                    // 关闭模态框
+                    document.querySelector('.modal').remove();
+
+                    // 显示成功提示
+                    const toast = document.createElement('div');
+                    toast.style.cssText = `
                 position: fixed; top: 20px; right: 20px; background: #27ae60;
                 color: white; padding: 15px 20px; border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001;
                 font-size: 14px; font-weight: bold;
             `;
-            toast.textContent = `✅ 第${slideIndex + 1}页修改成功`;
-            document.body.appendChild(toast);
+                    toast.textContent = `✅ 第${slideIndex + 1}页修改成功`;
+                    document.body.appendChild(toast);
 
-            setTimeout(() => {
-                toast.remove();
-                // 刷新页面以显示更新
-                window.location.reload();
-            }, 2000);
-        } else {
-            const error = await response.json();
-            alert('保存失败: ' + (error.detail || '未知错误'));
-        }
-    } catch (error) {
-        console.error('Error saving slide changes:', error);
-        alert('保存失败: ' + error.message);
-    }
-}
-
-async function restoreVersion(version) {
-    if (confirm(`确定要恢复到版本 v${version} 吗？当前未保存的更改将丢失。`)) {
-        try {
-            const response = await fetch(`/api/projects/${projectId}/versions/${version}/restore`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+                    setTimeout(() => {
+                        toast.remove();
+                        // 刷新页面以显示更新
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert('保存失败: ' + (error.detail || '未知错误'));
                 }
-            });
-            
-            if (response.ok) {
-                alert('版本恢复成功');
-                window.location.reload();
-            } else {
-                alert('版本恢复失败，请重试');
+            } catch (error) {
+                console.error('Error saving slide changes:', error);
+                alert('保存失败: ' + error.message);
             }
-        } catch (error) {
-            console.error('Error restoring version:', error);
-            alert('版本恢复失败: ' + error.message);
         }
-    }
-}
 
-// ========== AI优化功能 ==========
+        async function restoreVersion(version) {
+            if (confirm(`确定要恢复到版本 v${version} 吗？当前未保存的更改将丢失。`)) {
+                try {
+                    const response = await fetch(`/api/projects/${projectId}/versions/${version}/restore`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
 
-// 创建美化的AI优化需求输入弹窗
-function showAIOptimizeModal(config) {
-    return new Promise((resolve, reject) => {
-        // 创建模态框遮罩
-        const modal = document.createElement('div');
-        modal.className = 'ai-optimize-modal';
-        modal.style.cssText = `
+                    if (response.ok) {
+                        alert('版本恢复成功');
+                        window.location.reload();
+                    } else {
+                        alert('版本恢复失败，请重试');
+                    }
+                } catch (error) {
+                    console.error('Error restoring version:', error);
+                    alert('版本恢复失败: ' + error.message);
+                }
+            }
+        }
+
+        // ========== AI优化功能 ==========
+
+        // 创建美化的AI优化需求输入弹窗
+        function showAIOptimizeModal(config) {
+            return new Promise((resolve, reject) => {
+                // 创建模态框遮罩
+                const modal = document.createElement('div');
+                modal.className = 'ai-optimize-modal';
+                modal.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+            background: rgba(255, 255, 255, 0.98);
             z-index: 10000; display: flex; align-items: center; justify-content: center;
             padding: 20px; animation: fadeIn 0.3s ease;
         `;
 
-        // 创建弹窗内容
-        const content = document.createElement('div');
-        content.style.cssText = `
+                // 创建弹窗内容
+                const content = document.createElement('div');
+                content.style.cssText = `
             background: var(--surface);
             border-radius: 20px; padding: 0; max-width: 600px; width: 100%;
             border: 1px solid var(--glass-border);
@@ -1245,16 +1281,16 @@ function showAIOptimizeModal(config) {
             display: flex; flex-direction: column;
         `;
 
-        // 建议示例
-        const suggestions = config.suggestions || [
-            '增加更多文字说明',
-            '简化内容，突出核心要点',
-            '添加数据支撑和案例分析',
-            '优化逻辑结构，增强说服力',
-            '增加视觉化描述建议'
-        ];
+                // 建议示例
+                const suggestions = config.suggestions || [
+                    '增加更多文字说明',
+                    '简化内容，突出核心要点',
+                    '添加数据支撑和案例分析',
+                    '优化逻辑结构，增强说服力',
+                    '增加视觉化描述建议'
+                ];
 
-        content.innerHTML = `
+                content.innerHTML = `
             <style>
                 @keyframes fadeIn {
                     from { opacity: 0; }
@@ -1511,323 +1547,325 @@ function showAIOptimizeModal(config) {
             </div>
         `;
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
+                modal.appendChild(content);
+                document.body.appendChild(modal);
 
-        // 聚焦输入框
-        setTimeout(() => {
-            const input = document.getElementById('aiOptimizeInput');
-            if (input) input.focus();
-        }, 100);
+                // 聚焦输入框
+                setTimeout(() => {
+                    const input = document.getElementById('aiOptimizeInput');
+                    if (input) input.focus();
+                }, 100);
 
-        // 点击背景关闭
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-                reject('用户取消');
-            }
-        });
+                // 点击背景关闭
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                        reject('用户取消');
+                    }
+                });
 
-        // 确认按钮
-        const confirmBtn = document.getElementById('confirmOptimizeBtn');
-        confirmBtn.onclick = () => {
-            const input = document.getElementById('aiOptimizeInput');
-            const value = input?.value.trim();
-            if (!value) {
-                // 输入框抖动动画
-                input.style.animation = 'shake 0.5s';
-                setTimeout(() => { input.style.animation = ''; }, 500);
-                return;
-            }
-            modal.remove();
-            resolve(value);
-        };
+                // 确认按钮
+                const confirmBtn = document.getElementById('confirmOptimizeBtn');
+                confirmBtn.onclick = () => {
+                    const input = document.getElementById('aiOptimizeInput');
+                    const value = input?.value.trim();
+                    if (!value) {
+                        // 输入框抖动动画
+                        input.style.animation = 'shake 0.5s';
+                        setTimeout(() => { input.style.animation = ''; }, 500);
+                        return;
+                    }
+                    modal.remove();
+                    resolve(value);
+                };
 
-        // 添加shake动画
-        const style = document.createElement('style');
-        style.textContent = `
+                // 添加shake动画
+                const style = document.createElement('style');
+                style.textContent = `
             @keyframes shake {
                 0%, 100% { transform: translateX(0); }
                 25% { transform: translateX(-10px); }
                 75% { transform: translateX(10px); }
             }
         `;
-        document.head.appendChild(style);
-    });
-}
+                document.head.appendChild(style);
+            });
+        }
 
-// 辅助函数：获取正确的目标受众（处理自定义受众情况）
-function getTargetAudience(outline) {
-    if (!outline || !outline.metadata) {
-        return '普通大众';
-    }
-    const audienceType = outline.metadata.target_audience;
-    // 如果选择的是"自定义"，则使用custom_audience字段的值
-    if (audienceType === '自定义' && outline.metadata.custom_audience) {
-        return outline.metadata.custom_audience;
-    }
-    return audienceType || '普通大众';
-}
+        // 辅助函数：获取正确的目标受众（处理自定义受众情况）
+        function getTargetAudience(outline) {
+            if (!outline || !outline.metadata) {
+                return '普通大众';
+            }
+            const audienceType = outline.metadata.target_audience;
+            // 如果选择的是"自定义"，则使用custom_audience字段的值
+            if (audienceType === '自定义' && outline.metadata.custom_audience) {
+                return outline.metadata.custom_audience;
+            }
+            return audienceType || '普通大众';
+        }
 
-// AI优化整个大纲
-async function aiOptimizeFullOutlineInProjectDetail() {
-    const editor = document.getElementById('outlineEditor');
-    if (!editor || !editor.value) {
-        alert('请先输入大纲JSON内容');
-        return;
-    }
+        // AI优化整个大纲
+        async function aiOptimizeFullOutlineInProjectDetail() {
+            const editor = document.getElementById('outlineEditor');
+            if (!editor || !editor.value) {
+                alert('请先输入大纲JSON内容');
+                return;
+            }
 
-    // 验证JSON格式
-    let parsedOutline;
-    try {
-        parsedOutline = JSON.parse(editor.value);
-    } catch (e) {
-        alert('JSON格式错误，请先修正格式后再进行AI优化');
-        return;
-    }
+            // 验证JSON格式
+            let parsedOutline;
+            try {
+                parsedOutline = JSON.parse(editor.value);
+            } catch (e) {
+                alert('JSON格式错误，请先修正格式后再进行AI优化');
+                return;
+            }
 
-    // 显示美化的优化需求输入弹窗
-    let userRequest;
-    try {
-        userRequest = await showAIOptimizeModal({
-            title: '优化大纲',
-            subtitle: '让AI帮助您优化整个PPT大纲结构和内容',
-            currentInfo: `<strong>大纲标题：</strong>${parsedOutline.title}<br><strong>幻灯片数量：</strong>${parsedOutline.slides ? parsedOutline.slides.length : 0} 页<br><strong>场景：</strong>${parsedOutline.metadata?.scenario || '通用'}`,
-            suggestions: [
-                '增加更多文字说明和技术细节',
-                '重新组织结构，优化逻辑流程',
-                '突出创新点和亮点内容',
-                '增强各页面之间的连贯性',
-                '调整页数，使内容更详细'
-            ]
-        });
-    } catch (e) {
-        return; // 用户取消
-    }
+            // 显示美化的优化需求输入弹窗
+            let userRequest;
+            try {
+                userRequest = await showAIOptimizeModal({
+                    title: '优化大纲',
+                    subtitle: '让AI帮助您优化整个PPT大纲结构和内容',
+                    currentInfo: `<strong>大纲标题：</strong>${parsedOutline.title}<br><strong>幻灯片数量：</strong>${parsedOutline.slides ? parsedOutline.slides.length : 0} 页<br><strong>场景：</strong>${parsedOutline.metadata?.scenario || '通用'}`,
+                    suggestions: [
+                        '增加更多文字说明和技术细节',
+                        '重新组织结构，优化逻辑流程',
+                        '突出创新点和亮点内容',
+                        '增强各页面之间的连贯性',
+                        '调整页数，使内容更详细'
+                    ]
+                });
+            } catch (e) {
+                return; // 用户取消
+            }
 
-    if (!userRequest || !userRequest.trim()) {
-        return;
-    }
+            if (!userRequest || !userRequest.trim()) {
+                return;
+            }
 
-    // 显示加载提示
-    const loadingToast = document.createElement('div');
-    loadingToast.id = 'ai-optimize-loading';
-    loadingToast.style.cssText = `
+            // 显示加载提示
+            const loadingToast = document.createElement('div');
+            loadingToast.id = 'ai-optimize-loading';
+            loadingToast.style.cssText = `
         position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
         color: white; padding: 15px 20px; border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
         font-size: 14px; font-weight: bold;
     `;
-    loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化整个大纲...`;
-    document.body.appendChild(loadingToast);
+            loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化整个大纲...`;
+            document.body.appendChild(loadingToast);
 
-    try {
-        // 调用AI优化接口
-        const response = await fetch('/api/ai/optimize-outline', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                outline_content: editor.value,
-                user_request: userRequest.trim(),
-                project_info: {
-                    topic: parsedOutline.title || '未知',
-                    scenario: parsedOutline.metadata?.scenario || '通用',
-                    target_audience: getTargetAudience(parsedOutline)
-                },
-                optimization_type: 'full'
-            })
-        });
+            try {
+                // 调用AI优化接口
+                const response = await fetch('/api/ai/optimize-outline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        outline_content: editor.value,
+                        user_request: userRequest.trim(),
+                        language: parsedOutline?.metadata?.language || 'zh',
+                        project_info: {
+                            topic: parsedOutline.title || '未知',
+                            scenario: parsedOutline.metadata?.scenario || '通用',
+                            target_audience: getTargetAudience(parsedOutline)
+                        },
+                        optimization_type: 'full'
+                    })
+                });
 
-        const result = await response.json();
-        loadingToast.remove();
+                const result = await response.json();
+                loadingToast.remove();
 
-        if (result.success && result.optimized_content) {
-            // 更新编辑器内容
-            editor.value = result.optimized_content;
-            
-            // 显示成功提示
-            const successToast = document.createElement('div');
-            successToast.style.cssText = `
+                if (result.success && result.optimized_content) {
+                    // 更新编辑器内容
+                    editor.value = result.optimized_content;
+
+                    // 显示成功提示
+                    const successToast = document.createElement('div');
+                    successToast.style.cssText = `
                 position: fixed; top: 20px; right: 20px; background: #27ae60;
                 color: white; padding: 15px 20px; border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
                 font-size: 14px; font-weight: bold;
             `;
-            successToast.innerHTML = `✅ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
-            document.body.appendChild(successToast);
+                    successToast.innerHTML = `✅ AI优化完成<br><small style="font-weight: normal;">请检查优化结果，满意后点击"保存修改"</small>`;
+                    document.body.appendChild(successToast);
 
-            setTimeout(() => {
-                successToast.remove();
-            }, 5000);
+                    setTimeout(() => {
+                        successToast.remove();
+                    }, 5000);
 
-        } else {
-            // 显示详细的错误信息
-            let errorMsg = result.error || '未知错误';
-            if (result.extracted_json) {
-                console.error('提取的JSON:', result.extracted_json);
-                errorMsg += '\n\n请检查控制台查看详细信息。';
+                } else {
+                    // 显示详细的错误信息
+                    let errorMsg = result.error || '未知错误';
+                    if (result.extracted_json) {
+                        console.error('提取的JSON:', result.extracted_json);
+                        errorMsg += '\n\n请检查控制台查看详细信息。';
+                    }
+                    if (result.raw_response) {
+                        console.error('AI原始响应:', result.raw_response);
+                    }
+                    alert('AI优化失败:\n' + errorMsg);
+                }
+
+            } catch (error) {
+                console.error('AI优化失败:', error);
+                const loadingToast = document.getElementById('ai-optimize-loading');
+                if (loadingToast) loadingToast.remove();
+                alert('AI优化失败: ' + error.message);
             }
-            if (result.raw_response) {
-                console.error('AI原始响应:', result.raw_response);
-            }
-            alert('AI优化失败:\n' + errorMsg);
         }
 
-    } catch (error) {
-        console.error('AI优化失败:', error);
-        const loadingToast = document.getElementById('ai-optimize-loading');
-        if (loadingToast) loadingToast.remove();
-        alert('AI优化失败: ' + error.message);
-    }
-}
+        // AI优化单页幻灯片
+        async function aiOptimizeSingleSlideInProjectDetail(slideIndex) {
+            // 从表单中获取当前数据
+            const title = document.getElementById('slideTitle')?.value.trim() || '';
+            const subtitle = document.getElementById('slideSubtitle')?.value.trim() || '';
+            const slideType = document.getElementById('slideType')?.value || 'content';
 
-// AI优化单页幻灯片
-async function aiOptimizeSingleSlideInProjectDetail(slideIndex) {
-    // 从表单中获取当前数据
-    const title = document.getElementById('slideTitle')?.value.trim() || '';
-    const subtitle = document.getElementById('slideSubtitle')?.value.trim() || '';
-    const slideType = document.getElementById('slideType')?.value || 'content';
-    
-    // 获取所有内容要点
-    const contentPointInputs = document.querySelectorAll('input[id^="point_"]');
-    const contentPoints = Array.from(contentPointInputs)
-        .map(input => input.value.trim())
-        .filter(point => point.length > 0);
+            // 获取所有内容要点
+            const contentPointInputs = document.querySelectorAll('input[id^="point_"]');
+            const contentPoints = Array.from(contentPointInputs)
+                .map(input => input.value.trim())
+                .filter(point => point.length > 0);
 
-    if (!title) {
-        alert('请先输入页面标题');
-        return;
-    }
+            if (!title) {
+                alert('请先输入页面标题');
+                return;
+            }
 
-    // 显示美化的优化需求输入弹窗
-    let userRequest;
-    try {
-        userRequest = await showAIOptimizeModal({
-            title: `AI优化 - 第${slideIndex + 1}页`,
-            subtitle: '让AI帮助您优化这一页的内容',
-            currentInfo: `<strong>标题：</strong>${title}<br>${subtitle ? `<strong>副标题：</strong>${subtitle}<br>` : ''}<strong>类型：</strong>${slideType}<br><strong>内容要点：</strong>${contentPoints.length}个`,
-            suggestions: [
-                '增加更多技术细节和实例',
-                '简化内容，突出核心要点',
-                '优化逻辑结构，使内容更连贯',
-                '增强说服力，添加数据支撑',
-                '丰富表达方式，提升专业度'
-            ]
-        });
-    } catch (e) {
-        return; // 用户取消
-    }
+            // 显示美化的优化需求输入弹窗
+            let userRequest;
+            try {
+                userRequest = await showAIOptimizeModal({
+                    title: `AI优化 - 第${slideIndex + 1}页`,
+                    subtitle: '让AI帮助您优化这一页的内容',
+                    currentInfo: `<strong>标题：</strong>${title}<br>${subtitle ? `<strong>副标题：</strong>${subtitle}<br>` : ''}<strong>类型：</strong>${slideType}<br><strong>内容要点：</strong>${contentPoints.length}个`,
+                    suggestions: [
+                        '增加更多技术细节和实例',
+                        '简化内容，突出核心要点',
+                        '优化逻辑结构，使内容更连贯',
+                        '增强说服力，添加数据支撑',
+                        '丰富表达方式，提升专业度'
+                    ]
+                });
+            } catch (e) {
+                return; // 用户取消
+            }
 
-    if (!userRequest || !userRequest.trim()) {
-        return;
-    }
+            if (!userRequest || !userRequest.trim()) {
+                return;
+            }
 
-    // 显示加载提示
-    const loadingToast = document.createElement('div');
-    loadingToast.id = 'ai-optimize-loading';
-    loadingToast.style.cssText = `
+            // 显示加载提示
+            const loadingToast = document.createElement('div');
+            loadingToast.id = 'ai-optimize-loading';
+            loadingToast.style.cssText = `
         position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea, #764ba2);
         color: white; padding: 15px 20px; border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
         font-size: 14px; font-weight: bold;
     `;
-    loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化第${slideIndex + 1}页...`;
-    document.body.appendChild(loadingToast);
+            loadingToast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> AI正在优化第${slideIndex + 1}页...`;
+            document.body.appendChild(loadingToast);
 
-    try {
-        // 使用项目大纲数据
-        if (!projectOutline || !projectOutline.slides) {
-            throw new Error('大纲数据不存在');
-        }
+            try {
+                // 使用项目大纲数据
+                if (!projectOutline || !projectOutline.slides) {
+                    throw new Error('大纲数据不存在');
+                }
 
-        const outlineContent = JSON.stringify(projectOutline);
+                const outlineContent = JSON.stringify(projectOutline);
 
-        // 调用AI优化接口
-        const response = await fetch('/api/ai/optimize-outline', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                outline_content: outlineContent,
-                user_request: userRequest.trim(),
-                project_info: {
-                    topic: projectOutline.title || '未知',
-                    scenario: projectOutline.metadata?.scenario || '通用',
-                    target_audience: getTargetAudience(projectOutline)
-                },
-                optimization_type: 'single',
-                slide_index: slideIndex
-            })
-        });
+                // 调用AI优化接口
+                const response = await fetch('/api/ai/optimize-outline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        outline_content: outlineContent,
+                        user_request: userRequest.trim(),
+                        language: projectOutline?.metadata?.language || 'zh',
+                        project_info: {
+                            topic: projectOutline.title || '未知',
+                            scenario: projectOutline.metadata?.scenario || '通用',
+                            target_audience: getTargetAudience(projectOutline)
+                        },
+                        optimization_type: 'single',
+                        slide_index: slideIndex
+                    })
+                });
 
-        const result = await response.json();
-        loadingToast.remove();
+                const result = await response.json();
+                loadingToast.remove();
 
-        if (result.success && result.optimized_content) {
-            // 解析优化后的单页数据
-            const optimizedSlide = JSON.parse(result.optimized_content);
-            
-            // 更新弹窗中的表单
-            document.getElementById('slideTitle').value = optimizedSlide.title || '';
-            document.getElementById('slideSubtitle').value = optimizedSlide.subtitle || '';
-            document.getElementById('slideType').value = optimizedSlide.slide_type || 'content';
-            
-            // 更新内容要点
-            const container = document.getElementById('contentPointsContainer');
-            if (container) {
-                container.innerHTML = '';
-                if (optimizedSlide.content_points && optimizedSlide.content_points.length > 0) {
-                    optimizedSlide.content_points.forEach((point, idx) => {
-                        const pointDiv = document.createElement('div');
-                        pointDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px;';
-                        pointDiv.innerHTML = `
+                if (result.success && result.optimized_content) {
+                    // 解析优化后的单页数据
+                    const optimizedSlide = JSON.parse(result.optimized_content);
+
+                    // 更新弹窗中的表单
+                    document.getElementById('slideTitle').value = optimizedSlide.title || '';
+                    document.getElementById('slideSubtitle').value = optimizedSlide.subtitle || '';
+                    document.getElementById('slideType').value = optimizedSlide.slide_type || 'content';
+
+                    // 更新内容要点
+                    const container = document.getElementById('contentPointsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        if (optimizedSlide.content_points && optimizedSlide.content_points.length > 0) {
+                            optimizedSlide.content_points.forEach((point, idx) => {
+                                const pointDiv = document.createElement('div');
+                                pointDiv.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px;';
+                                pointDiv.innerHTML = `
                             <input type="text" id="point_${idx}" value="${point.replace(/"/g, '&quot;')}"
                                    style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 8px;">
                             <button onclick="removeContentPoint(${idx})" style="background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;">删除</button>
                         `;
-                        container.appendChild(pointDiv);
-                    });
-                }
-            }
-            
-            // 显示成功提示
-            const successToast = document.createElement('div');
-            successToast.style.cssText = `
+                                container.appendChild(pointDiv);
+                            });
+                        }
+                    }
+
+                    // 显示成功提示
+                    const successToast = document.createElement('div');
+                    successToast.style.cssText = `
                 position: fixed; top: 20px; right: 20px; background: #27ae60;
                 color: white; padding: 15px 20px; border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10001;
                 font-size: 14px; font-weight: bold;
             `;
-            successToast.textContent = `✅ AI优化完成，请检查后保存`;
-            document.body.appendChild(successToast);
+                    successToast.textContent = `✅ AI优化完成，请检查后保存`;
+                    document.body.appendChild(successToast);
 
-            setTimeout(() => {
-                successToast.remove();
-            }, 3000);
+                    setTimeout(() => {
+                        successToast.remove();
+                    }, 3000);
 
-        } else {
-            // 显示详细的错误信息
-            let errorMsg = result.error || '未知错误';
-            if (result.extracted_json) {
-                console.error('提取的JSON:', result.extracted_json);
-                errorMsg += '\n\n请检查控制台查看详细信息。';
+                } else {
+                    // 显示详细的错误信息
+                    let errorMsg = result.error || '未知错误';
+                    if (result.extracted_json) {
+                        console.error('提取的JSON:', result.extracted_json);
+                        errorMsg += '\n\n请检查控制台查看详细信息。';
+                    }
+                    if (result.raw_response) {
+                        console.error('AI原始响应:', result.raw_response);
+                    }
+                    alert('AI优化失败:\n' + errorMsg);
+                }
+
+            } catch (error) {
+                console.error('AI优化失败:', error);
+                const loadingToast = document.getElementById('ai-optimize-loading');
+                if (loadingToast) loadingToast.remove();
+                alert('AI优化失败: ' + error.message);
             }
-            if (result.raw_response) {
-                console.error('AI原始响应:', result.raw_response);
-            }
-            alert('AI优化失败:\n' + errorMsg);
         }
 
-    } catch (error) {
-        console.error('AI优化失败:', error);
-        const loadingToast = document.getElementById('ai-optimize-loading');
-        if (loadingToast) loadingToast.remove();
-        alert('AI优化失败: ' + error.message);
-    }
-}
-
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

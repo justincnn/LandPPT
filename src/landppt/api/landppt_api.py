@@ -171,17 +171,24 @@ async def get_ai_providers():
 @router.post("/ai/providers/{provider_name}/test")
 async def test_ai_provider(provider_name: str, request: Request):
     """Test a specific AI provider - uses frontend provided config if available"""
+    # Anthropic has its own dedicated proxy endpoint in routes.py
+    if provider_name == "anthropic":
+        raise HTTPException(
+            status_code=400,
+            detail="Anthropic testing is handled by a dedicated endpoint. Please use the frontend test function."
+        )
+
     try:
         import aiohttp
         import json
-        
+
         # Try to get configuration from request body (if provided by frontend)
         body = None
         try:
             body = await request.json()
         except:
             pass  # No JSON body, use backend config
-        
+
         # Special handling for OpenAI provider with frontend config
         if provider_name == "openai" and body:
             base_url = body.get('base_url')

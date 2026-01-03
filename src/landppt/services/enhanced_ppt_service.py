@@ -216,6 +216,24 @@ class EnhancedPPTService(PPTService):
         provider, settings = self._get_role_provider(role)
         if settings.get("model"):
             kwargs.setdefault("model", settings["model"])
+
+        # For outline generation with Anthropic, use streaming to avoid timeout
+        if role == "outline" and settings.get("provider") == "anthropic":
+            # Use streaming and collect the result
+            full_response = ""
+            async for chunk in provider.stream_text_completion(prompt=prompt, **kwargs):
+                full_response += chunk
+
+            # Return a mock AIResponse-like object with the collected content
+            from ..ai.base import AIResponse
+            return AIResponse(
+                content=full_response,
+                model=settings.get("model", "anthropic"),
+                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                finish_reason="stop",
+                metadata={"provider": "anthropic", "streamed": True}
+            )
+
         return await provider.text_completion(prompt=prompt, **kwargs)
 
     async def _chat_completion_for_role(self, role: str, *, messages: List[AIMessage], **kwargs):
@@ -3220,11 +3238,17 @@ Please fully utilize the above research information to enrich the PPT content, e
                 
                 for idx in range(i, batch_end):
                     slide = slides[idx]
+                    page_number = idx + 1  # page_number 从1开始
                     
-                    # 检查是否已存在
+                    # 检查是否已存在 - 使用 page_number 查找，而不是列表索引
+                    # 这是因为 slides_data 可能是紧凑列表（某些幻灯片缺失时没有占位符）
                     existing_slide = None
-                    if project.slides_data and idx < len(project.slides_data):
-                        existing_slide = project.slides_data[idx]
+                    if project.slides_data:
+                        # 查找具有匹配 page_number 的幻灯片
+                        for s in project.slides_data:
+                            if s and s.get('page_number') == page_number:
+                                existing_slide = s
+                                break
                     
                     if existing_slide and existing_slide.get('html_content'):
                         # 幻灯片已存在，跳过
@@ -3305,7 +3329,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                                 from .db_project_manager import DatabaseProjectManager
                                 db_manager = DatabaseProjectManager()
                                 project.updated_at = time.time()
-                                await db_manager.save_single_slide(project_id, idx, slide_data)
+                                await db_manager.save_single_slide(project_id, idx, slide_data, skip_if_user_edited=True)
                                 logger.info(f"💾 第{idx+1}页已保存到数据库")
                             except Exception as save_error:
                                 logger.error(f"保存第{idx+1}页失败: {save_error}")
@@ -3352,7 +3376,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                                     from .db_project_manager import DatabaseProjectManager
                                     db_manager = DatabaseProjectManager()
                                     project.updated_at = time.time()
-                                    await db_manager.save_single_slide(project_id, idx, slide_data)
+                                    await db_manager.save_single_slide(project_id, idx, slide_data, skip_if_user_edited=True)
                                     logger.info(f"Successfully saved slide {idx+1} to database for project {project_id}")
                                 except Exception as save_error:
                                     logger.error(f"Failed to save slide {idx+1} to database: {save_error}")
@@ -7100,7 +7124,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                     confirmed = project.confirmed_requirements or {}
 
                     slide_lines: List[str] = []
-                    for idx, s in enumerate(slides[:20], start=1):
+                    for idx, s in enumerate(slides[:5], start=1):
                         if not isinstance(s, dict):
                             continue
                         t = s.get('title') or f"第{idx}页"
@@ -7137,22 +7161,20 @@ Please fully utilize the above research information to enrich the PPT content, e
                         f"受众：{target_audience}" if target_audience else "",
                         f"风格偏好：{ppt_style}" if ppt_style else "",
                         f"自定义风格补充：{custom_style_prompt}" if custom_style_prompt else "",
-                        f"页数：{len(slides)}" if slides else "",
                         "",
-                        "===== PPT大纲（最多展示前20页）=====",
+                        "===== PPT大纲（最多展示前5页）=====",
                         "\n".join(slide_lines) if slide_lines else "(无)",
                         "",
                         "===== 设计要求 =====",
                         "1. **严格尺寸控制**：页面尺寸必须为1280x720像素（16:9比例）",
                         "2. **完整HTML结构**：包含<!DOCTYPE html>、head、body等完整结构",
                         "3. **内联样式**：所有CSS样式必须内联，确保自包含性",
-                        "4. **响应式设计**：适配不同屏幕尺寸但保持16:9比例",
-                        "5. **占位符支持**：在适当位置使用占位符：",
-                        "   - {{ page_title }} - 页面标题，默认居左",
+                        "4. **占位符支持**：在适当位置使用占位符：",
+                        "   - {{ page_title }} - 页面标题",
                         "   - {{ page_content }} - 页面内容",
                         "   - {{ current_page_number }} - 当前页码",
                         "   - {{ total_page_count }} - 总页数",
-                        "6. **技术要求**：",
+                        "5. **技术要求**：",
                         "   - 使用内联CSS样式（支持Tailwind CSS风格）",
                         "   - 支持Font Awesome图标",
                         "   - 支持Chart.js、ECharts.js、D3.js等图表库",

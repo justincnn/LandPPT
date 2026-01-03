@@ -536,6 +536,16 @@
             color: var(--surface);
         }
 
+        .btn-warning {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+            color: #fff;
+        }
+
         .btn-outline-light {
             background: transparent;
             color: var(--text-primary);
@@ -764,6 +774,12 @@
                         <button class="btn btn-primary" id="startBtn">
                             <i class="fas fa-play"></i> 开始生成
                         </button>
+                        <button class="btn btn-warning" id="pauseBtn" style="display: none;">
+                            <i class="fas fa-pause"></i> 暂停
+                        </button>
+                        <button class="btn btn-success" id="resumeBtn" style="display: none;">
+                            <i class="fas fa-play"></i> 继续
+                        </button>
                         <button class="btn btn-danger" id="stopBtn" style="display: none;">
                             <i class="fas fa-stop"></i> 停止生成
                         </button>
@@ -940,6 +956,39 @@
                         display: inline-flex;
                         align-items: center;
                         gap: 6px;
+                        font-size: 0.85em;
+                        padding: 4px 10px;
+                        border-radius: 12px;
+                        background: rgba(0, 0, 0, 0.05);
+                    }
+
+                    .connection-status.connected {
+                        color: #10b981;
+                    }
+
+                    .connection-status.connecting,
+                    .connection-status.reconnecting {
+                        color: #6b7280;
+                    }
+
+                    .connection-status.paused {
+                        color: #f59e0b;
+                        background: rgba(245, 158, 11, 0.1);
+                    }
+
+                    .connection-status.disconnected,
+                    .connection-status.error,
+                    .connection-status.failed {
+                        color: #ef4444;
+                    }
+
+                    .connection-status.stopped {
+                        color: #6b7280;
+                    }
+
+                    .connection-status.completed {
+                        color: #10b981;
+                        background: rgba(16, 185, 129, 0.1);
                     }
 
                     @keyframes pulse {
@@ -1141,6 +1190,7 @@
         let connectionTimeout = null;
         let heartbeatInterval = null;
         let isManualStop = false; // 标记是否为手动停止
+        let isPaused = false; // 标记是否暂停生成
 
         // Free template wizard state
         let freeTemplateModalInstance = null;
@@ -1383,7 +1433,6 @@
                 if (confirmBtn) confirmBtn.disabled = false;
 
             } catch (e) {
-                console.error('调整模板失败:', e);
                 if (errorDiv) {
                     errorDiv.textContent = `调整失败：${e.message || '未知错误'}`;
                     errorDiv.style.display = 'block';
@@ -1509,7 +1558,7 @@
             throw lastErr || new Error('模板生成失败');
         }
 
-        function openFreeTemplateWizardAndWait() {
+        function openFreeTemplateWizardAndWait(alreadyConfirmed = false) {
             return new Promise(async (resolve) => {
                 if (!freeTemplateModalInstance) initFreeTemplateWizard();
                 if (!freeTemplateModalInstance) {
@@ -1577,18 +1626,244 @@
                 }
 
                 freeTemplateModalInstance.show();
+
                 try {
-                    await generateFreeTemplateWithRetry(false);
+                    if (alreadyConfirmed) {
+                        // 已有确认过的模板，尝试加载已有模板预览
+                        setFreeTemplateStatus('正在加载已有模板...');
+                        updateFreeTemplateStatusIndicator('generating', '正在加载已有模板...');
+
+                        const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.template && data.template.html_template) {
+                                setFreeTemplatePreviewHtml(data.template.html_template);
+                                const successMsg = `模板已加载：${data.template.template_name || '自由模板'}`;
+                                setFreeTemplateStatus(successMsg);
+                                updateFreeTemplateStatusIndicator('success', successMsg);
+                                setTimeout(updateFreeTemplatePreviewScale, 100);
+                                showFreeTemplateAdjustSection(true);
+                                if (confirmBtn) confirmBtn.disabled = false;
+                                if (regenerateBtn) regenerateBtn.disabled = false;
+                            } else {
+                                // 没有有效模板，重新生成
+                                await generateFreeTemplateWithRetry(false);
+                            }
+                        } else {
+                            // 加载失败，重新生成
+                            await generateFreeTemplateWithRetry(false);
+                        }
+                    } else {
+                        // 首次生成模板
+                        await generateFreeTemplateWithRetry(false);
+                    }
                 } catch (_) { }
             });
         }
 
         async function ensureFreeTemplateConfirmedBeforeStart() {
-            const meta = await fetchProjectMeta();
-            const metadata = meta.project_metadata || {};
-            if (metadata.template_mode !== 'free') return true;
-            if (metadata.free_template_confirmed) return true;
-            return await openFreeTemplateWizardAndWait();
+            // 首先快速检查是否可能是自由模板（使用缓存或快速检测）
+            // 如果怀疑是自由模板，立即显示弹窗，然后在弹窗内部进行详细检测
+
+            // 先尝试从页面数据快速判断
+            let quickCheckIsFree = false;
+
+            // 检查页面是否有自由模板相关的元素或数据
+            const projectMetaFromPage = {{ (project.project_metadata | tojson | safe) if project and project.project_metadata else '{}'
+        }};
+        if (projectMetaFromPage.template_mode === 'free' || projectMetaFromPage.free_template_html) {
+            quickCheckIsFree = true;
+        }
+
+        // 如果快速检查不是自由模板，做完整的API检查
+        if (!quickCheckIsFree) {
+            try {
+                const meta = await fetchProjectMeta();
+                const metadata = meta.project_metadata || {};
+
+                // 检测是否是自由模板：多种检测方式
+                let isFreeTemplate = metadata.template_mode === 'free';
+
+                // 如果 template_mode 不是 'free'，额外检查是否有自由模板的 HTML
+                if (!isFreeTemplate && metadata.free_template_html) {
+                    isFreeTemplate = true;
+                }
+
+                // 如果还不是，检查选中的模板是否是 AI 生成的自由模板
+                if (!isFreeTemplate) {
+                    try {
+                        const templateResp = await fetch(`/api/projects/{{ todo_board.task_id }}/selected-global-template`);
+                        if (templateResp.ok) {
+                            const templateData = await templateResp.json();
+                            if (templateData.template && (
+                                templateData.template.created_by === 'ai_free' ||
+                                (templateData.template.template_name && templateData.template.template_name.startsWith('自由模板'))
+                            )) {
+                                isFreeTemplate = true;
+                            }
+                        }
+                    } catch (e) {
+                        // Ignore errors
+                    }
+                }
+
+                if (!isFreeTemplate) {
+                    return true;
+                }
+
+                // 是自由模板，检查是否已经确认过
+                if (metadata.free_template_confirmed) {
+                    return true;
+                }
+
+                // 弹窗只在这里显示：用户手动点击开始生成且自由模板未确认
+                return await openFreeTemplateWizardAndWait(false);
+
+            } catch (e) {
+                // 如果检测失败，询问用户
+                if (confirm('无法检测模板类型，是否继续生成？')) {
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // 快速检测到是自由模板，检查是否已确认
+        const quickConfirmed = projectMetaFromPage.free_template_confirmed;
+        if (quickConfirmed) {
+            return true;
+        }
+
+        // 快速检测到是自由模板但未确认，需要显示弹窗（这种情况很少见，因为快速检查通常在页面有明确数据时才会触发）
+        return await openFreeTemplateWizardAndWaitImmediate();
+        }
+
+        // 立即显示自由模板弹窗（先显示再加载）
+        async function openFreeTemplateWizardAndWaitImmediate() {
+            return new Promise(async (resolve) => {
+                if (!freeTemplateModalInstance) initFreeTemplateWizard();
+                if (!freeTemplateModalInstance) {
+                    alert('无法打开自由模板对话框');
+                    resolve(false);
+                    return;
+                }
+
+                const confirmBtn = document.getElementById('freeTemplateConfirmBtn');
+                const regenerateBtn = document.getElementById('freeTemplateRegenerateBtn');
+                const saveCheckbox = document.getElementById('saveFreeTemplateToLibrary');
+                const nameInput = document.getElementById('freeTemplateNameInput');
+                const modalEl = document.getElementById('freeTemplateModal');
+
+                // 重置状态
+                if (confirmBtn) confirmBtn.disabled = true;
+                if (regenerateBtn) regenerateBtn.disabled = true;
+                setFreeTemplateStatus('正在加载模板信息...');
+                setFreeTemplateError('');
+                updateFreeTemplateStatusIndicator('generating', '正在加载...');
+                showFreeTemplateAdjustSection(false);
+
+                const cleanup = () => {
+                    if (confirmBtn) confirmBtn.onclick = null;
+                    if (regenerateBtn) regenerateBtn.onclick = null;
+                };
+
+                const onHidden = () => {
+                    cleanup();
+                    resolve(false);
+                };
+                if (modalEl) modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+
+                if (regenerateBtn) {
+                    regenerateBtn.onclick = async () => {
+                        try {
+                            await generateFreeTemplateWithRetry(true);
+                        } catch (_) { }
+                    };
+                }
+
+                if (confirmBtn) {
+                    confirmBtn.onclick = async () => {
+                        try {
+                            confirmBtn.disabled = true;
+                            setFreeTemplateError('');
+                            setFreeTemplateStatus('正在确认模板…');
+                            const saveToLibrary = !!(saveCheckbox && saveCheckbox.checked);
+                            const templateName = (nameInput && nameInput.value) ? nameInput.value.trim() : '';
+
+                            const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template/confirm`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    save_to_library: saveToLibrary,
+                                    template_name: templateName
+                                })
+                            });
+                            if (!resp.ok) {
+                                const txt = await resp.text();
+                                throw new Error(txt || `HTTP ${resp.status}`);
+                            }
+                            await resp.json();
+                            freeTemplateModalInstance.hide();
+                            cleanup();
+                            resolve(true);
+                        } catch (e) {
+                            setFreeTemplateError(`确认失败：${e.message}`);
+                            setFreeTemplateStatus('确认失败');
+                            confirmBtn.disabled = false;
+                        }
+                    };
+                }
+
+                // 立即显示弹窗
+                freeTemplateModalInstance.show();
+
+                // 弹窗显示后，异步加载模板
+                try {
+                    // 更新缩放
+                    setTimeout(updateFreeTemplatePreviewScale, 100);
+
+                    // 检查是否有已确认的模板
+                    setFreeTemplateStatus('正在检查模板状态...');
+                    const meta = await fetchProjectMeta();
+                    const metadata = meta.project_metadata || {};
+                    const alreadyConfirmed = metadata.free_template_confirmed;
+
+                    if (alreadyConfirmed) {
+                        // 已有确认过的模板，尝试加载已有模板预览
+                        setFreeTemplateStatus('正在加载已有模板...');
+                        updateFreeTemplateStatusIndicator('generating', '正在加载已有模板...');
+
+                        const resp = await fetch(`/api/projects/{{ todo_board.task_id }}/free-template`);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.template && data.template.html_template) {
+                                setFreeTemplatePreviewHtml(data.template.html_template);
+                                const successMsg = `模板已加载：${data.template.template_name || '自由模板'}`;
+                                setFreeTemplateStatus(successMsg);
+                                updateFreeTemplateStatusIndicator('success', successMsg);
+                                setTimeout(updateFreeTemplatePreviewScale, 100);
+                                showFreeTemplateAdjustSection(true);
+                                if (confirmBtn) confirmBtn.disabled = false;
+                                if (regenerateBtn) regenerateBtn.disabled = false;
+                            } else {
+                                // 没有有效模板，重新生成
+                                await generateFreeTemplateWithRetry(false);
+                            }
+                        } else {
+                            // 加载失败，重新生成
+                            await generateFreeTemplateWithRetry(false);
+                        }
+                    } else {
+                        // 首次生成模板
+                        await generateFreeTemplateWithRetry(false);
+                    }
+                } catch (e) {
+                    setFreeTemplateError(`加载失败：${e.message || '未知错误'}`);
+                    setFreeTemplateStatus('加载失败');
+                    updateFreeTemplateStatusIndicator('error', '加载失败');
+                    if (regenerateBtn) regenerateBtn.disabled = false;
+                }
+            });
         }
 
         async function startGeneration() {
@@ -1615,7 +1890,6 @@
             }
 
             // 检查全局模板设置
-            console.log('开始检查全局模板设置...');
             try {
                 // If project uses free-template mode, skip legacy "must select a global template" check
                 let templateMode = null;
@@ -1626,62 +1900,77 @@
                     templateMode = null;
                 }
                 if (templateMode === 'free') {
-                    console.log('Free template mode: skip global template selection check');
+                    // Free template mode: skip global template selection check
                 } else {
                     const templateUrl = `/api/projects/{{ todo_board.task_id }}/selected-global-template`;
-                    console.log('请求模板API:', templateUrl);
-
                     const templateResponse = await fetch(templateUrl);
-                    console.log('模板API响应状态:', templateResponse.status);
 
                     if (!templateResponse.ok) {
                         throw new Error(`API请求失败: ${templateResponse.status} ${templateResponse.statusText}`);
                     }
 
                     const templateData = await templateResponse.json();
-                    console.log('模板API响应数据:', templateData);
 
                     // 检查是否用户主动选择了模板，而不是使用默认模板
                     if (!templateData.template || !templateData.is_user_selected) {
                         const templateName = templateData.template ? templateData.template.template_name : '无';
-                        console.log('未检测到用户选择的全局模板，当前使用:', templateName, '是否用户选择:', templateData.is_user_selected);
 
                         // 未检测到用户选择的全局模板ID，跳转到模板选择页面
                         if (confirm('检测到您还未选择全局模板，需要先选择模板才能开始生成PPT。是否跳转到模板选择页面？')) {
-                            console.log('用户确认跳转到模板选择页面');
                             window.location.href = `/projects/{{ todo_board.task_id }}/template-selection`;
                             return;
                         } else {
-                            console.log('用户取消跳转，停止生成');
                             return; // 用户取消，不继续生成
                         }
-                    } else {
-                        console.log('检测到用户已选择的全局模板:', templateData.template.template_name);
                     }
                 }
             } catch (error) {
-                console.error('检查全局模板时出错:', error);
                 // 如果检查失败，询问用户是否继续
                 if (!confirm('无法检查全局模板设置，是否继续生成PPT？')) {
-                    console.log('用户选择不继续生成');
                     return;
-                } else {
-                    console.log('用户选择继续生成，忽略模板检查错误');
                 }
             }
 
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const editorBtn = document.getElementById('editorBtn');
+            const slideshowBtn = document.getElementById('slideshowBtn');
             const statusDiv = document.getElementById('generationStatus');
             const slidesContainer = document.getElementById('slidesContainer');
 
             // Mark as started
             generationStarted = true;
+            isPaused = false; // 重置暂停状态
 
-            // 更新按钮状态
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'inline-block';
-            statusDiv.style.display = 'block';
+            // 更新按钮状态 - 确保所有按钮都正确显示
+            if (startBtn) {
+                startBtn.style.display = 'none';
+            }
+
+            if (pauseBtn) {
+                pauseBtn.style.display = 'inline-block';
+            }
+
+            if (resumeBtn) {
+                resumeBtn.style.display = 'none';
+            }
+
+            if (stopBtn) {
+                stopBtn.style.display = 'inline-block';
+            }
+
+            // 有幻灯片数据时显示编辑器和放映按钮
+            const hasSlidesData = (slidesData && slidesData.length > 0) || (projectSlidesData && projectSlidesData.length > 0);
+            if (hasSlidesData) {
+                if (editorBtn) editorBtn.style.display = 'inline-block';
+                if (slideshowBtn) slideshowBtn.style.display = 'inline-block';
+            }
+
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+            }
 
             // 断点续生：不清空已有数据，而是保留现有的幻灯片
             // 如果有已生成的幻灯片数据，保留它们
@@ -1721,14 +2010,42 @@
             startEventSourceConnection();
         }
 
+        // Helper to ensure correct buttons are shown during generation
+        function ensureGeneratingButtonsVisible() {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const editorBtn = document.getElementById('editorBtn');
+            const slideshowBtn = document.getElementById('slideshowBtn');
+            const statusDiv = document.getElementById('generationStatus');
+
+            if (startBtn) startBtn.style.display = 'none';
+            if (statusDiv) statusDiv.style.display = 'block';
+
+            // 暂停和停止按钮始终显示（除了生成完毕状态）
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+            if (pauseBtn) pauseBtn.style.display = 'inline-block';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+
+            // 有幻灯片数据时显示编辑器和放映按钮
+            const hasSlidesData = (slidesData && slidesData.length > 0) || (projectSlidesData && projectSlidesData.length > 0);
+            if (hasSlidesData) {
+                if (editorBtn) editorBtn.style.display = 'inline-block';
+                if (slideshowBtn) slideshowBtn.style.display = 'inline-block';
+            }
+        }
+
         function startEventSourceConnection() {
             // 显示连接状态
             updateConnectionStatus('connecting', '正在连接服务器...');
 
+            // 确保在开始连接时按钮可见
+            ensureGeneratingButtonsVisible();
+
             // 设置连接超时
             connectionTimeout = setTimeout(() => {
                 if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
-                    console.warn('Connection timeout, attempting to reconnect...');
                     eventSource.close();
                     attemptReconnect();
                 }
@@ -1742,6 +2059,9 @@
                 clearTimeout(connectionTimeout);
                 reconnectAttempts = 0; // 重置重连计数
                 updateConnectionStatus('connected', '已连接到服务器');
+
+                // 确保按钮可见
+                ensureGeneratingButtonsVisible();
 
                 // 启动心跳检测
                 startHeartbeat();
@@ -1837,7 +2157,6 @@
             heartbeatInterval = setInterval(() => {
                 // 检查连接状态
                 if (eventSource && eventSource.readyState !== EventSource.OPEN) {
-                    console.warn('Connection lost during heartbeat check');
                     stopHeartbeat();
                     updateConnectionStatus('disconnected', '连接丢失，尝试重连...');
                     attemptReconnect();
@@ -1874,8 +2193,86 @@
             }
         }
 
+        // 暂停生成
+        function pauseGeneration() {
+            if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+                return;
+            }
+
+            isPaused = true;
+
+            // 关闭当前连接，但不标记为手动停止（允许后续恢复）
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            clearTimeout(connectionTimeout);
+            stopHeartbeat();
+
+            updateConnectionStatus('paused', '已暂停生成');
+
+            // 更新按钮状态
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (resumeBtn) resumeBtn.style.display = 'inline-block';
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            updateStatus('生成已暂停，点击"继续"按钮恢复生成', 'progress');
+        }
+
+        // 恢复生成
+        function resumeGeneration() {
+            if (!isPaused) {
+                return;
+            }
+
+            isPaused = false;
+            isManualStop = false;
+            reconnectAttempts = 0;
+
+            // 更新按钮状态
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            if (pauseBtn) pauseBtn.style.display = 'inline-block';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            updateStatus('正在恢复生成...', 'progress');
+            updateConnectionStatus('connecting', '正在重新连接...');
+
+            // 重新开始SSE连接
+            startEventSourceConnection();
+        }
+
+        // 停止生成（带确认对话框）
         function stopGeneration() {
+            // 弹出确认对话框
+            const completedCount = getCompletedSlidesCount();
+            const totalSlides = estimateTotalSlides();
+
+            let confirmMessage = '确定要停止PPT生成吗？';
+            if (completedCount > 0) {
+                confirmMessage = `已生成 ${completedCount}${totalSlides ? '/' + totalSlides : ''} 页。确定要停止生成吗？\n\n已生成的幻灯片将被保留，您可以稍后继续生成。`;
+            }
+
+            if (!confirm(confirmMessage)) {
+                return; // 用户取消停止
+            }
+
+            // 执行停止操作
+            doStopGeneration();
+        }
+
+        // 实际执行停止操作
+        function doStopGeneration() {
             isManualStop = true;
+            isPaused = false;
 
             if (eventSource) {
                 eventSource.close();
@@ -1890,15 +2287,17 @@
             // Reset UI
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
 
             if (startBtn) {
                 startBtn.style.display = 'inline-block';
-                startBtn.innerHTML = '<i class="fas fa-play"></i> 开始生成';
+                startBtn.innerHTML = '<i class="fas fa-play"></i> 继续生成';
             }
 
-            if (stopBtn) {
-                stopBtn.style.display = 'none';
-            }
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (resumeBtn) resumeBtn.style.display = 'none';
 
             // Reset generation state
             generationStarted = false;
@@ -1906,7 +2305,14 @@
 
             currentlyGeneratingPages.clear();
 
-            updateStatus('生成已停止', 'error');
+            const completedCount = getCompletedSlidesCount();
+            if (completedCount > 0) {
+                updateStatus(`生成已停止（已完成 ${completedCount} 页）`, 'error');
+                // 如果有已生成的幻灯片，显示编辑器按钮
+                showEditorButton();
+            } else {
+                updateStatus('生成已停止', 'error');
+            }
         }
 
         function handleStreamData(data) {
@@ -1933,8 +2339,9 @@
                         }
 
                         updateProgressIndicators();
-                        // 每生成一页就检查是否可以显示编辑器按钮
-                        checkAndShowEditorButton();
+
+                        // 幻灯片添加后，检查是否需要显示编辑器和放映按钮
+                        ensureGeneratingButtonsVisible();
                     }
                     break;
 
@@ -1946,21 +2353,31 @@
                             currentlyGeneratingPages.delete(skippedPage);
                         }
 
-                        // 确保slidesData中包含这个幻灯片数据
-                        const existingDataIndex = slidesData.findIndex(slide => slide.page_number === data.slide_data.page_number);
-                        if (existingDataIndex === -1) {
-                            // 如果数据中没有，添加进去（按页码顺序插入）
+                        // 检查幻灯片是否已经存在于 slidesData 中（避免重复添加）
+                        const existingSlideIndex = slidesData.findIndex(slide => slide.page_number === data.slide_data.page_number);
+                        if (existingSlideIndex !== -1) {
+                            // 幻灯片已存在，检查是否需要更新（用户编辑状态等）
+                            if (data.slide_data.is_user_edited && !slidesData[existingSlideIndex].is_user_edited) {
+                                slidesData[existingSlideIndex] = data.slide_data;
+                                addSlideToContainer(data.slide_data);
+                            }
+                        } else {
+                            // 幻灯片不存在，按页码顺序插入
                             const insertIndex = slidesData.findIndex(slide => slide.page_number > data.slide_data.page_number);
                             if (insertIndex === -1) {
                                 slidesData.push(data.slide_data);
                             } else {
                                 slidesData.splice(insertIndex, 0, data.slide_data);
                             }
+                            // 添加到DOM
+                            addSlideToContainer(data.slide_data);
                         }
-                        checkAndShowEditorButton();
                     }
 
                     updateProgressIndicators(data.total);
+
+                    // 跳过的幻灯片处理后，检查是否需要显示编辑器和放映按钮
+                    ensureGeneratingButtonsVisible();
                     break;
 
                 case 'complete':
@@ -1996,7 +2413,6 @@
                     // 清除生成标志，允许下次重新生成
                     sessionStorage.removeItem(generationKey);
 
-                    console.log('PPT generation completed successfully');
                     break;
 
                 case 'error':
@@ -2044,7 +2460,6 @@
                     break;
 
                 default:
-                    console.log('Unknown stream data type:', data.type, data);
                     break;
             }
         }
@@ -2238,11 +2653,13 @@
                 slideCard.classList.add('completed');
             }, 1000);
 
-            // Store slide data - 按页码顺序存储
+            // Store slide data - 按页码顺序存储，避免重复
             const existingDataIndex = slidesData.findIndex(slide => slide.page_number === slideData.page_number);
             if (existingDataIndex >= 0) {
-                // 更新现有数据
-                slidesData[existingDataIndex] = slideData;
+                // 幻灯片已存在，只更新内容（保留用户编辑状态等）
+                if (!slidesData[existingDataIndex].is_user_edited || slideData.is_user_edited) {
+                    slidesData[existingDataIndex] = slideData;
+                }
             } else {
                 // 按页码顺序插入新数据
                 const dataInsertIndex = slidesData.findIndex(slide => slide.page_number > slideData.page_number);
@@ -2254,23 +2671,20 @@
             }
         }
 
-        function checkAndShowEditorButton() {
-            // 如果已经有幻灯片生成，就显示编辑器按钮
-            if (slidesData.length > 0) {
-                showEditorButton();
-            }
-        }
-
         function showEditorButton() {
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
             const editorBtn = document.getElementById('editorBtn');
             const slideshowBtn = document.getElementById('slideshowBtn');
 
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'none';
-            editorBtn.style.display = 'inline-block';
-            slideshowBtn.style.display = 'inline-block';
+            if (startBtn) startBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (pauseBtn) pauseBtn.style.display = 'none';
+            if (resumeBtn) resumeBtn.style.display = 'none';
+            if (editorBtn) editorBtn.style.display = 'inline-block';
+            if (slideshowBtn) slideshowBtn.style.display = 'inline-block';
         }
 
         function openFullEditor() {
@@ -2375,6 +2789,8 @@
             // 添加按钮事件监听器
             const startBtn = document.getElementById('startBtn');
             const stopBtn = document.getElementById('stopBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
             const editorBtn = document.getElementById('editorBtn');
             const slideshowBtn = document.getElementById('slideshowBtn');
             const closeFullscreenBtn = document.getElementById('closeFullscreenBtn');
@@ -2384,6 +2800,12 @@
             }
             if (stopBtn) {
                 stopBtn.addEventListener('click', stopGeneration);
+            }
+            if (pauseBtn) {
+                pauseBtn.addEventListener('click', pauseGeneration);
+            }
+            if (resumeBtn) {
+                resumeBtn.addEventListener('click', resumeGeneration);
             }
             if (editorBtn) {
                 editorBtn.addEventListener('click', openFullEditor);
@@ -2461,8 +2883,27 @@
 
             // 如果有部分slides但未完成，显示部分内容并继续生成
             if (projectSlidesData && projectSlidesData.length > 0) {
+                // 立即显示按钮（在 displayPartialSlides 之前）
+                const startBtn = document.getElementById('startBtn');
+                const pauseBtn = document.getElementById('pauseBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const editorBtn = document.getElementById('editorBtn');
+                const slideshowBtn = document.getElementById('slideshowBtn');
+                if (startBtn) startBtn.style.display = 'none';
+                if (pauseBtn) pauseBtn.style.display = 'inline-block';
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                // 有幻灯片数据时显示编辑器和放映按钮
+                if (editorBtn) editorBtn.style.display = 'inline-block';
+                if (slideshowBtn) slideshowBtn.style.display = 'inline-block';
+
                 displayPartialSlides();
                 // 继续检查是否需要自动开始生成
+            } else if (slidesData && slidesData.length > 0) {
+                // 如果 slidesData 有数据但 projectSlidesData 为空（从页面数据加载），也显示按钮
+                const editorBtn = document.getElementById('editorBtn');
+                const slideshowBtn = document.getElementById('slideshowBtn');
+                if (editorBtn) editorBtn.style.display = 'inline-block';
+                if (slideshowBtn) slideshowBtn.style.display = 'inline-block';
             }
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -2505,6 +2946,10 @@
         function displayPartialSlides() {
             const slidesContainer = document.getElementById('slidesContainer');
             const statusDiv = document.getElementById('generationStatus');
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const stopBtn = document.getElementById('stopBtn');
 
             // Clear welcome message
             slidesContainer.innerHTML = '';
@@ -2520,6 +2965,9 @@
             progressBar.style.width = progress + '%';
             lastKnownTotalSlides = expectedCount;
             currentlyGeneratingPages.clear();
+
+            // 显示暂停和停止按钮（生成过程中应该可用）
+            ensureGeneratingButtonsVisible();
 
             // Display existing slides
             projectSlidesData.forEach((slideData, index) => {
@@ -2545,7 +2993,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.slides_data && data.slides_data.length > slidesData.length) {
-                        console.log('发现新的幻灯片，刷新页面...');
                         window.location.reload();
                     }
                 })

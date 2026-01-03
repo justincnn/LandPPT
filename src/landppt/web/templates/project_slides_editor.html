@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -105,7 +106,7 @@
         .editor-header h2 {
             position: relative;
             z-index: 1;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             font-weight: 700;
             font-size: 1.5rem;
             letter-spacing: -0.01em;
@@ -120,7 +121,7 @@
             font-weight: 500;
             margin: var(--spacing-xs) 0 0 0;
         }
-        
+
         .slides-sidebar {
             background: var(--surface-elevated);
             border-right: 1px solid var(--border-color);
@@ -164,6 +165,31 @@
             transform: translateY(-3px);
         }
 
+        .slide-thumbnail.selected {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        .slide-thumbnail.selected::after {
+            content: "✓";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #0d6efd;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.35);
+            pointer-events: none;
+            z-index: 5;
+        }
+
         .slide-thumbnail.dragging {
             opacity: 0.5;
             transform: rotate(5deg) scale(0.95);
@@ -177,7 +203,8 @@
 
         .slide-preview {
             width: 100%;
-            height: 135px; /* 调整高度以适应新的缩放比例：720*0.1875=135px */
+            height: 135px;
+            /* 调整高度以适应新的缩放比例：720*0.1875=135px */
             border: none;
             border-radius: 6px 6px 0 0;
             pointer-events: none;
@@ -199,7 +226,7 @@
             /* 计算缩放比例以填满容器：容器宽度约240px，240/1280=0.1875 */
             transform: scale(0.1875);
         }
-        
+
         .slide-title {
             padding: 4px 2px;
             font-size: 10px;
@@ -214,13 +241,13 @@
             justify-content: center;
             color: var(--text-secondary);
         }
-        
+
         .main-editor {
             height: calc(100vh - 140px);
             display: flex;
             flex-direction: column;
         }
-        
+
         .editor-toolbar {
             background: var(--surface-elevated);
             border-bottom: 1px solid var(--border-color);
@@ -230,19 +257,19 @@
             align-items: center;
             position: relative;
         }
-        
+
         .editor-content {
             flex: 1;
             display: flex;
         }
-        
+
         .preview-pane {
             flex: 1;
             background: var(--surface-muted);
             border-right: 1px solid var(--border-color);
             position: relative;
         }
-        
+
         .edit-pane {
             flex: 1;
             background: white;
@@ -250,7 +277,7 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         .slide-frame {
             position: absolute;
             top: 50%;
@@ -299,10 +326,12 @@
             /* 固定16:9比例，自适应缩放 */
             width: 100%;
             height: 100%;
-            max-width: calc(100vh * 16/9 - 40px); /* 基于高度计算最大宽度 */
-            max-height: calc(100vw * 9/16 - 40px); /* 基于宽度计算最大高度 */
+            max-width: calc(100vh * 16/9 - 40px);
+            /* 基于高度计算最大宽度 */
+            max-height: calc(100vw * 9/16 - 40px);
+            /* 基于宽度计算最大高度 */
         }
-        
+
         /* Preview navigation buttons */
         .preview-nav-btn {
             position: absolute !important;
@@ -395,7 +424,8 @@
             background: transparent !important;
         }
 
-        .CodeMirror-vscrollbar, .CodeMirror-hscrollbar {
+        .CodeMirror-vscrollbar,
+        .CodeMirror-hscrollbar {
             outline: none !important;
         }
 
@@ -472,7 +502,7 @@
             padding: 10px 15px !important;
             border: none !important;
             border-bottom: 2px solid #3498db !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
         }
 
         .CodeMirror-dialog input {
@@ -556,7 +586,7 @@
         .CodeMirror-dialog .CodeMirror-search-close:hover {
             background: #c0392b !important;
         }
-        
+
         .btn-group-custom {
             display: flex;
             gap: var(--spacing-md);
@@ -717,6 +747,7 @@
                 opacity: 0;
                 transform: translateX(-50%) translateY(5px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
@@ -763,6 +794,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -814,15 +846,18 @@
         .slideshow-slide {
             background: white;
             border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
             overflow: hidden;
             position: relative;
             /* 使用flex确保PPT居中且尺寸自适应 */
             width: 100%;
             height: 100%;
-            max-width: calc(100vh * 16/9 - 40px); /* 基于高度计算最大宽度，保持16:9比例 */
-            max-height: calc(100vw * 9/16 - 40px); /* 基于宽度计算最大高度，保持16:9比例 */
-            aspect-ratio: 16/9; /* 强制保持16:9比例 */
+            max-width: calc(100vh * 16/9 - 40px);
+            /* 基于高度计算最大宽度，保持16:9比例 */
+            max-height: calc(100vw * 9/16 - 40px);
+            /* 基于宽度计算最大高度，保持16:9比例 */
+            aspect-ratio: 16/9;
+            /* 强制保持16:9比例 */
             /* 硬件加速 */
             transform: translateZ(0);
             will-change: transform;
@@ -893,9 +928,9 @@
         }
 
         .slideshow-btn {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             padding: 10px 20px;
             border-radius: 25px;
             cursor: pointer;
@@ -904,8 +939,8 @@
         }
 
         .slideshow-btn:hover {
-            background: rgba(255,255,255,0.3);
-            border-color: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .slideshow-info {
@@ -929,9 +964,9 @@
             position: absolute;
             top: 30px;
             right: 30px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             padding: 10px 15px;
             border-radius: 50%;
             cursor: pointer;
@@ -947,15 +982,17 @@
         }
 
         .slideshow-exit:hover {
-            background: rgba(255,255,255,0.3);
-            border-color: rgba(255,255,255,0.5);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         /* 响应式设计 */
         @media (max-width: 1200px) {
             .slide-preview {
-                height: 115px; /* 200px容器宽度，200/1280=0.156，720*0.156=112.32px */
+                height: 115px;
+                /* 200px容器宽度，200/1280=0.156，720*0.156=112.32px */
             }
+
             .slide-preview iframe {
                 transform: scale(0.156);
             }
@@ -968,8 +1005,10 @@
             }
 
             .slide-preview {
-                height: 115px; /* 200px容器宽度，200/1280=0.156，720*0.156=112.32px */
+                height: 115px;
+                /* 200px容器宽度，200/1280=0.156，720*0.156=112.32px */
             }
+
             .slide-preview iframe {
                 transform: scale(0.156);
             }
@@ -988,8 +1027,10 @@
             }
 
             .slide-preview {
-                height: 105px; /* 180px容器宽度，180/1280=0.141，720*0.141=101.52px */
+                height: 105px;
+                /* 180px容器宽度，180/1280=0.141，720*0.141=101.52px */
             }
+
             .slide-preview iframe {
                 transform: scale(0.141);
             }
@@ -1017,8 +1058,10 @@
             }
 
             .slide-preview {
-                height: 95px; /* 160px容器宽度，160/1280=0.125，720*0.125=90px */
+                height: 95px;
+                /* 160px容器宽度，160/1280=0.125，720*0.125=90px */
             }
+
             .slide-preview iframe {
                 transform: scale(0.125);
             }
@@ -1064,7 +1107,7 @@
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             z-index: 2000;
             min-width: 180px;
             display: none;
@@ -1116,7 +1159,7 @@
             font-weight: bold;
             z-index: 10000;
             max-width: 300px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             animation: slideInRight 0.3s ease;
         }
 
@@ -1142,6 +1185,7 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
@@ -1176,8 +1220,10 @@
         .ai-edit-sidebar {
             position: fixed;
             top: 0;
-            right: -650px; /* 增加默认宽度 */
-            width: 650px; /* 增加默认宽度 */
+            right: -650px;
+            /* 增加默认宽度 */
+            width: 650px;
+            /* 增加默认宽度 */
             height: 100vh;
             background: var(--surface-elevated);
             border: 1px solid var(--border-color);
@@ -1188,9 +1234,12 @@
             transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            resize: horizontal; /* 允许水平调整大小 */
-            min-width: 500px; /* 最小宽度 */
-            max-width: 1000px; /* 最大宽度 */
+            resize: horizontal;
+            /* 允许水平调整大小 */
+            min-width: 500px;
+            /* 最小宽度 */
+            max-width: 1000px;
+            /* 最大宽度 */
             overflow: hidden;
         }
 
@@ -1332,7 +1381,7 @@
             background: var(--surface-muted);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-md);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
             position: relative;
         }
 
@@ -1361,7 +1410,7 @@
             border: 1px solid var(--border-color);
             margin-right: auto;
             margin-left: var(--spacing-md);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
         }
 
         .ai-message.system {
@@ -1416,16 +1465,17 @@
 
         /* 选中图像信息容器样式 */
         .ai-selected-image-container {
-            background: var(--surface-muted);
-            border: 1px solid var(--border-color);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(79, 172, 254, 0.3);
             border-radius: var(--border-radius-md);
             margin-bottom: var(--spacing-md);
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .ai-selected-image-header {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
             color: white;
             padding: var(--spacing-sm) var(--spacing-md);
             display: flex;
@@ -1433,6 +1483,7 @@
             align-items: center;
             font-size: 0.875rem;
             font-weight: 600;
+            border-bottom: 1px solid rgba(79, 172, 254, 0.2);
         }
 
         .ai-clear-selection-btn {
@@ -1457,6 +1508,7 @@
             display: flex;
             gap: var(--spacing-md);
             align-items: flex-start;
+            background: rgba(0, 0, 0, 0.2);
         }
 
         .ai-selected-image-preview {
@@ -1489,12 +1541,12 @@
         }
 
         .ai-detail-label {
-            color: var(--text-secondary);
+            color: rgba(255, 255, 255, 0.6);
             font-weight: 500;
         }
 
         .ai-detail-value {
-            color: var(--text-primary);
+            color: #ffffff;
             font-weight: 600;
             text-align: right;
             max-width: 120px;
@@ -1505,8 +1557,8 @@
 
         .ai-image-actions {
             padding: var(--spacing-sm) var(--spacing-md);
-            border-top: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid rgba(79, 172, 254, 0.2);
+            background: rgba(0, 0, 0, 0.3);
         }
 
         .ai-image-action-row {
@@ -1521,6 +1573,7 @@
 
         .ai-regenerate-image-btn,
         .ai-replace-image-btn,
+        .ai-upload-local-image-btn,
         .ai-delete-image-btn {
             flex: 1;
             border: none;
@@ -1547,12 +1600,14 @@
         }
 
         .ai-replace-image-btn {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+            border: 1px solid rgba(79, 172, 254, 0.4);
         }
 
         .ai-replace-image-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+            box-shadow: 0 4px 15px rgba(44, 62, 80, 0.4);
+            border-color: rgba(79, 172, 254, 0.6);
         }
 
         .ai-delete-image-btn {
@@ -1565,8 +1620,18 @@
             box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
         }
 
+        .ai-upload-local-image-btn {
+            background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+        }
+
+        .ai-upload-local-image-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(245, 175, 25, 0.3);
+        }
+
         .ai-regenerate-image-btn:active,
         .ai-replace-image-btn:active,
+        .ai-upload-local-image-btn:active,
         .ai-delete-image-btn:active {
             transform: translateY(0);
         }
@@ -1632,7 +1697,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -1683,7 +1748,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -1741,10 +1806,14 @@
         }
 
         @keyframes typing {
-            0%, 80%, 100% {
+
+            0%,
+            80%,
+            100% {
                 transform: scale(0.8);
                 opacity: 0.5;
             }
+
             40% {
                 transform: scale(1.2);
                 opacity: 1;
@@ -1799,7 +1868,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -1868,7 +1937,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -1908,10 +1977,12 @@
                 transform: scale(0.95);
                 box-shadow: 0 0 0 0 rgba(67, 233, 123, 0.7);
             }
+
             70% {
                 transform: scale(1);
                 box-shadow: 0 0 0 10px rgba(67, 233, 123, 0);
             }
+
             100% {
                 transform: scale(0.95);
                 box-shadow: 0 0 0 0 rgba(67, 233, 123, 0);
@@ -1946,7 +2017,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -1966,55 +2037,178 @@
             animation: spin 1s linear infinite;
         }
 
+        /* AI自由对话按钮样式 */
+        .ai-native-dialog-btn {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(31, 38, 135, 0.1);
+        }
+
+        .ai-native-dialog-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .ai-native-dialog-btn:hover {
+            background: rgba(13, 110, 253, 0.08);
+            border-color: rgba(13, 110, 253, 0.28);
+            color: rgba(13, 110, 253, 0.95);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.18);
+        }
+
+        .ai-native-dialog-btn:hover::before {
+            left: 100%;
+        }
+
+        /* 自由对话 Dialog */
+        .ai-native-chat-dialog {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 0;
+            width: min(960px, calc(100vw - 48px));
+            height: min(78vh, 760px);
+            box-shadow: var(--shadow-soft);
+            background: var(--surface-elevated);
+            overflow: hidden;
+        }
+
+        .ai-native-chat-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .ai-native-chat-dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .ai-native-chat-dialog-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .ai-native-chat-dialog-close {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius-md);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ai-native-chat-dialog-close:hover {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .ai-native-chat-dialog-body {
+            height: calc(100% - 62px - 78px);
+            padding: var(--spacing-md);
+            overflow: hidden;
+        }
+
+        .ai-native-chat-dialog-body .ai-chat-messages {
+            height: 100%;
+        }
+
+        .ai-native-chat-dialog-footer {
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+        }
+
+        .ai-native-chat-input-row {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .ai-native-chat-input {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            outline: none;
+            background: var(--surface-elevated);
+        }
+
+        .ai-native-chat-input:focus {
+            border-color: rgba(13, 110, 253, 0.55);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        .ai-native-chat-send-btn {
+            background: var(--accent-color);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent-color);
+            border-radius: var(--border-radius-md);
+            padding: 10px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .ai-native-chat-send-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .ai-native-chat-send-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .ai-native-chat-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-sm);
+        }
+
         /* 快速编辑模式样式 */
         .quick-edit-mode .slide-frame {
             cursor: pointer;
-        }
-
-        .quick-edit-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(79, 172, 254, 0.05);
-            border: 2px dashed rgba(79, 172, 254, 0.3);
-            border-radius: var(--border-radius-md);
-            display: none;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .quick-edit-mode .quick-edit-overlay {
-            display: block;
-        }
-
-        .quick-edit-overlay::before {
-            content: ' 点击文本直接编辑 | Enter保存 | ESC取消 | 再次点击修改退出';
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(79, 172, 254, 0.9);
-            color: white;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: var(--border-radius-sm);
-            font-size: 0.60rem;
-            font-weight: 500;
-            white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
-            animation: fadeInDown 0.5s ease;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
         }
 
         /* 可编辑元素高亮样式 */
@@ -2218,22 +2412,7 @@
             color: var(--accent-contrast) !important;
         }
 
-        .direct-editing::before {
-            content: ' 正在编辑... (Enter保存 / ESC取消)';
-            position: absolute !important;
-            top: -30px !important;
-            left: 0 !important;
-            background: rgba(79, 172, 254, 0.9) !important;
-            color: white !important;
-            padding: 4px 8px !important;
-            border-radius: 4px !important;
-            font-size: 11px !important;
-            font-weight: 600 !important;
-            white-space: nowrap !important;
-            z-index: 1001 !important;
-            box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3) !important;
-            animation: fadeInDown 0.3s ease !important;
-        }
+        /* 直接编辑样式 - 简化版，无悬浮提示 */
 
         .direct-editing:focus {
             outline-color: #2980b9 !important;
@@ -2306,9 +2485,145 @@
             color: rgba(67, 233, 123, 1);
         }
 
+        /* ========== 快速编辑工具栏样式 ========== */
+        .quick-edit-toolbar {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 1500;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .quick-edit-toolbar.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .quick-edit-toolbar .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border-color);
+            margin: 0 6px;
+        }
+
+        .quick-edit-tool-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .quick-edit-tool-btn:hover {
+            background: var(--surface-muted);
+            color: var(--text-primary);
+        }
+
+        .quick-edit-tool-btn:active {
+            transform: scale(0.95);
+        }
+
+        .quick-edit-tool-btn.danger:hover {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .quick-edit-tool-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 选中元素样式 */
+        .quick-edit-element-selected {
+            outline: 2px solid #4facfe !important;
+            outline-offset: 2px !important;
+            position: relative !important;
+            cursor: move !important;
+        }
+
+        /* 调整大小手柄 */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #4facfe;
+            border: 2px solid white;
+            border-radius: 2px;
+            z-index: 1001;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .resize-handle.nw {
+            top: -5px;
+            left: -5px;
+            cursor: nw-resize;
+        }
+
+        .resize-handle.ne {
+            top: -5px;
+            right: -5px;
+            cursor: ne-resize;
+        }
+
+        .resize-handle.sw {
+            bottom: -5px;
+            left: -5px;
+            cursor: sw-resize;
+        }
+
+        .resize-handle.se {
+            bottom: -5px;
+            right: -5px;
+            cursor: se-resize;
+        }
+
+        /* 拖拽中状态 */
+        .quick-edit-dragging {
+            opacity: 0.7 !important;
+            cursor: grabbing !important;
+        }
+
+        /* 快速编辑模式提示 */
+        .quick-edit-mode-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-contrast);
+            color: var(--surface);
+            padding: 10px 20px;
+            border-radius: var(--border-radius-lg);
+            font-size: 13px;
+            z-index: 1500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
 
@@ -2318,6 +2633,7 @@
                 opacity: 0;
                 transform: translateY(-5px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -2663,23 +2979,24 @@
 
         .image-library-loading p {
 
-.image-library-item {
-    background: var(--glass-bg);
-    backdrop-filter: blur(15px);
-    border: 2px solid var(--glass-border);
-    border-radius: var(--border-radius-md);
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    aspect-ratio: 1;
-}
+            .image-library-item {
+                background: var(--glass-bg);
+                backdrop-filter: blur(15px);
+                border: 2px solid var(--glass-border);
+                border-radius: var(--border-radius-md);
+                overflow: hidden;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                aspect-ratio: 1;
+            }
 
-.image-library-item:hover {
-    transform: scale(1.05);
-    border-color: rgba(79, 172, 254, 0.6);
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-}
+            .image-library-item:hover {
+                transform: scale(1.05);
+                border-color: rgba(79, 172, 254, 0.6);
+                box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+            }
+
             backdrop-filter: blur(15px);
             border: 2px solid var(--glass-border);
             border-radius: var(--border-radius-md);
@@ -2928,6 +3245,7 @@
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
@@ -2952,6 +3270,7 @@
                 opacity: 0;
                 transform: scale(0.8) translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: scale(1) translateY(0);
@@ -3025,7 +3344,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -3123,7 +3442,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -3638,22 +3957,22 @@
             color: rgba(0, 0, 0, 0.6);
         }
 
-        .slide-selection-checkbox:checked + .slide-selection-card {
+        .slide-selection-checkbox:checked+.slide-selection-card {
             border-color: #000;
             background: #fff;
             box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
         }
 
-        .slide-selection-checkbox:checked + .slide-selection-card .slide-selection-indicator {
+        .slide-selection-checkbox:checked+.slide-selection-card .slide-selection-indicator {
             background: #000;
             border-color: #000;
         }
 
-        .slide-selection-checkbox:checked + .slide-selection-card .slide-selection-indicator::after {
+        .slide-selection-checkbox:checked+.slide-selection-card .slide-selection-indicator::after {
             content: '✓';
         }
 
-        .slide-selection-checkbox:focus-visible + .slide-selection-card {
+        .slide-selection-checkbox:focus-visible+.slide-selection-card {
             outline: 2px solid #000;
             outline-offset: 2px;
         }
@@ -3693,12 +4012,12 @@
             box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
         }
 
-        .speech-type-option input[type="radio"]:focus-visible + .speech-type-label {
+        .speech-type-option input[type="radio"]:focus-visible+.speech-type-label {
             outline: 2px solid #000;
             outline-offset: 2px;
         }
 
-        .speech-type-option input[type="radio"]:checked + .speech-type-label {
+        .speech-type-option input[type="radio"]:checked+.speech-type-label {
             border-color: #000;
             background: #fff;
             box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.85);
@@ -3717,7 +4036,7 @@
             transition: background 0.2s ease, color 0.2s ease;
         }
 
-        .speech-type-option input[type="radio"]:checked + .speech-type-label .speech-type-icon,
+        .speech-type-option input[type="radio"]:checked+.speech-type-label .speech-type-icon,
         .speech-type-label:hover .speech-type-icon {
             background: #000;
             color: #fff;
@@ -3739,7 +4058,7 @@
             color: rgba(0, 0, 0, 0.65);
         }
 
-        .speech-type-option input[type="radio"]:checked + .speech-type-label .speech-type-desc {
+        .speech-type-option input[type="radio"]:checked+.speech-type-label .speech-type-desc {
             color: rgba(0, 0, 0, 0.7);
         }
 
@@ -3813,12 +4132,12 @@
             position: relative;
         }
 
-        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom {
+        .speech-form-check input[type="checkbox"]:checked+.speech-checkbox-label .speech-checkbox-custom {
             background: var(--primary-color);
             border-color: var(--primary-color);
         }
 
-        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom::after {
+        .speech-form-check input[type="checkbox"]:checked+.speech-checkbox-label .speech-checkbox-custom::after {
             content: '✓';
             color: white;
             font-size: 12px;
@@ -3881,7 +4200,7 @@
             transform: translateY(0);
         }
 
-        
+
 
         /* Script Preview Styles */
         .script-item {
@@ -4249,12 +4568,12 @@
             position: relative;
         }
 
-        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom {
+        .speech-form-check input[type="checkbox"]:checked+.speech-checkbox-label .speech-checkbox-custom {
             background: var(--primary-color);
             border-color: var(--primary-color);
         }
 
-        .speech-form-check input[type="checkbox"]:checked + .speech-checkbox-label .speech-checkbox-custom::after {
+        .speech-form-check input[type="checkbox"]:checked+.speech-checkbox-label .speech-checkbox-custom::after {
             content: '✓';
             color: white;
             font-size: 12px;
@@ -4341,7 +4660,7 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
-        
+
 
         /* Script Preview Styles */
         .script-item {
@@ -4402,6 +4721,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="editor-container">
         <!-- Header -->
@@ -4409,7 +4729,8 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h2><i class="fas fa-edit"></i> PPT编辑器</h2>
-                    <p class="mb-0">{{ project.title }} - 共 {{ project.slides_data|length if project.slides_data else 0 }} 页</p>
+                    <p class="mb-0">{{ project.title }} - 共 {{ project.slides_data|length if project.slides_data else 0
+                        }} 页</p>
                 </div>
                 <div>
                     <a href="/dashboard" class="btn btn-outline-light">
@@ -4424,39 +4745,40 @@
             <div class="slides-sidebar" style="flex: 0 0 260px;">
                 <div class="p-3">
                     <h6><i class="fas fa-images"></i> 幻灯片</h6>
+                    <div class="small" style="color: #6b7078;">
+                        Ctrl+点击多选（已选 <span id="selectedSlidesCount">0</span> 页）
+                    </div>
                 </div>
                 <div class="slides-container">
                     {% if project.slides_data and project.slides_data|length > 0 %}
-                        {% for slide in project.slides_data %}
-                        <div class="slide-thumbnail {% if loop.index == 1 %}active{% endif %}"
-                             data-slide-index="{{ loop.index0 }}"
-                             draggable="true">
-                            <div class="drag-indicator top"></div>
-                            <div class="slide-preview">
-                                <iframe srcdoc="{{ slide.html_content | e }}"
-                                        title="Slide {{ loop.index }}"></iframe>
-                            </div>
-                            <div class="slide-title">{{ loop.index }}. {{ slide.title }}</div>
-                            <div class="drag-indicator bottom"></div>
+                    {% for slide in project.slides_data %}
+                    <div class="slide-thumbnail {% if loop.index == 1 %}active{% endif %}"
+                        data-slide-index="{{ loop.index0 }}" draggable="true">
+                        <div class="drag-indicator top"></div>
+                        <div class="slide-preview">
+                            <iframe srcdoc="{{ slide.html_content | e }}" title="Slide {{ loop.index }}"></iframe>
                         </div>
-                        {% endfor %}
+                        <div class="slide-title">{{ loop.index }}. {{ slide.title }}</div>
+                        <div class="drag-indicator bottom"></div>
+                    </div>
+                    {% endfor %}
                     {% else %}
-                        <div class="text-center p-4" style="color: #7f8c8d;" id="noSlidesMessage">
-                            <div style="font-size: 48px; margin-bottom: 15px;">
-                                <i class="fas fa-magic"></i>
-                            </div>
-                            <h5 style="margin-bottom: 10px;">PPT正在生成中...</h5>
-                            <p style="margin-bottom: 15px; font-size: 14px;">
-                                幻灯片生成完成后，您可以在这里进行编辑和管理
-                            </p>
-                            <div class="spinner-border text-primary" role="status" style="margin-bottom: 15px;">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <br>
-                            <button class="btn btn-primary btn-sm" onclick="checkForUpdates()">
-                                <i class="fas fa-refresh"></i> 刷新页面
-                            </button>
+                    <div class="text-center p-4" style="color: #7f8c8d;" id="noSlidesMessage">
+                        <div style="font-size: 48px; margin-bottom: 15px;">
+                            <i class="fas fa-magic"></i>
                         </div>
+                        <h5 style="margin-bottom: 10px;">PPT正在生成中...</h5>
+                        <p style="margin-bottom: 15px; font-size: 14px;">
+                            幻灯片生成完成后，您可以在这里进行编辑和管理
+                        </p>
+                        <div class="spinner-border text-primary" role="status" style="margin-bottom: 15px;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <br>
+                        <button class="btn btn-primary btn-sm" onclick="checkForUpdates()">
+                            <i class="fas fa-refresh"></i> 刷新页面
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -4490,9 +4812,38 @@
                         <button class="btn btn-primary btn-sm" id="aiEditBtn" title="AI智能编辑">
                             <i class="fas fa-robot"></i>
                         </button>
-                        <button class="btn btn-info btn-sm" id="speechScriptBtn" onclick="showSpeechScriptDialog()" title="生成演讲稿">
+                        <button class="btn btn-info btn-sm" id="speechScriptBtn" onclick="showSpeechScriptDialog()"
+                            title="生成演讲稿">
                             <i class="fas fa-commenting"></i>
                         </button>
+                        <div class="dropdown">
+                            <button class="btn btn-warning btn-sm" type="button" id="regenerateDropdownBtn"
+                                data-bs-toggle="dropdown" aria-expanded="false" title="重新生成">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="regenerateDropdownBtn">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="quickRegenerateSlide(); return false;">
+                                        <i class="fas fa-sync me-2"></i> 重新生成当前页
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#"
+                                        onclick="regenerateSelectedSlides(); return false;">
+                                        <i class="fas fa-layer-group me-2"></i> 重新生成所选页
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#"
+                                        onclick="regenerateAllSlides(); return false;">
+                                        <i class="fas fa-bolt me-2"></i> 一键重新生成全部
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -4501,41 +4852,44 @@
                     <!-- Preview Pane -->
                     <div class="preview-pane" id="previewPane">
                         {% if project.slides_data and project.slides_data|length > 0 %}
-                            <div class="slide-frame-container">
-                                <div class="slide-frame-wrapper" id="slideFrameWrapper">
-                                    <button class="preview-nav-btn left" id="previewPrevBtn" onclick="navigatePreviewSlide(-1)" title="&#19978;&#19968;&#39029; (&#8592;)">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
+                        <div class="slide-frame-container">
+                            <div class="slide-frame-wrapper" id="slideFrameWrapper">
+                                <button class="preview-nav-btn left" id="previewPrevBtn"
+                                    onclick="navigatePreviewSlide(-1)" title="&#19978;&#19968;&#39029; (&#8592;)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
 
-                                    <iframe class="slide-frame" id="slideFrame"
-                                            srcdoc="{{ project.slides_data[0].html_content | e }}"
-                                            title="Slide Preview"></iframe>
-                                    <div class="quick-edit-overlay" id="quickEditOverlay"></div>
+                                <iframe class="slide-frame" id="slideFrame"
+                                    srcdoc="{{ project.slides_data[0].html_content | e }}"
+                                    title="Slide Preview"></iframe>
 
-                                    <button class="preview-nav-btn right" id="previewNextBtn" onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
+                                <button class="preview-nav-btn right" id="previewNextBtn"
+                                    onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
                             </div>
+                        </div>
                         {% else %}
-                            <div class="d-flex align-items-center justify-content-center h-100" style="background: #f8f9fa; border-radius: 8px;">
-                                <div class="text-center" style="color: #6c757d;">
-                                    <div style="font-size: 64px; margin-bottom: 20px;">
-                                        <i class="fas fa-presentation-screen"></i>
-                                    </div>
-                                    <h4 style="margin-bottom: 15px;">等待PPT生成</h4>
-                                    <p style="margin-bottom: 20px;">PPT生成完成后，预览将在这里显示</p>
-                                    <button class="btn btn-outline-primary" onclick="window.location.reload()">
-                                        <i class="fas fa-refresh"></i> 刷新查看
-                                    </button>
+                        <div class="d-flex align-items-center justify-content-center h-100"
+                            style="background: #f8f9fa; border-radius: 8px;">
+                            <div class="text-center" style="color: #6c757d;">
+                                <div style="font-size: 64px; margin-bottom: 20px;">
+                                    <i class="fas fa-presentation-screen"></i>
                                 </div>
+                                <h4 style="margin-bottom: 15px;">等待PPT生成</h4>
+                                <p style="margin-bottom: 20px;">PPT生成完成后，预览将在这里显示</p>
+                                <button class="btn btn-outline-primary" onclick="window.location.reload()">
+                                    <i class="fas fa-refresh"></i> 刷新查看
+                                </button>
                             </div>
+                        </div>
                         {% endif %}
                     </div>
 
                     <!-- Edit Pane -->
                     <div class="edit-pane" id="editPane" style="display: none;">
-                        <textarea class="code-editor" id="codeEditor" placeholder="HTML代码将在这里显示...">{{ project.slides_data[0].html_content if project.slides_data and project.slides_data|length > 0 else '' }}</textarea>
+                        <textarea class="code-editor" id="codeEditor"
+                            placeholder="HTML代码将在这里显示...">{{ project.slides_data[0].html_content if project.slides_data and project.slides_data|length > 0 else '' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -4551,12 +4905,14 @@
                     <button class="btn btn-warning" onclick="exportToPPTX()" title="导出为PowerPoint文件">
                         <i class="fas fa-file-powerpoint"></i>
                     </button>
-                    <button type="button" class="btn btn-warning dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button type="button" class="btn btn-warning dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="visually-hidden">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="#" onclick="exportToPPTX(); return false;">标准导出</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="exportToPPTXAsImages(); return false;">以图片形式导出</a></li>
+                        <li><a class="dropdown-item" href="#"
+                                onclick="exportToPPTXAsImages(); return false;">以图片形式导出</a></li>
                     </ul>
                 </div>
                 <button class="btn btn-success" onclick="downloadHTML()" title="下载HTML文件">
@@ -4567,6 +4923,40 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- 快速编辑工具栏 -->
+    <div class="quick-edit-toolbar" id="quickEditToolbar">
+        <button class="quick-edit-tool-btn" onclick="quickEditUndo()" title="撤销 (Ctrl+Z)" id="undoBtn" disabled>
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditRedo()" title="重做 (Ctrl+Y)" id="redoBtn" disabled>
+            <i class="fas fa-redo"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn danger" onclick="quickEditDelete()" title="删除元素">
+            <i class="fas fa-trash"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditDuplicate()" title="复制元素">
+            <i class="fas fa-copy"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn" onclick="quickEditMoveUp()" title="上移层级">
+            <i class="fas fa-layer-group"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditMoveDown()" title="下移层级">
+            <i class="fas fa-level-down-alt"></i>
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignLeft()" title="左对齐">
+            <i class="fas fa-align-left"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignCenter()" title="居中对齐">
+            <i class="fas fa-align-center"></i>
+        </button>
+        <button class="quick-edit-tool-btn" onclick="quickEditAlignRight()" title="右对齐">
+            <i class="fas fa-align-right"></i>
+        </button>
     </div>
 
     <!-- Slideshow Overlay -->
@@ -4672,7 +5062,8 @@
                     <div class="search-input-group">
                         <i class="fas fa-search"></i>
                         <input type="text" id="imageLibrarySearchInput" placeholder="搜索图片..." />
-                        <button class="search-clear-btn" id="imageLibrarySearchClear" style="display: none;" onclick="clearImageLibrarySearch()">
+                        <button class="search-clear-btn" id="imageLibrarySearchClear" style="display: none;"
+                            onclick="clearImageLibrarySearch()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -4699,7 +5090,8 @@
                 </div>
             </div>
             <div class="image-library-actions">
-                <button class="image-library-action" onclick="confirmImageSelection()" id="confirmSelectionBtn" disabled>
+                <button class="image-library-action" onclick="confirmImageSelection()" id="confirmSelectionBtn"
+                    disabled>
                     <i class="fas fa-check"></i> 确认选择 (<span id="selectedCount">0</span>)
                 </button>
                 <button class="image-library-action secondary" onclick="closeImageLibrary()">
@@ -4778,10 +5170,12 @@
                 <div class="ai-chat-messages" id="aiChatMessages">
                     <div class="ai-message system">
                         <div style="text-align: center; padding: var(--spacing-sm);">
-                            <div style="font-size: 2rem; margin-bottom: var(--spacing-sm); color: var(--text-secondary);">
+                            <div
+                                style="font-size: 2rem; margin-bottom: var(--spacing-sm); color: var(--text-secondary);">
                                 <i class="fas fa-magic"></i>
                             </div>
-                            <div style="font-weight: 600; margin-bottom: var(--spacing-xs); color: var(--text-primary);">
+                            <div
+                                style="font-weight: 600; margin-bottom: var(--spacing-xs); color: var(--text-primary);">
                                 欢迎使用AI编辑助手！
                             </div>
                             <div style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-muted);">
@@ -4797,25 +5191,24 @@
                 </div>
 
                 <div class="ai-input-container">
-                    <textarea
-                        class="ai-input-box"
-                        id="aiInputBox"
-                        placeholder="请输入您的编辑指令..."
-                        rows="3"></textarea>
+                    <textarea class="ai-input-box" id="aiInputBox" placeholder="请输入您的编辑指令..." rows="3"></textarea>
 
 
                     <div class="ai-input-buttons">
                         <button class="ai-send-btn" id="aiSendBtn" onclick="sendAIMessage()">
                             <i class="fas fa-paper-plane"></i> 发送
                         </button>
-                        <button class="ai-image-upload-btn" id="aiImageUploadBtn" onclick="triggerImageUpload()" title="上传图片">
+                        <button class="ai-image-upload-btn" id="aiImageUploadBtn" onclick="triggerImageUpload()"
+                            title="上传图片">
                             <i class="fas fa-image"></i>
                         </button>
-                        <button class="ai-vision-toggle-btn" id="aiVisionToggleBtn" onclick="toggleVisionMode()" title="启用视觉模式 - AI将能看到当前幻灯片">
+                        <button class="ai-vision-toggle-btn" id="aiVisionToggleBtn" onclick="toggleVisionMode()"
+                            title="启用视觉模式 - AI将能看到当前幻灯片">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="ai-regenerate-btn" onclick="quickRegenerateSlide()" title="重新生成当前幻灯片">
-                            <i class="fas fa-sync"></i>
+                        <button class="ai-native-dialog-btn" type="button" onclick="openNativeChatDialog()"
+                            title="自由对话（仅当前页）">
+                            <i class="fas fa-comments"></i>
                         </button>
                         <button class="ai-clear-context-btn" onclick="clearAIContext()" title="清除对话上下文">
                             <i class="fas fa-trash"></i>
@@ -4842,9 +5235,50 @@
         </div>
     </div>
 
+    <!-- AI自由对话（仅当前页） -->
+    <dialog class="ai-native-chat-dialog" id="aiNativeChatDialog">
+        <div class="ai-native-chat-dialog-header">
+            <div class="ai-native-chat-dialog-title">
+                <i class="fas fa-comments"></i>
+                <span>自由对话（仅当前页）</span>
+            </div>
+            <button class="ai-native-chat-dialog-close" type="button" onclick="closeNativeChatDialog()" title="关闭">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ai-native-chat-dialog-body">
+            <div class="ai-chat-messages" id="aiNativeChatMessages"></div>
+        </div>
+        <div class="ai-native-chat-dialog-footer">
+            <div class="ai-native-chat-input-row">
+                <input class="ai-native-chat-input" id="aiNativeInputBox" type="text" placeholder="和当前页对话…"
+                    autocomplete="off">
+                <button class="ai-native-chat-send-btn" id="aiNativeSendBtn" type="button"
+                    onclick="sendNativeChatMessage()">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
+                <button class="ai-image-upload-btn" id="aiNativeImageUploadBtn" type="button"
+                    onclick="triggerNativeImageUpload()" title="上传图片（也支持粘贴图片）">
+                    <i class="fas fa-image"></i>
+                </button>
+                <button class="ai-clear-context-btn" id="aiNativeClearContextBtn" type="button"
+                    onclick="clearNativeChatContext()" title="清除对话上下文">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="ai-native-chat-hint">
+                <span>不设系统提示词，仅带当前页信息；支持粘贴/上传图片对话。</span>
+            </div>
+            <input type="file" id="aiNativeImageFileInput" accept="image/*" multiple style="display: none;">
+            <div class="ai-uploaded-images" id="aiNativeUploadedImages"></div>
+        </div>
+    </dialog>
+
     <script id="projectDataScript" type="application/json">{{ {'projectId': project.project_id}|tojson|safe }}</script>
-    <script id="projectSlidesScript" type="application/json">{{ {'slides': project.slides_data or []}|tojson|safe }}</script>
-    <script id="projectMetaScript" type="application/json">{{ {'status': project.status, 'outline': project.outline}|tojson|safe }}</script>
+    <script id="projectSlidesScript"
+        type="application/json">{{ {'slides': project.slides_data or []}|tojson|safe }}</script>
+    <script id="projectMetaScript"
+        type="application/json">{{ {'status': project.status, 'outline': project.outline}|tojson|safe }}</script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -4858,10 +5292,160 @@
         let slideshowIndex = 0;
         let isSlideshow = false;
 
+        // 幻灯片多选（Ctrl+点击）- 用于批量重新生成等操作
+        let selectedSlideIndices = new Set();
+
+        function getOutlineSlidesCount() {
+            const outlineSlides = projectOutline && Array.isArray(projectOutline.slides) ? projectOutline.slides : null;
+            if (outlineSlides && outlineSlides.length > 0) return outlineSlides.length;
+            return Array.isArray(slidesData) ? slidesData.length : 0;
+        }
+
+        function ensureSlidesDataLength(targetLen) {
+            if (!Array.isArray(slidesData)) {
+                slidesData = [];
+                window.slidesData = slidesData;
+            }
+            const len = Math.max(0, parseInt(targetLen, 10) || 0);
+            while (slidesData.length < len) {
+                const pageNumber = slidesData.length + 1;
+                slidesData.push({
+                    page_number: pageNumber,
+                    title: `第${pageNumber}页`,
+                    html_content: '<div style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;font-family:Microsoft YaHei,Arial,sans-serif;color:#6c757d;">待生成</div>'
+                });
+            }
+        }
+
+        let slidesDataWasNormalized = false;
+        function normalizeSlidesDataToOutline() {
+            if (!Array.isArray(slidesData) || slidesData.length === 0) {
+                return false;
+            }
+
+            const outlineTotal = getOutlineSlidesCount();
+            if (!Number.isInteger(outlineTotal) || outlineTotal <= 0) {
+                return false;
+            }
+
+            let maxPageNumber = 0;
+            slidesData.forEach((s) => {
+                const pn = s && (typeof s.page_number === 'number' ? s.page_number : parseInt(s.page_number, 10));
+                if (Number.isInteger(pn) && pn > maxPageNumber) maxPageNumber = pn;
+            });
+
+            const targetLen = Math.max(outlineTotal, maxPageNumber, slidesData.length);
+            const normalized = new Array(targetLen).fill(null);
+            const unplaced = [];
+
+            slidesData.forEach((slide) => {
+                if (!slide || typeof slide !== 'object') {
+                    return;
+                }
+                const pn = typeof slide.page_number === 'number' ? slide.page_number : parseInt(slide.page_number, 10);
+                if (Number.isInteger(pn) && pn >= 1 && pn <= targetLen && !normalized[pn - 1]) {
+                    normalized[pn - 1] = slide;
+                } else {
+                    unplaced.push(slide);
+                }
+            });
+
+            // 依次填充未能通过page_number定位的内容（兼容历史数据）
+            unplaced.forEach((slide) => {
+                const idx = normalized.indexOf(null);
+                if (idx === -1) return;
+                normalized[idx] = slide;
+            });
+
+            // 填充缺失页为占位符，确保索引与大纲序号对齐
+            for (let i = 0; i < normalized.length; i++) {
+                if (!normalized[i]) {
+                    const outlineSlide = (projectOutline && projectOutline.slides && projectOutline.slides[i]) ? projectOutline.slides[i] : null;
+                    const title = outlineSlide && outlineSlide.title ? outlineSlide.title : `第${i + 1}页`;
+                    normalized[i] = {
+                        page_number: i + 1,
+                        title,
+                        html_content: '<div style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;font-family:Microsoft YaHei,Arial,sans-serif;color:#6c757d;">待生成</div>',
+                        slide_type: outlineSlide && (outlineSlide.slide_type || outlineSlide.type) ? (outlineSlide.slide_type || outlineSlide.type) : 'content',
+                        content_points: outlineSlide && Array.isArray(outlineSlide.content_points) ? outlineSlide.content_points : [],
+                        is_user_edited: false
+                    };
+                }
+                // 强制page_number与数组索引一致，避免再次错位
+                if (normalized[i] && typeof normalized[i] === 'object') {
+                    normalized[i].page_number = i + 1;
+                }
+            }
+
+            const changed =
+                normalized.length !== slidesData.length ||
+                normalized.some((s, i) => slidesData[i] !== s);
+
+            if (changed) {
+                slidesData = normalized;
+                window.slidesData = slidesData;
+            }
+            return changed;
+        }
+
+        function sanitizeSelectedSlides() {
+            if (!slidesData || slidesData.length === 0) {
+                selectedSlideIndices.clear();
+                return;
+            }
+            selectedSlideIndices = new Set(
+                Array.from(selectedSlideIndices).filter(i => Number.isInteger(i) && i >= 0 && i < slidesData.length)
+            );
+        }
+
+        function updateSelectedSlidesUI() {
+            sanitizeSelectedSlides();
+
+            const countEl = document.getElementById('selectedSlidesCount');
+            if (countEl) {
+                countEl.textContent = String(selectedSlideIndices.size);
+            }
+
+            document.querySelectorAll('.slide-thumbnail').forEach((thumb) => {
+                const idx = parseInt(thumb.getAttribute('data-slide-index'));
+                if (!Number.isInteger(idx)) return;
+                if (selectedSlideIndices.has(idx)) {
+                    thumb.classList.add('selected');
+                } else {
+                    thumb.classList.remove('selected');
+                }
+            });
+        }
+
+        function setSingleSlideSelection(index) {
+            selectedSlideIndices = new Set([index]);
+            updateSelectedSlidesUI();
+        }
+
+        function toggleSlideSelection(index) {
+            if (selectedSlideIndices.has(index)) {
+                selectedSlideIndices.delete(index);
+            } else {
+                selectedSlideIndices.add(index);
+            }
+            updateSelectedSlidesUI();
+        }
+
+        function clearSlideSelections() {
+            selectedSlideIndices.clear();
+            updateSelectedSlidesUI();
+        }
+
+        function getSelectedSlideIndicesSorted() {
+            sanitizeSelectedSlides();
+            return Array.from(selectedSlideIndices).sort((a, b) => a - b);
+        }
+
         const projectMeta = JSON.parse(document.getElementById('projectMetaScript').textContent);
         let projectStatus = projectMeta.status || '';
         let projectOutline = projectMeta.outline || null;
         window.projectOutline = projectOutline;
+        slidesDataWasNormalized = normalizeSlidesDataToOutline();
 
         // AI编辑相关变量
         let aiChatHistory = {}; // 改为对象，按幻灯片索引存储对话历史
@@ -4909,7 +5493,7 @@
             }
 
             let prepared = html.replace(/integrity="[^"]*"/gi, '')
-                               .replace(/crossorigin="[^"]*"/gi, '');
+                .replace(/crossorigin="[^"]*"/gi, '');
 
             prepared = prepared.replace(
                 /<script\s+src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/d3\/[\d\.]+\/d3\.min\.js"[^>]*><\/script>/gi,
@@ -4947,7 +5531,7 @@
                     iframe.setAttribute('data-current-content', preparedHtml);
 
                     // 简化的加载完成处理
-                    iframe.onload = function() {
+                    iframe.onload = function () {
                         // 减少延迟，提高响应速度
                         setTimeout(() => {
                             try {
@@ -5182,9 +5766,53 @@
             }
 
             const newIndex = currentSlideIndex + direction;
+
             if (newIndex >= 0 && newIndex < slidesData.length) {
-                selectSlide(newIndex);
+                // 先更新currentSlideIndex
+                currentSlideIndex = newIndex;
+
+                // 显式更新侧边栏缩略图选中状态（放在最前面确保执行）
+                const thumbnails = document.querySelectorAll('.slide-thumbnail');
+
+                thumbnails.forEach((thumb, i) => {
+                    if (i === newIndex) {
+                        thumb.classList.add('active');
+                        thumb.classList.add('selected');  // 添加选中状态（对勾）
+                        thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        thumb.classList.remove('active');
+                        thumb.classList.remove('selected');  // 移除选中状态（对勾）
+                    }
+                });
+
+                // 更新预览和编辑器
+                if (slidesData[newIndex]) {
+                    const slideFrame = document.getElementById('slideFrame');
+                    const codeEditor = document.getElementById('codeEditor');
+
+                    if (slideFrame) {
+                        slideFrame.style.opacity = '0.8';
+                        slideFrame.style.transition = 'opacity 0.2s ease';
+                        setSafeIframeContent(slideFrame, slidesData[newIndex].html_content);
+                        setTimeout(() => {
+                            slideFrame.style.opacity = '1';
+                            forceReinitializeIframeJS(slideFrame);
+                        }, 150);
+                    }
+
+                    if (codeEditor) {
+                        if (codeMirrorEditor && isCodeMirrorInitialized) {
+                            codeMirrorEditor.setValue(slidesData[newIndex].html_content);
+                        } else {
+                            codeEditor.value = slidesData[newIndex].html_content;
+                        }
+                    }
+                }
+
                 updatePreviewNavButtons();
+                updateAICurrentSlideInfo();
+                clearAIMessagesForSlideSwitch();
+                clearImageSelection();
             }
         }
 
@@ -5334,9 +5962,16 @@
                 previewPane.classList.add('quick-edit-mode');
             }
 
+            // 显示快速编辑工具栏
+            showQuickEditToolbar();
+
+            // 保存初始状态用于撤销
+            saveStateForUndo();
+
             // 等待iframe加载完成后初始化可编辑元素
             setTimeout(() => {
                 initEditableElements();
+                initQuickEditElementSelection();
 
                 // 重新初始化图像选择功能
                 const slideFrame = document.getElementById('slideFrame');
@@ -5363,6 +5998,17 @@
             if (previewPane) {
                 previewPane.classList.remove('quick-edit-mode');
             }
+
+            // 隐藏快速编辑工具栏
+            hideQuickEditToolbar();
+
+            // 取消选择的元素
+            deselectQuickEditElement();
+
+            // 清除撤销/重做栈
+            undoStack = [];
+            redoStack = [];
+            updateUndoRedoButtons();
 
             // 清除所有编辑标识
             clearEditableHighlights();
@@ -5451,7 +6097,7 @@
             element.style.cursor = 'text'; // 改为文本光标
 
             // 添加点击事件
-            element.addEventListener('click', function(e) {
+            element.addEventListener('click', function (e) {
                 if (quickEditMode) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -5652,6 +6298,7 @@
                 // 更新幻灯片数据
                 if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
                     slidesData[currentSlideIndex].html_content = updatedHtml;
+                    slidesData[currentSlideIndex].is_user_edited = true;
 
                     // 更新代码编辑器
                     if (typeof codeMirrorEditor !== 'undefined' && codeMirrorEditor && typeof isCodeMirrorInitialized !== 'undefined' && isCodeMirrorInitialized) {
@@ -5669,18 +6316,585 @@
                         setSafeIframeContent(thumbnailIframe, updatedHtml);
                     }
 
-                    // 保存到服务器
-                    if (typeof saveToServer === 'function') {
-                        saveToServer();
-                    }
-                    if (typeof showNotification === 'function') {
-                        showNotification('内容已更新并保存！', 'success');
+                    // 只保存当前编辑的幻灯片，而不是保存所有幻灯片
+                    // 这样可以避免在生成过程中覆盖其他正在生成的幻灯片
+                    if (typeof saveSingleSlideToServer === 'function') {
+                        saveSingleSlideToServer(currentSlideIndex, updatedHtml).then(success => {
+                            if (success && typeof showNotification === 'function') {
+                                showNotification('内容已更新并保存！', 'success');
+                            }
+                        }).catch(err => {
+                            if (typeof showNotification === 'function') {
+                                showNotification('保存失败：' + err.message, 'error');
+                            }
+                        });
                     }
                 }
             }
         }
 
+        // ==================== 增强快速编辑功能 ====================
+
+        // 撤销/重做系统
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STEPS = 50;
+        let selectedQuickEditElement = null;
+        let isDragging = false;
+        let isResizing = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let elementStartX = 0;
+        let elementStartY = 0;
+        let resizeHandle = null;
+        let elementStartWidth = 0;
+        let elementStartHeight = 0;
+
+        // 保存状态用于撤销
+        function saveStateForUndo() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const currentHtml = slideFrame.contentDocument.documentElement.outerHTML;
+
+            // 如果当前状态和最后保存的状态相同，不保存
+            if (undoStack.length > 0 && undoStack[undoStack.length - 1] === currentHtml) {
+                return;
+            }
+
+            undoStack.push(currentHtml);
+
+            // 限制栈大小
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift();
+            }
+
+            // 新操作后清空重做栈
+            redoStack = [];
+
+            updateUndoRedoButtons();
+        }
+
+        // 更新撤销/重做按钮状态
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+
+            if (undoBtn) {
+                undoBtn.disabled = undoStack.length <= 1;
+            }
+            if (redoBtn) {
+                redoBtn.disabled = redoStack.length === 0;
+            }
+        }
+
+        // 撤销操作
+        function quickEditUndo() {
+            if (undoStack.length <= 1) {
+                showNotification('没有可撤销的操作', 'info');
+                return;
+            }
+
+            const currentState = undoStack.pop();
+            redoStack.push(currentState);
+
+            const previousState = undoStack[undoStack.length - 1];
+            applyHtmlState(previousState);
+
+            updateUndoRedoButtons();
+            showNotification('已撤销', 'success');
+        }
+
+        // 重做操作
+        function quickEditRedo() {
+            if (redoStack.length === 0) {
+                showNotification('没有可重做的操作', 'info');
+                return;
+            }
+
+            const nextState = redoStack.pop();
+            undoStack.push(nextState);
+
+            applyHtmlState(nextState);
+
+            updateUndoRedoButtons();
+            showNotification('已重做', 'success');
+        }
+
+        // 应用HTML状态
+        function applyHtmlState(html) {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame) return;
+
+            setSafeIframeContent(slideFrame, html);
+
+            // 更新数据
+            if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
+                slidesData[currentSlideIndex].html_content = html;
+            }
+
+            // 更新缩略图
+            const thumbnailIframe = document.querySelectorAll('.slide-thumbnail .slide-preview iframe')[currentSlideIndex];
+            if (thumbnailIframe) {
+                setSafeIframeContent(thumbnailIframe, html);
+            }
+
+            // 重新初始化编辑元素
+            setTimeout(() => {
+                initEditableElements();
+                initQuickEditElementSelection();
+            }, 300);
+        }
+
+        // 显示/隐藏快速编辑工具栏
+        function showQuickEditToolbar() {
+            const toolbar = document.getElementById('quickEditToolbar');
+            if (toolbar) {
+                toolbar.classList.add('visible');
+            }
+        }
+
+        function hideQuickEditToolbar() {
+            const toolbar = document.getElementById('quickEditToolbar');
+            if (toolbar) {
+                toolbar.classList.remove('visible');
+            }
+        }
+
+        // 初始化快速编辑元素选择
+        function initQuickEditElementSelection() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            // 为所有可选择的元素添加点击事件
+            const selectableElements = iframeDoc.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6, span, ul, ol, li, table');
+
+            selectableElements.forEach(element => {
+                // 排除body和html
+                if (element.tagName === 'BODY' || element.tagName === 'HTML') return;
+
+                element.addEventListener('click', function (e) {
+                    if (!quickEditMode) return;
+                    // 如果点击的是图片，不处理，让图片替换功能接管
+                    if (e.target.tagName === 'IMG') return;
+                    e.stopPropagation();
+                    selectQuickEditElement(element);
+                });
+            });
+
+            // 点击空白区域取消选择
+            iframeDoc.addEventListener('click', function (e) {
+                if (e.target === iframeDoc.body || e.target === iframeDoc.documentElement) {
+                    deselectQuickEditElement();
+                }
+            });
+        }
+
+        // 选择元素
+        function selectQuickEditElement(element) {
+            // 先取消之前的选择
+            deselectQuickEditElement();
+
+            selectedQuickEditElement = element;
+            element.classList.add('quick-edit-element-selected');
+
+            // 保存原始位置样式
+            if (!element.style.position || element.style.position === 'static') {
+                element.style.position = 'relative';
+            }
+
+            // 添加调整大小手柄
+            addResizeHandles(element);
+
+            // 初始化拖拽
+            initElementDrag(element);
+        }
+
+        // 取消选择元素
+        function deselectQuickEditElement() {
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.remove('quick-edit-element-selected');
+                removeResizeHandles(selectedQuickEditElement);
+                selectedQuickEditElement = null;
+            }
+        }
+
+        // 添加调整大小手柄
+        function addResizeHandles(element) {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            const positions = ['nw', 'ne', 'sw', 'se'];
+            positions.forEach(pos => {
+                const handle = iframeDoc.createElement('div');
+                handle.className = `resize-handle ${pos}`;
+                handle.setAttribute('data-resize-handle', pos);
+                handle.style.cssText = `
+                    position: absolute;
+                    width: 10px;
+                    height: 10px;
+                    background: #4facfe;
+                    border: 2px solid white;
+                    border-radius: 2px;
+                    z-index: 1001;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                `;
+
+                // 设置位置
+                switch (pos) {
+                    case 'nw': handle.style.top = '-5px'; handle.style.left = '-5px'; handle.style.cursor = 'nw-resize'; break;
+                    case 'ne': handle.style.top = '-5px'; handle.style.right = '-5px'; handle.style.cursor = 'ne-resize'; break;
+                    case 'sw': handle.style.bottom = '-5px'; handle.style.left = '-5px'; handle.style.cursor = 'sw-resize'; break;
+                    case 'se': handle.style.bottom = '-5px'; handle.style.right = '-5px'; handle.style.cursor = 'se-resize'; break;
+                }
+
+                handle.addEventListener('mousedown', function (e) {
+                    e.stopPropagation();
+                    startResize(e, pos);
+                });
+
+                element.appendChild(handle);
+            });
+        }
+
+        // 移除调整大小手柄
+        function removeResizeHandles(element) {
+            if (!element) return;
+            const handles = element.querySelectorAll('[data-resize-handle]');
+            handles.forEach(h => h.remove());
+        }
+
+        // 开始调整大小
+        function startResize(e, handlePos) {
+            if (!selectedQuickEditElement) return;
+
+            isResizing = true;
+            resizeHandle = handlePos;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartWidth = selectedQuickEditElement.offsetWidth;
+            elementStartHeight = selectedQuickEditElement.offsetHeight;
+
+            saveStateForUndo();
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.addEventListener('mousemove', handleResize);
+                slideFrame.contentDocument.addEventListener('mouseup', stopResize);
+            }
+        }
+
+        // 处理调整大小
+        function handleResize(e) {
+            if (!isResizing || !selectedQuickEditElement) return;
+
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+
+            let newWidth = elementStartWidth;
+            let newHeight = elementStartHeight;
+
+            switch (resizeHandle) {
+                case 'se':
+                    newWidth = elementStartWidth + dx;
+                    newHeight = elementStartHeight + dy;
+                    break;
+                case 'sw':
+                    newWidth = elementStartWidth - dx;
+                    newHeight = elementStartHeight + dy;
+                    break;
+                case 'ne':
+                    newWidth = elementStartWidth + dx;
+                    newHeight = elementStartHeight - dy;
+                    break;
+                case 'nw':
+                    newWidth = elementStartWidth - dx;
+                    newHeight = elementStartHeight - dy;
+                    break;
+            }
+
+            // 最小尺寸限制
+            newWidth = Math.max(50, newWidth);
+            newHeight = Math.max(30, newHeight);
+
+            selectedQuickEditElement.style.width = newWidth + 'px';
+            selectedQuickEditElement.style.height = newHeight + 'px';
+        }
+
+        // 停止调整大小
+        function stopResize(e) {
+            isResizing = false;
+            resizeHandle = null;
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.removeEventListener('mousemove', handleResize);
+                slideFrame.contentDocument.removeEventListener('mouseup', stopResize);
+            }
+
+            saveQuickEditChanges();
+        }
+
+        // 初始化元素拖拽
+        function initElementDrag(element) {
+            element.addEventListener('mousedown', function (e) {
+                // 如果点击的是调整大小手柄，不启动拖拽
+                if (e.target.hasAttribute('data-resize-handle')) return;
+                if (!quickEditMode || element !== selectedQuickEditElement) return;
+
+                startDrag(e);
+            });
+        }
+
+        // 开始拖拽
+        function startDrag(e) {
+            if (!selectedQuickEditElement) return;
+
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            elementStartX = parseInt(selectedQuickEditElement.style.left) || 0;
+            elementStartY = parseInt(selectedQuickEditElement.style.top) || 0;
+
+            selectedQuickEditElement.classList.add('quick-edit-dragging');
+
+            saveStateForUndo();
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.addEventListener('mousemove', handleDrag);
+                slideFrame.contentDocument.addEventListener('mouseup', stopDrag);
+            }
+        }
+
+        // 处理拖拽
+        function handleDrag(e) {
+            if (!isDragging || !selectedQuickEditElement) return;
+
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+
+            selectedQuickEditElement.style.left = (elementStartX + dx) + 'px';
+            selectedQuickEditElement.style.top = (elementStartY + dy) + 'px';
+        }
+
+        // 停止拖拽
+        function stopDrag(e) {
+            isDragging = false;
+
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.remove('quick-edit-dragging');
+            }
+
+            const slideFrame = document.getElementById('slideFrame');
+            if (slideFrame && slideFrame.contentDocument) {
+                slideFrame.contentDocument.removeEventListener('mousemove', handleDrag);
+                slideFrame.contentDocument.removeEventListener('mouseup', stopDrag);
+            }
+
+            saveQuickEditChanges();
+        }
+
+        // 删除元素
+        function quickEditDelete() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择要删除的元素', 'warning');
+                return;
+            }
+
+            if (confirm('确定要删除此元素吗？')) {
+                saveStateForUndo();
+                selectedQuickEditElement.remove();
+                selectedQuickEditElement = null;
+                saveQuickEditChanges();
+                showNotification('元素已删除', 'success');
+            }
+        }
+
+        // 复制元素
+        function quickEditDuplicate() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择要复制的元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const clone = selectedQuickEditElement.cloneNode(true);
+            clone.classList.remove('quick-edit-element-selected');
+            removeResizeHandles(clone);
+
+            // 偏移位置
+            const currentLeft = parseInt(selectedQuickEditElement.style.left) || 0;
+            const currentTop = parseInt(selectedQuickEditElement.style.top) || 0;
+            clone.style.left = (currentLeft + 20) + 'px';
+            clone.style.top = (currentTop + 20) + 'px';
+
+            selectedQuickEditElement.parentNode.insertBefore(clone, selectedQuickEditElement.nextSibling);
+
+            // 选择新元素
+            selectQuickEditElement(clone);
+
+            saveQuickEditChanges();
+            showNotification('元素已复制', 'success');
+        }
+
+        // 上移层级
+        function quickEditMoveUp() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const currentZIndex = parseInt(window.getComputedStyle(selectedQuickEditElement).zIndex) || 0;
+            selectedQuickEditElement.style.zIndex = currentZIndex + 1;
+
+            saveQuickEditChanges();
+            showNotification('层级已上移', 'success');
+        }
+
+        // 下移层级
+        function quickEditMoveDown() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+
+            const currentZIndex = parseInt(window.getComputedStyle(selectedQuickEditElement).zIndex) || 0;
+            selectedQuickEditElement.style.zIndex = Math.max(0, currentZIndex - 1);
+
+            saveQuickEditChanges();
+            showNotification('层级已下移', 'success');
+        }
+
+        // 左对齐
+        function quickEditAlignLeft() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'left';
+            saveQuickEditChanges();
+            showNotification('已左对齐', 'success');
+        }
+
+        // 居中对齐
+        function quickEditAlignCenter() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'center';
+            saveQuickEditChanges();
+            showNotification('已居中对齐', 'success');
+        }
+
+        // 右对齐
+        function quickEditAlignRight() {
+            if (!selectedQuickEditElement) {
+                showNotification('请先选择元素', 'warning');
+                return;
+            }
+
+            saveStateForUndo();
+            selectedQuickEditElement.style.textAlign = 'right';
+            saveQuickEditChanges();
+            showNotification('已右对齐', 'success');
+        }
+
+        // 保存快速编辑更改
+        function saveQuickEditChanges() {
+            const slideFrame = document.getElementById('slideFrame');
+            if (!slideFrame || !slideFrame.contentDocument) return;
+
+            const iframeDoc = slideFrame.contentDocument;
+
+            // 临时移除选中状态和调整手柄，避免保存到HTML中
+            const selectedElements = iframeDoc.querySelectorAll('.quick-edit-element-selected');
+            const resizeHandles = iframeDoc.querySelectorAll('[data-resize-handle]');
+            const draggingElements = iframeDoc.querySelectorAll('.quick-edit-dragging');
+
+            // 临时移除类名
+            selectedElements.forEach(el => el.classList.remove('quick-edit-element-selected'));
+            draggingElements.forEach(el => el.classList.remove('quick-edit-dragging'));
+
+            // 临时移除调整手柄
+            resizeHandles.forEach(h => h.remove());
+
+            // 获取干净的HTML
+            const updatedHtml = iframeDoc.documentElement.outerHTML;
+
+            // 恢复选中状态
+            if (selectedQuickEditElement) {
+                selectedQuickEditElement.classList.add('quick-edit-element-selected');
+                addResizeHandles(selectedQuickEditElement);
+            }
+
+            // 更新数据
+            if (typeof slidesData !== 'undefined' && slidesData[currentSlideIndex]) {
+                slidesData[currentSlideIndex].html_content = updatedHtml;
+                slidesData[currentSlideIndex].is_user_edited = true;
+
+                // 更新代码编辑器
+                if (typeof codeMirrorEditor !== 'undefined' && codeMirrorEditor && isCodeMirrorInitialized) {
+                    codeMirrorEditor.setValue(updatedHtml);
+                }
+
+                // 更新缩略图
+                const thumbnailIframe = document.querySelectorAll('.slide-thumbnail .slide-preview iframe')[currentSlideIndex];
+                if (thumbnailIframe) {
+                    setSafeIframeContent(thumbnailIframe, updatedHtml);
+                }
+
+                // 只保存当前编辑的幻灯片，避免覆盖生成器正在生成的其他页面
+                if (typeof saveSingleSlideToServer === 'function') {
+                    saveSingleSlideToServer(currentSlideIndex, updatedHtml);
+                }
+            }
+        }
+
+        // 键盘快捷键支持
+        document.addEventListener('keydown', function (e) {
+            if (!quickEditMode) return;
+
+            // Ctrl+Z 撤销
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                quickEditUndo();
+            }
+
+            // Ctrl+Y 重做
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                quickEditRedo();
+            }
+
+            // Delete 删除
+            if (e.key === 'Delete' && selectedQuickEditElement) {
+                e.preventDefault();
+                quickEditDelete();
+            }
+
+            // Escape 取消选择
+            if (e.key === 'Escape') {
+                deselectQuickEditElement();
+            }
+        });
+
         function setMode(mode) {
+
             currentMode = mode;
 
             // Update button states
@@ -5688,7 +6902,7 @@
 
             // 处理按钮ID映射
             let buttonId;
-            switch(mode) {
+            switch (mode) {
                 case 'quickedit':
                     buttonId = 'quickEditMode';
                     break;
@@ -5712,7 +6926,7 @@
                 return;
             }
 
-            switch(mode) {
+            switch (mode) {
                 case 'preview':
                     previewPane.style.display = 'block';
                     previewPane.style.flex = '1';
@@ -5764,7 +6978,7 @@
             }
         }
 
-        function saveSlide() {
+        async function saveSlide() {
             const codeEditor = document.getElementById('codeEditor');
             let newContent;
 
@@ -5795,9 +7009,20 @@
                 }
 
                 // Save to server
-                saveToServer();
+                try {
+                    // 如果当前项目存在缺页并已做归一化，为避免“批量保存把占位页写入数据库”，这里改为只保存当前页
+                    const saved = slidesDataWasNormalized
+                        ? await saveSingleSlideToServer(currentSlideIndex, newContent)
+                        : await saveToServer();
 
-                showNotification('幻灯片已保存！', 'success');
+                    if (saved) {
+                        showNotification('幻灯片已保存！', 'success');
+                    } else {
+                        showNotification('保存失败，请重试', 'error');
+                    }
+                } catch (e) {
+                    showNotification('保存失败：' + (e?.message || e), 'error');
+                }
             }
         }
 
@@ -5883,11 +7108,15 @@
                             </button>
                         </div>
                         <div class="ai-image-action-row">
+                            <button class="ai-upload-local-image-btn" onclick="triggerLocalImageUploadForReplace()" title="从本地上传图片替换">
+                                <i class="fas fa-upload"></i> 本地上传
+                            </button>
                             <button class="ai-delete-image-btn" onclick="deleteSelectedImage()" title="删除此图像">
                                 <i class="fas fa-trash"></i> 删除图像
                             </button>
                         </div>
                     </div>
+                    <input type="file" id="localImageUploadForReplace" accept="image/*" style="display: none;" onchange="handleLocalImageUploadForReplace(event)">
                 `;
                 selectedImageContainer.style.display = 'block';
             } else {
@@ -6154,6 +7383,127 @@
                 showNotification('图像替换成功！', 'success');
 
             } catch (error) {
+                showNotification('替换图像失败，请重试', 'error');
+            }
+        }
+
+        // 触发本地图片上传用于替换选中图像
+        function triggerLocalImageUploadForReplace() {
+            if (!selectedImageInfo) {
+                showNotification('请先选择要替换的图像', 'warning');
+                return;
+            }
+
+            // 创建或获取隐藏的文件输入
+            let fileInput = document.getElementById('localImageUploadForReplace');
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.id = 'localImageUploadForReplace';
+                fileInput.accept = 'image/*';
+                fileInput.style.display = 'none';
+                fileInput.onchange = handleLocalImageUploadForReplace;
+                document.body.appendChild(fileInput);
+            }
+
+            // 清除之前的值以便重新选择相同文件
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        // 处理本地图片上传并替换选中图像
+        async function handleLocalImageUploadForReplace(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!selectedImageInfo) {
+                showNotification('请先选择要替换的图像', 'warning');
+                return;
+            }
+
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                showNotification('请选择有效的图片文件', 'error');
+                return;
+            }
+
+            // 验证文件大小（最大10MB）
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showNotification('图片文件过大，请选择小于10MB的图片', 'error');
+                return;
+            }
+
+            // 显示上传进度
+            const progressToast = showProgressToast('正在上传图片...', 10);
+
+            try {
+                updateProgressToast(progressToast, '正在上传图片到服务器...', 30);
+
+                // 上传文件
+                const uploadResult = await uploadSingleFile(file);
+
+                if (!uploadResult.success) {
+                    closeProgressToast(progressToast);
+                    showNotification(uploadResult.message || '图片上传失败', 'error');
+                    return;
+                }
+
+                updateProgressToast(progressToast, '正在替换图像...', 60);
+
+                // 保存原始状态用于撤销
+                const originalHtmlContent = slidesData[selectedImageInfo.slideIndex].html_content;
+
+                // 获取新图像URL
+                const newImageUrl = uploadResult.data.url;
+
+                // 替换HTML中的图像
+                const updatedHtml = replaceImageInHtmlClient(
+                    slidesData[selectedImageInfo.slideIndex].html_content,
+                    selectedImageInfo,
+                    newImageUrl
+                );
+
+                if (updatedHtml === slidesData[selectedImageInfo.slideIndex].html_content) {
+                    closeProgressToast(progressToast);
+                    showNotification('图像替换失败', 'warning');
+                    return;
+                }
+
+                updateProgressToast(progressToast, '正在更新预览...', 80);
+
+                // 更新幻灯片内容
+                slidesData[selectedImageInfo.slideIndex].html_content = updatedHtml;
+
+                // 更新预览
+                const slideFrame = document.getElementById('slideFrame');
+                if (slideFrame && selectedImageInfo.slideIndex === currentSlideIndex) {
+                    setSafeIframeContent(slideFrame, updatedHtml);
+                    setTimeout(() => {
+                        forceReinitializeIframeJS(slideFrame);
+                    }, 300);
+                }
+
+                // 更新缩略图
+                const thumbnailIframe = document.querySelectorAll('.slide-thumbnail .slide-preview iframe')[selectedImageInfo.slideIndex];
+                if (thumbnailIframe) {
+                    setSafeIframeContent(thumbnailIframe, updatedHtml);
+                }
+
+                // 保存到服务器
+                await saveToServer();
+
+                // 显示撤销选项
+                showUndoOption(originalHtmlContent, selectedImageInfo.slideIndex, '本地图片替换');
+
+                // 清除选择状态
+                clearImageSelection();
+
+                closeProgressToast(progressToast);
+                showNotification('本地图片上传并替换成功！', 'success');
+
+            } catch (error) {
+                console.error('本地图片上传替换失败:', error);
                 showNotification('替换图像失败，请重试', 'error');
             }
         }
@@ -7158,10 +8508,10 @@
                     indentWithTabs: false,
                     extraKeys: {
                         // 保存功能
-                        'Ctrl-S': function(cm) {
+                        'Ctrl-S': function (cm) {
                             saveSlide();
                         },
-                        'Cmd-S': function(cm) {
+                        'Cmd-S': function (cm) {
                             saveSlide();
                         },
                         // 搜索功能
@@ -7179,7 +8529,7 @@
                         'F3': 'findNext',
                         'Shift-F3': 'findPrev',
                         // ESC键关闭搜索对话框
-                        'Esc': function(cm) {
+                        'Esc': function (cm) {
                             if (cm.state.search && cm.state.search.overlay) {
                                 cm.execCommand('clearSearch');
                             }
@@ -7203,7 +8553,7 @@
                 }, 200);
 
                 // 绑定内容变化事件
-                codeMirrorEditor.on('change', function(cm) {
+                codeMirrorEditor.on('change', function (cm) {
                     clearTimeout(cm.saveTimeout);
                     cm.saveTimeout = setTimeout(() => {
                         if (currentMode === 'split') {
@@ -7221,7 +8571,7 @@
                 isCodeMirrorInitialized = true;
 
                 // 添加搜索功能的增强配置
-                codeMirrorEditor.on('cursorActivity', function(cm) {
+                codeMirrorEditor.on('cursorActivity', function (cm) {
                     // 当光标移动时，如果有搜索状态，保持高亮
                     if (cm.state.search && cm.state.search.query) {
                         // 搜索功能已激活，保持高亮状态
@@ -7360,6 +8710,511 @@
                 closeAIEditSidebar();
             } else {
                 showNotification('请先选择一个幻灯片', 'warning');
+            }
+        }
+
+        // 自由对话（仅当前页）
+        let isNativeChatSending = false;
+        const nativeChatHistory = {}; // key: slideIndex, value: [{role, content, timestamp}]
+        let isNativeImageUploading = false;
+        const nativeUploadedImagesBySlide = {}; // key: slideIndex, value: [{id,name,size,url}]
+
+        function openNativeChatDialog() {
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            const dialog = document.getElementById('aiNativeChatDialog');
+            if (!dialog) return;
+            if (typeof dialog.showModal !== 'function') {
+                alert('当前浏览器不支持自由对话框（<dialog>）。');
+                return;
+            }
+
+            renderNativeChatMessages();
+            renderNativeUploadedImages();
+            updateNativeUploadButtonState();
+            dialog.showModal();
+
+            setTimeout(() => {
+                const input = document.getElementById('aiNativeInputBox');
+                if (input) input.focus();
+            }, 50);
+        }
+
+        function closeNativeChatDialog() {
+            const dialog = document.getElementById('aiNativeChatDialog');
+            if (dialog && dialog.open) {
+                dialog.close();
+            }
+        }
+
+        function renderNativeChatMessages() {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'ai-message system';
+            systemDiv.innerHTML = `
+                <div style="text-align: center; padding: var(--spacing-sm);">
+                    <div style="font-size: 1.8rem; margin-bottom: var(--spacing-sm); color: var(--text-secondary);">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div style="font-weight: 700; margin-bottom: var(--spacing-xs); color: var(--text-primary);">
+                        自由对话（仅当前页）
+                    </div>
+                    <div style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-muted);">
+                        这里不设置系统提示词；每次仅携带当前页信息进行对话。支持粘贴或上传图片参与对话。
+                    </div>
+                </div>
+            `;
+            container.appendChild(systemDiv);
+
+            if (!nativeChatHistory[currentSlideIndex]) {
+                nativeChatHistory[currentSlideIndex] = [];
+            }
+            for (const msg of nativeChatHistory[currentSlideIndex]) {
+                appendNativeChatMessageToDom(msg.role, msg.content);
+            }
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearNativeChatContext() {
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            if (!confirm('确定要清除当前页的自由对话上下文吗？这将删除该页的对话记录和已添加图片。')) {
+                return;
+            }
+
+            nativeChatHistory[currentSlideIndex] = [];
+            nativeUploadedImagesBySlide[currentSlideIndex] = [];
+            renderNativeChatMessages();
+            renderNativeUploadedImages();
+            updateNativeUploadButtonState();
+            showNotification('自由对话上下文已清除', 'info');
+        }
+
+        function appendNativeChatMessageToDom(role, content, messageId = null) {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return null;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `ai-message ${role === 'user' ? 'user' : 'assistant'}`;
+            if (messageId) messageDiv.id = messageId;
+
+            if (role === 'user') {
+                messageDiv.textContent = content;
+            } else {
+                messageDiv.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            }
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            return messageDiv;
+        }
+
+        function addNativeWaitingAnimation() {
+            const container = document.getElementById('aiNativeChatMessages');
+            if (!container) return null;
+            const waitingDiv = document.createElement('div');
+            waitingDiv.className = 'ai-message assistant ai-waiting';
+            waitingDiv.id = 'ai-native-waiting';
+            waitingDiv.innerHTML = `
+                <div class="ai-typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span style="margin-left: 10px;">AI正在思考中...</span>
+            `;
+            container.appendChild(waitingDiv);
+            container.scrollTop = container.scrollHeight;
+            return waitingDiv;
+        }
+
+        function removeNativeWaitingAnimation() {
+            const waitingDiv = document.getElementById('ai-native-waiting');
+            if (waitingDiv) waitingDiv.remove();
+        }
+
+        function getNativeUploadedImages() {
+            if (!nativeUploadedImagesBySlide[currentSlideIndex]) {
+                nativeUploadedImagesBySlide[currentSlideIndex] = [];
+            }
+            return nativeUploadedImagesBySlide[currentSlideIndex];
+        }
+
+        function updateNativeUploadButtonState() {
+            const btn = document.getElementById('aiNativeImageUploadBtn');
+            const images = getNativeUploadedImages();
+            if (!btn) return;
+            if (images.length === 0) {
+                btn.classList.remove('has-images');
+                btn.removeAttribute('data-count');
+            } else {
+                btn.classList.add('has-images');
+                btn.setAttribute('data-count', images.length);
+            }
+        }
+
+        function renderNativeUploadedImages() {
+            const container = document.getElementById('aiNativeUploadedImages');
+            if (!container) return;
+
+            const images = getNativeUploadedImages();
+            container.innerHTML = '';
+
+            images.forEach((image, index) => {
+                const imageDiv = document.createElement('div');
+                imageDiv.className = 'ai-uploaded-image';
+                const previewUrl = image.dataUrl || image.url;
+
+                imageDiv.innerHTML = `
+                    <img src="${previewUrl}" alt="${escapeHtml(image.name)}" onclick="showNativeUploadedImagePreview(${index})">
+                    <button class="ai-image-remove" onclick="removeNativeUploadedImage(${index}); event.stopPropagation();" title="移除图片">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="ai-image-info">
+                        <div style="font-weight: 600; margin-bottom: 2px;">${escapeHtml(image.name)}</div>
+                        <div style="opacity: 0.85;">${formatFileSize(image.size || 0)} · 发送时附带</div>
+                    </div>
+                `;
+
+                container.appendChild(imageDiv);
+            });
+        }
+
+        function showNativeUploadedImagePreview(index) {
+            const images = getNativeUploadedImages();
+            if (index < 0 || index >= images.length) return;
+            const image = images[index];
+            window.currentPreviewOwner = 'native_dialog';
+            window.currentPreviewNativeIndex = index;
+            const previewUrl = image.dataUrl || image.url;
+            showImagePreview({
+                id: image.id,
+                name: image.name,
+                size: image.size || 0,
+                url: previewUrl
+            });
+        }
+
+        function removeNativeUploadedImage(index) {
+            const images = getNativeUploadedImages();
+            if (index >= 0 && index < images.length) {
+                images.splice(index, 1);
+                renderNativeUploadedImages();
+                updateNativeUploadButtonState();
+            }
+        }
+
+        function triggerNativeImageUpload() {
+            if (isNativeImageUploading) {
+                showNotification('正在上传中，请稍候...', 'warning');
+                return;
+            }
+            const input = document.getElementById('aiNativeImageFileInput');
+            if (input) input.click();
+        }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('FileReader读取失败'));
+                    reader.readAsDataURL(file);
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        async function uploadNativeSingleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', file.name.split('.')[0]);
+            formData.append('description', `AI自由对话上传的图片: ${file.name}`);
+            formData.append('category', 'ai_native_dialog');
+            formData.append('tags', 'ai_native_dialog,ppt_edit');
+
+            const response = await fetch('/api/image/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                return { success: false, message: result.message || '上传失败' };
+            }
+
+            const imageUrl = await getImageAbsoluteUrl(result.image_id);
+            return {
+                success: true,
+                data: {
+                    id: result.image_id,
+                    name: file.name,
+                    size: file.size,
+                    url: imageUrl
+                }
+            };
+        }
+
+        async function uploadNativeFiles(files) {
+            if (!files || files.length === 0) return;
+            if (isNativeImageUploading) return;
+
+            const supportedTypes = [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+                'image/webp', 'image/bmp', 'image/svg+xml'
+            ];
+
+            const validFiles = [];
+            const errors = [];
+
+            Array.from(files).forEach(file => {
+                if (!supportedTypes.includes((file.type || '').toLowerCase())) {
+                    errors.push(`${file.name}: 不支持的图片格式 (${file.type || 'unknown'})`);
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    errors.push(`${file.name}: 文件大小超过10MB限制 (${formatFileSize(file.size)})`);
+                    return;
+                }
+                validFiles.push(file);
+            });
+
+            if (errors.length > 0) {
+                showNotification(errors[0], 'warning');
+            }
+            if (validFiles.length === 0) return;
+
+            // 限制数量，避免请求过大
+            const images = getNativeUploadedImages();
+            const maxImages = 6;
+            if (images.length + validFiles.length > maxImages) {
+                showNotification(`最多只能上传 ${maxImages} 张图片（当前已上传 ${images.length} 张）`, 'warning');
+                return;
+            }
+
+            isNativeImageUploading = true;
+            updateNativeUploadButtonState();
+            try {
+                for (const file of validFiles) {
+                    let dataUrl = null;
+                    try {
+                        const maybe = await readFileAsDataUrl(file);
+                        dataUrl = typeof maybe === 'string' ? maybe : null;
+                    } catch (e) {
+                        // 忽略读取失败，继续走上传URL
+                    }
+
+                    const result = await uploadNativeSingleFile(file);
+                    if (result.success) {
+                        images.push({
+                            ...result.data,
+                            dataUrl: dataUrl
+                        });
+                    } else {
+                        // 即使上传失败，仍允许用 dataUrl 参与对话
+                        if (dataUrl) {
+                            images.push({
+                                id: null,
+                                name: file.name,
+                                size: file.size,
+                                url: dataUrl,
+                                dataUrl: dataUrl
+                            });
+                            showNotification(`上传失败，已改用本地图片参与对话：${file.name}`, 'warning');
+                        } else {
+                            showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        }
+                    }
+                }
+                renderNativeUploadedImages();
+                updateNativeUploadButtonState();
+                showNotification(`已上传 ${validFiles.length} 张图片`, 'success');
+            } catch (e) {
+                showNotification('上传失败，请重试', 'error');
+            } finally {
+                isNativeImageUploading = false;
+                updateNativeUploadButtonState();
+            }
+        }
+
+        async function handleNativePaste(e) {
+            if (!e || !e.clipboardData) return;
+            const items = e.clipboardData.items;
+            if (!items) return;
+
+            const imageFiles = [];
+            for (const item of items) {
+                if (item && item.type && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                await uploadNativeFiles(imageFiles);
+            }
+        }
+
+        // AI编辑助手：视觉模式开启时支持粘贴图片（自动上传并随消息发送）
+        async function handleAIPaste(e) {
+            if (!visionModeEnabled) return;
+            if (!e || !e.clipboardData) return;
+            const items = e.clipboardData.items;
+            if (!items) return;
+
+            const imageFiles = [];
+            for (const item of items) {
+                if (item && item.type && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) imageFiles.push(file);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                showNotification(`检测到 ${imageFiles.length} 张剪贴板图片，正在处理...`, 'info');
+                handleFiles(imageFiles);
+            }
+        }
+
+        async function sendNativeChatMessage() {
+            const inputBox = document.getElementById('aiNativeInputBox');
+            const sendBtn = document.getElementById('aiNativeSendBtn');
+            if (!inputBox || !sendBtn) return;
+
+            let message = inputBox.value.trim();
+            if (!message || isNativeChatSending) return;
+
+            if (currentSlideIndex < 0 || currentSlideIndex >= slidesData.length) {
+                showNotification('请先选择一个幻灯片', 'warning');
+                return;
+            }
+
+            isNativeChatSending = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 响应中...';
+            inputBox.disabled = true;
+
+            if (!nativeChatHistory[currentSlideIndex]) nativeChatHistory[currentSlideIndex] = [];
+
+            // 仅发送“此前”历史，避免当前用户消息重复进入上下文
+            const chatHistory = nativeChatHistory[currentSlideIndex].map(m => ({
+                role: m.role,
+                content: m.content
+            }));
+
+            // 用户消息入历史 + UI
+            nativeChatHistory[currentSlideIndex].push({ role: 'user', content: message, timestamp: Date.now() });
+            appendNativeChatMessageToDom('user', message);
+            inputBox.value = '';
+
+            addNativeWaitingAnimation();
+
+            try {
+                const currentSlide = slidesData[currentSlideIndex];
+                const referencedImages = getNativeUploadedImages().map(image => ({
+                    id: image.id,
+                    name: image.name,
+                    size: image.size > 0 ? formatFileSize(image.size) : '未知大小',
+                    url: image.dataUrl || image.url
+                }));
+
+                const payload = {
+                    slideIndex: currentSlideIndex + 1,
+                    slideTitle: currentSlide.title,
+                    slideContent: currentSlide.html_content,
+                    userRequest: message,
+                    chatHistory: chatHistory,
+                    images: referencedImages
+                };
+
+                const response = await fetch('/api/ai/slide-native-dialog/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                await handleNativeStreamingResponse(response);
+            } catch (error) {
+                removeNativeWaitingAnimation();
+                appendNativeChatMessageToDom('assistant', '抱歉，无法连接到AI服务。请稍后重试。');
+            } finally {
+                isNativeChatSending = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+                inputBox.disabled = false;
+                inputBox.focus();
+            }
+        }
+
+        async function handleNativeStreamingResponse(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let aiMessageDiv = null;
+            let fullResponse = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim().startsWith('data: ')) continue;
+                    const dataStr = line.slice(6).trim();
+                    if (!dataStr) continue;
+
+                    let data;
+                    try {
+                        data = JSON.parse(dataStr);
+                    } catch {
+                        continue;
+                    }
+
+                    if (data.type === 'start') {
+                        removeNativeWaitingAnimation();
+                        const messageId = 'ai-native-streaming-' + Date.now();
+                        aiMessageDiv = appendNativeChatMessageToDom('assistant', '', messageId);
+                    } else if (data.type === 'content' && data.content) {
+                        fullResponse += data.content;
+                        if (aiMessageDiv) {
+                            aiMessageDiv.innerHTML = escapeHtml(fullResponse).replace(/\n/g, '<br>');
+                            const container = document.getElementById('aiNativeChatMessages');
+                            if (container) container.scrollTop = container.scrollHeight;
+                        }
+                    } else if (data.type === 'complete') {
+                        fullResponse = data.fullResponse || fullResponse;
+                        if (aiMessageDiv) {
+                            aiMessageDiv.innerHTML = escapeHtml(fullResponse).replace(/\n/g, '<br>');
+                        }
+                        if (!nativeChatHistory[currentSlideIndex]) nativeChatHistory[currentSlideIndex] = [];
+                        nativeChatHistory[currentSlideIndex].push({ role: 'assistant', content: fullResponse, timestamp: Date.now() });
+                        return;
+                    } else if (data.type === 'error') {
+                        removeNativeWaitingAnimation();
+                        const err = data.error || '未知错误';
+                        appendNativeChatMessageToDom('assistant', '抱歉，处理您的请求时出现了错误：' + err);
+                        return;
+                    }
+                }
             }
         }
 
@@ -7809,7 +9664,7 @@
             }
         }
 
-        // 同步更新大纲（插入、删除幻灯片时调用）
+        // 同步更新大纲（插入、删除、排序时调用）
         async function updateOutlineForSlideOperation(operation, slideIndex, slideData = null) {
             try {
                 if (!projectOutline) {
@@ -7832,6 +9687,18 @@
                             projectOutline.slides.splice(slideIndex, 1);
                         }
                         break;
+                    case 'move': {
+                        // 调整大纲顺序（拖拽排序时调用）
+                        const toIndex = slideData && Number.isInteger(slideData.to_index) ? slideData.to_index : null;
+                        if (toIndex === null) break;
+                        if (slideIndex < 0 || slideIndex >= projectOutline.slides.length) break;
+                        if (toIndex < 0 || toIndex > projectOutline.slides.length) break;
+                        if (slideIndex === toIndex) break;
+
+                        const moved = projectOutline.slides.splice(slideIndex, 1)[0];
+                        projectOutline.slides.splice(toIndex, 0, moved);
+                        break;
+                    }
                 }
 
                 // 保存更新后的大纲到数据库
@@ -8021,7 +9888,7 @@
                                         console.log('🎯 AI流式响应完成');
                                         console.log('📝 完整响应长度:', fullResponse ? fullResponse.length : 0);
                                         console.log('🔍 提取的HTML内容:', newHtmlContent ? `长度${newHtmlContent.length}` : '无');
-                                        
+
                                         if (newHtmlContent) {
                                             console.log('✅ 检测到HTML内容，准备添加按钮');
                                             console.log('📄 HTML内容预览:', newHtmlContent.substring(0, 200));
@@ -8270,10 +10137,10 @@
             buttonContainer.appendChild(applyBtn);
             buttonContainer.appendChild(previewBtn);
             messageDiv.appendChild(buttonContainer);
-            
+
             console.log('🎉 按钮添加完成！');
             console.log('📋 按钮容器已添加到消息区域');
-            
+
             // 验证按钮是否正确添加
             const addedButtons = messageDiv.querySelectorAll('.ai-apply-changes-btn, .ai-preview-changes-btn');
             console.log('🔍 已添加的按钮数量:', addedButtons.length);
@@ -8378,6 +10245,9 @@
         // 应用AI更改
         async function applyAIChanges(newHtmlContent) {
             try {
+                // 防御：若slides_data存在缺页导致错位，先按page_number/大纲归一化，避免错页写入
+                normalizeSlidesDataToOutline();
+
                 // 验证当前索引状态
                 if (!validateCurrentSlideIndex('applyAIChanges')) {
                     throw new Error(`无效的幻灯片索引: ${currentSlideIndex}，总页数: ${slidesData ? slidesData.length : 'undefined'}`);
@@ -8452,12 +10322,20 @@
         }
 
         function regenerateSlideByIndex(slideIndex) {
-            if (slideIndex < 0 || slideIndex >= slidesData.length) {
+            // 防御：若slides_data存在缺页导致错位，先按page_number/大纲归一化，避免错页写入
+            normalizeSlidesDataToOutline();
+
+            const outlineTotal = getOutlineSlidesCount();
+            if (slideIndex < 0 || slideIndex >= outlineTotal) {
                 alert('无效的幻灯片索引');
                 return;
             }
 
-            const slideTitle = slidesData[slideIndex].title || `第${slideIndex + 1}页`;
+            ensureSlidesDataLength(outlineTotal);
+            const outlineTitle = (projectOutline && projectOutline.slides && projectOutline.slides[slideIndex])
+                ? projectOutline.slides[slideIndex].title
+                : null;
+            const slideTitle = (slidesData[slideIndex] && slidesData[slideIndex].title) || outlineTitle || `第${slideIndex + 1}页`;
             if (confirm(`确定要重新生成"${slideTitle}"吗？这将覆盖现有内容。`)) {
                 // Show loading indicator
                 const loadingDiv = document.createElement('div');
@@ -8493,38 +10371,177 @@
                         language: 'zh'
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    document.body.removeChild(loadingDiv);
-                    if (data.success) {
-                        // 更新本地数据而不是刷新页面
-                        if (data.slide_data) {
-                            // 更新slidesData中的对应幻灯片
-                            slidesData[slideIndex] = data.slide_data;
+                    .then(response => response.json())
+                    .then(data => {
+                        document.body.removeChild(loadingDiv);
+                        if (data.success) {
+                            // 更新本地数据而不是刷新页面
+                            if (data.slide_data) {
+                                // 更新slidesData中的对应幻灯片
+                                slidesData[slideIndex] = data.slide_data;
 
-                            // 更新缩略图显示
-                            updateThumbnailDisplay(slideIndex, data.slide_data);
+                                // 更新缩略图显示（如本次补齐了大纲页数，则需要刷新侧边栏）
+                                const thumbnailsCount = document.querySelectorAll('.slide-thumbnail').length;
+                                if (thumbnailsCount !== slidesData.length) {
+                                    refreshSidebar();
+                                } else {
+                                    updateThumbnailDisplay(slideIndex, data.slide_data);
+                                }
 
-                            // 如果当前正在查看这个幻灯片，更新主预览区域
-                            if (currentSlideIndex === slideIndex) {
-                                updateMainPreview(data.slide_data);
-                                updateCodeEditor(data.slide_data);
+                                // 如果当前正在查看这个幻灯片，更新主预览区域
+                                if (currentSlideIndex === slideIndex) {
+                                    updateMainPreview(data.slide_data);
+                                    updateCodeEditor(data.slide_data);
+                                }
+
+                                showNotification('幻灯片重新生成成功！', 'success');
+                            } else {
+                                // 如果没有返回slide_data，则刷新页面
+                                showNotification('幻灯片重新生成成功！正在刷新页面...', 'success');
+                                setTimeout(() => location.reload(), 1000);
                             }
-
-                            showNotification('幻灯片重新生成成功！', 'success');
                         } else {
-                            // 如果没有返回slide_data，则刷新页面
-                            showNotification('幻灯片重新生成成功！正在刷新页面...', 'success');
-                            setTimeout(() => location.reload(), 1000);
+                            showNotification('重新生成失败：' + (data.error || '未知错误'), 'error');
                         }
-                    } else {
-                        showNotification('重新生成失败：' + (data.error || '未知错误'), 'error');
-                    }
-                })
-                .catch(error => {
-                    document.body.removeChild(loadingDiv);
-                    alert('重新生成失败：' + error.message);
+                    })
+                    .catch(error => {
+                        document.body.removeChild(loadingDiv);
+                        alert('重新生成失败：' + error.message);
+                    });
+            }
+        }
+
+        async function regenerateSelectedSlides() {
+            const indices = getSelectedSlideIndicesSorted();
+            if (!indices || indices.length === 0) {
+                showNotification('请先按住 Ctrl 并点击左侧缩略图选择要重新生成的页面', 'warning');
+                return;
+            }
+            await batchRegenerateSlides({ slideIndices: indices, regenerateAll: false });
+        }
+
+        async function regenerateAllSlides() {
+            const outlineTotal = getOutlineSlidesCount();
+            if (outlineTotal <= 0) {
+                showNotification('没有可用的幻灯片', 'warning');
+                return;
+            }
+            await batchRegenerateSlides({ slideIndices: null, regenerateAll: true });
+        }
+
+        async function batchRegenerateSlides({ slideIndices, regenerateAll }) {
+            const outlineTotal = getOutlineSlidesCount();
+            if (outlineTotal <= 0) {
+                showNotification('没有可用的幻灯片', 'warning');
+                return;
+            }
+
+            const normalizedSlideIndices = regenerateAll
+                ? null
+                : (Array.isArray(slideIndices)
+                    ? slideIndices.filter(i => Number.isInteger(i) && i >= 0 && i < outlineTotal)
+                    : []);
+
+            const total = regenerateAll ? outlineTotal : normalizedSlideIndices.length;
+            if (total <= 0) {
+                showNotification('未选择任何幻灯片', 'warning');
+                return;
+            }
+
+            const confirmText = regenerateAll
+                ? `确定要一键重新生成全部${total}页吗？这将覆盖现有内容。`
+                : `确定要重新生成所选${total}页吗？这将覆盖现有内容。`;
+
+            if (!confirm(confirmText)) {
+                return;
+            }
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'batchRegenerateLoading';
+            loadingDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.85);
+                color: white;
+                padding: 20px 22px;
+                border-radius: 12px;
+                z-index: 9999;
+                text-align: center;
+                min-width: 280px;
+            `;
+            loadingDiv.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i>
+                <div style="margin-top: 10px; font-weight: 700;">正在重新生成幻灯片...</div>
+                <div style="margin-top: 6px; font-size: 12px; opacity: 0.85;">共 ${total} 页</div>
+            `;
+            document.body.appendChild(loadingDiv);
+
+            try {
+                ensureSlidesDataLength(outlineTotal);
+
+                const response = await fetch(`/api/projects/{{ project.project_id }}/slides/batch-regenerate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        regenerate_all: !!regenerateAll,
+                        slide_indices: regenerateAll ? null : normalizedSlideIndices,
+                        scenario: '{{ project.scenario }}',
+                        topic: `{{ project.topic }}`,
+                        requirements: `{{ (project.requirements or "") }}`,
+                        language: 'zh'
+                    })
                 });
+
+                const data = await response.json();
+                if (!data || !data.success) {
+                    throw new Error(data?.error || data?.message || '批量重新生成失败');
+                }
+
+                const results = Array.isArray(data.results) ? data.results : [];
+                let okCount = 0;
+                let failCount = 0;
+
+                results.forEach((r) => {
+                    if (r && r.success && r.slide_data && Number.isInteger(r.slide_index)) {
+                        slidesData[r.slide_index] = r.slide_data;
+                        updateThumbnailDisplay(r.slide_index, r.slide_data);
+
+                        if (currentSlideIndex === r.slide_index) {
+                            updateMainPreview(r.slide_data);
+                            updateCodeEditor(r.slide_data);
+                        }
+                        okCount += 1;
+                    } else if (r) {
+                        failCount += 1;
+                    }
+                });
+
+                // 如果本次是按大纲补齐生成，或缩略图数量不足，刷新侧边栏以显示完整页数
+                const thumbnailsCount = document.querySelectorAll('.slide-thumbnail').length;
+                if (thumbnailsCount !== slidesData.length) {
+                    refreshSidebar();
+                }
+
+                updateSelectedSlidesUI();
+
+                if (failCount > 0) {
+                    showNotification(`批量重新生成完成：成功${okCount}页，失败${failCount}页`, 'warning');
+                } else {
+                    showNotification(`批量重新生成完成：成功${okCount}页`, 'success');
+                }
+
+                // 操作完成后，默认回到单选当前页，避免后续误操作
+                clearSlideSelections();
+                setSingleSlideSelection(currentSlideIndex);
+
+            } catch (error) {
+                console.error('Batch regenerate error:', error);
+                showNotification('批量重新生成失败：' + error.message, 'error');
+            } finally {
+                const existing = document.getElementById('batchRegenerateLoading');
+                if (existing) existing.remove();
             }
         }
 
@@ -8573,40 +10590,36 @@
         }
 
         async function saveToServer() {
+            // 改用逐个保存，避免在生成过程中覆盖新生成的幻灯片数据
+            // 原batch-save会用前端旧数据覆盖后端新生成的数据，导致数据丢失
             try {
+                let saveSuccessCount = 0;
+                let saveFailureCount = 0;
 
-                // 标记所有幻灯片为用户编辑状态
-                slidesData.forEach(slide => {
-                    slide.is_user_edited = true;
-                });
+                for (let i = 0; i < slidesData.length; i++) {
+                    try {
+                        const slide = slidesData[i];
+                        if (!slide || !slide.html_content) continue;
 
-                // 使用批量保存API
-                const response = await fetch(`/api/projects/{{ project.project_id }}/slides/batch-save`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        slides_data: slidesData
-                    })
-                });
+                        // 标记为用户编辑状态
+                        slide.is_user_edited = true;
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        const success = await saveSingleSlideToServer(i, slide.html_content);
+                        if (success) {
+                            saveSuccessCount++;
+                        } else {
+                            saveFailureCount++;
+                        }
+                    } catch (error) {
+                        saveFailureCount++;
+                        console.error(`保存第${i + 1}页异常:`, error);
+                    }
                 }
 
-                const data = await response.json();
-
-                if (data.success) {
-                    return true;
-                } else {
-                    throw new Error(data.error || 'Unknown batch save error');
-                }
-
+                return saveSuccessCount > 0;
             } catch (error) {
-                // 如果批量保存失败，回退到逐个保存
-                return await saveToServerFallback();
+                console.error('保存失败:', error);
+                return false;
             }
         }
 
@@ -8765,7 +10778,7 @@
             // showNotification('正在打开客户端PDF导出页面...', 'info');
 
             // 打开客户端PDF导出页面（原html2pdf.js方式）
-           // window.open(`/api/projects/{{ project.project_id }}/export/pdf?fallback=true`, '_blank');
+            // window.open(`/api/projects/{{ project.project_id }}/export/pdf?fallback=true`, '_blank');
         }
 
         async function exportToPPTX() {
@@ -9013,7 +11026,7 @@
             `;
 
             // 根据类型设置背景色
-            switch(type) {
+            switch (type) {
                 case 'success':
                     notification.style.backgroundColor = '#28a745';
                     break;
@@ -9162,7 +11175,7 @@
                 document.body.appendChild(modal);
 
                 // 点击背景关闭
-                modal.addEventListener('click', function(e) {
+                modal.addEventListener('click', function (e) {
                     if (e.target === modal) {
                         modal.remove();
                     }
@@ -9222,7 +11235,7 @@
         function initializeCodeEditorAutoSave() {
             const codeEditor = document.getElementById('codeEditor');
             if (codeEditor && !isCodeMirrorInitialized) {
-                codeEditor.addEventListener('input', function() {
+                codeEditor.addEventListener('input', function () {
                     clearTimeout(this.saveTimeout);
                     this.saveTimeout = setTimeout(() => {
                         if (currentMode === 'split') {
@@ -9259,6 +11272,12 @@
                     e.stopPropagation();
                     const index = parseInt(thumbnail.getAttribute('data-slide-index'));
                     if (!isNaN(index)) {
+                        // Ctrl/Meta 多选，用于批量操作；普通点击为单选
+                        if (e.ctrlKey || e.metaKey) {
+                            toggleSlideSelection(index);
+                        } else {
+                            setSingleSlideSelection(index);
+                        }
                         selectSlide(index);
                     }
                 }
@@ -9558,7 +11577,7 @@
             // 防抖处理，避免按键过快
             clearTimeout(keyboardTimeout);
             keyboardTimeout = setTimeout(() => {
-                switch(e.key) {
+                switch (e.key) {
                     case 'ArrowLeft':
                     case 'ArrowUp':
                     case 'PageUp':
@@ -9701,9 +11720,33 @@
             const movedSlide = slidesData.splice(fromIndex, 1)[0];
             slidesData.splice(toIndex, 0, movedSlide);
 
+            // 更新已选中的索引（保持选中的是同一组幻灯片，而不是同一组位置）
+            if (selectedSlideIndices && selectedSlideIndices.size > 0) {
+                const nextSelected = new Set();
+                selectedSlideIndices.forEach((idx) => {
+                    if (!Number.isInteger(idx)) return;
+                    let nextIdx = idx;
+                    if (idx === fromIndex) {
+                        nextIdx = toIndex;
+                    } else if (fromIndex < toIndex) {
+                        if (idx > fromIndex && idx <= toIndex) nextIdx = idx - 1;
+                    } else if (fromIndex > toIndex) {
+                        if (idx >= toIndex && idx < fromIndex) nextIdx = idx + 1;
+                    }
+                    nextSelected.add(nextIdx);
+                });
+                selectedSlideIndices = nextSelected;
+            }
+
             // 更新页码
             slidesData.forEach((slide, index) => {
                 slide.page_number = index + 1;
+            });
+
+            // 同步更新大纲顺序（避免重新生成等操作按编辑器序号写入错误页）
+            updateOutlineForSlideOperation('move', fromIndex, { to_index: toIndex }).catch((e) => {
+                console.error('Outline move failed:', e);
+                showNotification('同步更新大纲顺序失败：' + (e?.message || e), 'warning');
             });
 
             // 更新当前选中的索引
@@ -10026,7 +12069,8 @@
             // 重新生成幻灯片缩略图
             slidesData.forEach((slide, index) => {
                 const thumbnailDiv = document.createElement('div');
-                thumbnailDiv.className = `slide-thumbnail ${index === currentSlideIndex ? 'active' : ''}`;
+                const isSelected = selectedSlideIndices && selectedSlideIndices.has(index);
+                thumbnailDiv.className = `slide-thumbnail ${index === currentSlideIndex ? 'active' : ''} ${isSelected ? 'selected' : ''}`;
                 thumbnailDiv.setAttribute('data-slide-index', index);
                 thumbnailDiv.setAttribute('draggable', 'true');
                 // 不再使用内联事件处理器，依赖事件委托
@@ -10047,7 +12091,7 @@
                     // 安全设置iframe内容
                     setSafeIframeContent(iframe, slide.html_content);
 
-                    iframe.onload = function() {
+                    iframe.onload = function () {
                         // 应用响应式缩放
                         this.style.transform = getResponsiveScale();
                         this.style.width = getResponsiveWidth();
@@ -10060,6 +12104,7 @@
 
             // 重新初始化事件监听器
             initializeThumbnailEvents();
+            updateSelectedSlidesUI();
         }
 
         // 优化的iframe JavaScript重新初始化函数
@@ -10216,7 +12261,7 @@
             element.classList.add('image-selectable');
 
             // 创建事件处理器并保存引用以便后续移除
-            element._imageClickHandler = function(e) {
+            element._imageClickHandler = function (e) {
                 // 只在快速编辑模式下响应点击
                 if (!quickEditMode || currentMode !== 'quickedit') {
                     return;
@@ -10226,7 +12271,7 @@
                 selectImage(element, iframe);
             };
 
-            element._imageMouseEnterHandler = function() {
+            element._imageMouseEnterHandler = function () {
                 // 只在快速编辑模式下显示悬停效果
                 if (!quickEditMode || currentMode !== 'quickedit') {
                     return;
@@ -10237,7 +12282,7 @@
                 }
             };
 
-            element._imageMouseLeaveHandler = function() {
+            element._imageMouseLeaveHandler = function () {
                 // 只在快速编辑模式下处理悬停离开
                 if (!quickEditMode || currentMode !== 'quickedit') {
                     return;
@@ -10734,7 +12779,7 @@
         }
 
         // 窗口大小改变时重新应用缩放
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             const iframes = document.querySelectorAll('.slide-preview iframe');
             iframes.forEach(iframe => {
                 iframe.style.transform = getResponsiveScale();
@@ -10744,14 +12789,14 @@
         });
 
         // 点击其他地方隐藏右键菜单
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (!event.target.closest('.context-menu')) {
                 hideContextMenu();
             }
         });
 
         // 阻止页面默认右键菜单
-        document.addEventListener('contextmenu', function(event) {
+        document.addEventListener('contextmenu', function (event) {
             if (!event.target.closest('.slide-thumbnail')) {
                 // 只在非幻灯片区域阻止默认右键菜单
                 // event.preventDefault();
@@ -10778,7 +12823,6 @@
 
                             <iframe class="slide-frame" id="slideFrame"
                                     title="Slide Preview"></iframe>
-                            <div class="quick-edit-overlay" id="quickEditOverlay"></div>
 
                             <button class="preview-nav-btn right" id="previewNextBtn" onclick="navigatePreviewSlide(1)" title="&#19979;&#19968;&#39029; (&#8594;)">
                                 <i class="fas fa-chevron-right"></i>
@@ -10822,7 +12866,18 @@
         }
 
         // 页面加载完成后应用响应式缩放和绑定事件
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            // 关键：如果服务端返回了缺页的slides_data（例如只存在第2、3页），这里先按page_number/大纲进行归一化，
+            // 避免后续编辑/保存把内容写到错误的页（如第2页覆盖第1页）。
+            if (normalizeSlidesDataToOutline()) {
+                slidesDataWasNormalized = true;
+            }
+
+            // 如果归一化导致页数/顺序变化，刷新侧边栏缩略图以对齐 slidesData 的索引
+            if (slidesDataWasNormalized && slidesData && slidesData.length > 0) {
+                refreshSidebar();
+            }
+
             // 为所有现有的iframe应用响应式缩放
             const iframes = document.querySelectorAll('.slide-preview iframe');
             iframes.forEach(iframe => {
@@ -10849,6 +12904,13 @@
             // 初始化代码编辑器自动保存（fallback）
             initializeCodeEditorAutoSave();
 
+            // Esc 清空多选
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    clearSlideSelections();
+                }
+            });
+
             // 绑定按钮事件监听器
             const slideshowBtn = document.getElementById('slideshowBtn');
             const saveSlideBtn = document.getElementById('saveSlideBtn');
@@ -10867,17 +12929,46 @@
             // 绑定AI输入框回车键事件
             const aiInputBox = document.getElementById('aiInputBox');
             if (aiInputBox) {
-                aiInputBox.addEventListener('keydown', function(event) {
+                aiInputBox.addEventListener('keydown', function (event) {
                     if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault();
                         sendAIMessage();
                     }
+                });
+                aiInputBox.addEventListener('paste', handleAIPaste);
+            }
+
+            // 绑定自由对话输入框回车键事件
+            const aiNativeInputBox = document.getElementById('aiNativeInputBox');
+            if (aiNativeInputBox) {
+                aiNativeInputBox.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        sendNativeChatMessage();
+                    }
+                });
+                aiNativeInputBox.addEventListener('paste', handleNativePaste);
+            }
+
+            // 绑定自由对话图片上传
+            const aiNativeImageFileInput = document.getElementById('aiNativeImageFileInput');
+            if (aiNativeImageFileInput) {
+                aiNativeImageFileInput.addEventListener('change', function (e) {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                        uploadNativeFiles(files);
+                    }
+                    // 允许重复选择同一文件
+                    e.target.value = '';
                 });
             }
 
             // 确保第一张幻灯片被选中
             if (hasSlidesData && slidesData.length > 0) {
                 selectSlide(0);
+                setSingleSlideSelection(0);
+            } else {
+                updateSelectedSlidesUI();
             }
 
             // 更新功能按钮状态
@@ -11048,8 +13139,8 @@
         // 检查是否为文件拖拽
         function isFileDrag(e) {
             return e.dataTransfer &&
-                   e.dataTransfer.types &&
-                   (e.dataTransfer.types.includes('Files') ||
+                e.dataTransfer.types &&
+                (e.dataTransfer.types.includes('Files') ||
                     e.dataTransfer.types.includes('application/x-moz-file'));
         }
 
@@ -11188,22 +13279,53 @@
             showUploadProgress(true);
 
             try {
+                let addedCount = 0;
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     updateUploadProgress((i / files.length) * 100, `上传中 ${i + 1}/${files.length}: ${file.name}`);
 
+                    let dataUrl = null;
+                    try {
+                        const maybe = await readFileAsDataUrl(file);
+                        dataUrl = typeof maybe === 'string' ? maybe : null;
+                    } catch (e) {
+                        // 忽略读取失败，继续走上传URL
+                    }
+
                     const result = await uploadSingleFile(file);
                     if (result.success) {
-                        addUploadedImage(result.data);
+                        addUploadedImage({
+                            ...result.data,
+                            dataUrl: dataUrl
+                        });
+                        addedCount++;
                     } else {
-                        showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        // 即使上传失败，仍允许用 dataUrl 参与对话（视觉模式）
+                        if (dataUrl) {
+                            addUploadedImage({
+                                id: null,
+                                name: file.name,
+                                size: file.size,
+                                url: '',
+                                file: file,
+                                dataUrl: dataUrl
+                            });
+                            addedCount++;
+                            showNotification(`上传失败，已改用本地图片参与对话：${file.name}`, 'warning');
+                        } else {
+                            showNotification(`上传失败: ${file.name} - ${result.message}`, 'error');
+                        }
                     }
                 }
 
                 updateUploadProgress(100, '上传完成');
                 setTimeout(() => showUploadProgress(false), 1000);
 
-                showNotification(`成功上传 ${files.length} 张图片`, 'success');
+                if (addedCount > 0) {
+                    showNotification(`已添加 ${addedCount} 张图片`, 'success');
+                } else {
+                    showNotification('未能添加图片，请重试', 'error');
+                }
 
             } catch (error) {
                 showNotification('上传失败，请重试', 'error');
@@ -11399,7 +13521,9 @@
             let imageInfoText = '\n\n📷 图片信息：\n';
             uploadedImages.forEach((image, index) => {
                 imageInfoText += `${index + 1}. 图片名称：${image.name}\n`;
-                imageInfoText += `   图片地址：${image.url}\n`;
+                const url = (image && typeof image.url === 'string') ? image.url : '';
+                const displayUrl = url && url.startsWith('data:image') ? '（本地图片，已随消息发送）' : (url || '（无URL）');
+                imageInfoText += `   图片地址：${displayUrl}\n`;
                 imageInfoText += `   文件大小：${formatFileSize(image.size)}\n`;
                 if (index < uploadedImages.length - 1) {
                     imageInfoText += '\n';
@@ -11415,7 +13539,8 @@
         function getAllUploadedImages() {
             return uploadedImages.map(image => ({
                 name: image.name,
-                url: image.url,
+                // 视觉模式优先使用 dataUrl，避免外部模型无法访问私有URL
+                url: visionModeEnabled ? (image.dataUrl || image.url || '') : (image.url || ''),
                 size: image.size > 0 ? formatFileSize(image.size) : '未知大小',
                 id: image.id
             }));
@@ -11528,19 +13653,19 @@
             img.style.display = 'none';
 
             // 加载图片
-            img.onload = function() {
+            img.onload = function () {
                 loading.style.display = 'none';
                 img.style.display = 'block';
             };
 
-            img.onerror = function() {
+            img.onerror = function () {
                 loading.style.display = 'none';
                 img.style.display = 'block';
                 img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4=';
             };
 
             // 设置图片源
-            img.src = image.url;
+            img.src = image.dataUrl || image.url;
 
             // 阻止页面滚动
             document.body.style.overflow = 'hidden';
@@ -11550,6 +13675,8 @@
             const overlay = document.getElementById('imagePreviewOverlay');
             overlay.style.display = 'none';
             currentPreviewImage = null;
+            window.currentPreviewOwner = null;
+            window.currentPreviewNativeIndex = null;
 
             // 恢复页面滚动
             document.body.style.overflow = '';
@@ -11573,6 +13700,17 @@
         function removeCurrentImage() {
             if (!currentPreviewImage) return;
 
+            if (window.currentPreviewOwner === 'native_dialog') {
+                const idx = Number(window.currentPreviewNativeIndex);
+                if (Number.isInteger(idx) && idx >= 0) {
+                    if (confirm(`确定要移除图片 "${currentPreviewImage.name}" 吗？`)) {
+                        removeNativeUploadedImage(idx);
+                        closeImagePreview();
+                    }
+                }
+                return;
+            }
+
             const index = uploadedImages.findIndex(img => img.id === currentPreviewImage.id);
             if (index !== -1) {
                 if (confirm(`确定要删除图片 "${currentPreviewImage.name}" 吗？`)) {
@@ -11583,14 +13721,14 @@
         }
 
         // 键盘事件处理
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && currentPreviewImage) {
                 closeImagePreview();
             }
         });
 
         // 点击遮罩层关闭预览
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (e.target.id === 'imagePreviewOverlay') {
                 closeImagePreview();
             }
@@ -11927,7 +14065,7 @@
             if (!searchInput) return;
 
             // 搜索输入事件
-            searchInput.addEventListener('input', function(e) {
+            searchInput.addEventListener('input', function (e) {
                 const searchTerm = e.target.value.trim();
                 currentSearchTerm = searchTerm;
 
@@ -11943,7 +14081,7 @@
             });
 
             // 回车键搜索
-            searchInput.addEventListener('keydown', function(e) {
+            searchInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const searchTerm = e.target.value.trim();
@@ -12066,7 +14204,7 @@
         }
 
         // 键盘事件处理
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 if (document.getElementById('bulletPointEnhancementDialog')) {
                     closeBulletPointEnhancementDialog();
@@ -12333,7 +14471,7 @@
         }
 
         // 点击遮罩层关闭
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (e.target.id === 'imageSelectMenu') {
                 closeImageSelectMenu();
             } else if (e.target.id === 'imageLibraryOverlay') {
@@ -12397,7 +14535,7 @@
             textArea.focus();
 
             // 添加事件监听器
-            textArea.addEventListener('blur', function() {
+            textArea.addEventListener('blur', function () {
                 // 移除新建状态样式
                 newBulletPoint.style.background = '';
                 newBulletPoint.style.border = '';
@@ -12406,7 +14544,7 @@
                 textArea.style.padding = '';
             });
 
-            textArea.addEventListener('input', function() {
+            textArea.addEventListener('input', function () {
                 if (this.textContent.trim()) {
                     // 有内容时移除新建状态样式
                     newBulletPoint.style.background = '';
@@ -12478,7 +14616,7 @@
         }
 
         // 添加键盘快捷键支持
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             // Ctrl/Cmd + E 切换快速编辑模式
             if ((e.ctrlKey || e.metaKey) && e.key === 'e' && !e.shiftKey && !e.altKey) {
                 e.preventDefault();
@@ -12496,7 +14634,7 @@
         });
 
         // 在页面加载完成后初始化图片上传功能
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // 延迟初始化，确保所有元素都已加载
             setTimeout(() => {
                 const imageUploadBtn = document.getElementById('aiImageUploadBtn');
@@ -12742,7 +14880,7 @@
             document.body.appendChild(speechScriptModal);
 
             // Close modal when clicking on the backdrop only
-            speechScriptModal.addEventListener('click', function(e) {
+            speechScriptModal.addEventListener('click', function (e) {
                 // Only close if clicking directly on the modal backdrop, not on child elements
                 if (e.target === speechScriptModal) {
                     closeSpeechScriptDialog();
@@ -12752,7 +14890,7 @@
             // Prevent modal content from closing the modal
             const modalContent = speechScriptModal.querySelector('.speech-modal-content');
             if (modalContent) {
-                modalContent.addEventListener('click', function(e) {
+                modalContent.addEventListener('click', function (e) {
                     e.stopPropagation();
                 });
             }
@@ -12765,7 +14903,7 @@
             // Handle generation type changes
             const typeRadios = document.querySelectorAll('input[name="generationType"]');
             typeRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
+                radio.addEventListener('change', function () {
                     const multiSlideSelection = document.getElementById('multiSlideSelection');
                     if (this.value === 'multi') {
                         multiSlideSelection.style.display = 'block';
@@ -12954,7 +15092,7 @@
                         return;
                     }
                 } else if (generationType === 'full') {
-                    slideIndices = Array.from({length: slidesData.length}, (_, i) => i);
+                    slideIndices = Array.from({ length: slidesData.length }, (_, i) => i);
                 }
 
                 // Show progress toast
@@ -13081,8 +15219,8 @@
             let scriptsHtml = '';
             result.scripts.forEach((script, index) => {
                 const slideTitle = script.slide_index === -1 ? '开场白' :
-                                 script.slide_index >= result.scripts.length - 1 && script.slide_title === '结束语' ? '结束语' :
-                                 script.slide_title;
+                    script.slide_index >= result.scripts.length - 1 && script.slide_title === '结束语' ? '结束语' :
+                        script.slide_title;
 
                 const scriptId = `script-${script.slide_index}-${index}`;
                 const contentId = `content-${script.slide_index}-${index}`;
@@ -13181,9 +15319,9 @@
                                     <button class="speech-btn ${editMode ? 'speech-btn-secondary' : 'speech-btn-primary'}" onclick="toggleAllEditMode()">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             ${editMode ?
-                                                '<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
-                                                '<path d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89783 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-                                            }
+                    '<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
+                    '<path d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89783 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+                }
                                         </svg>
                                         ${editMode ? '退出编辑' : '编辑模式'}
                                     </button>
@@ -13216,7 +15354,7 @@
             document.body.appendChild(speechScriptModal);
 
             // Close modal when clicking on the backdrop
-            speechScriptModal.addEventListener('click', function(e) {
+            speechScriptModal.addEventListener('click', function (e) {
                 if (e.target === speechScriptModal) {
                     closeSpeechScriptDialog();
                 }
@@ -13476,9 +15614,9 @@
                 toggleBtn.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         ${newEditMode ?
-                            '<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
-                            '<path d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89783 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-                        }
+                        '<path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' :
+                        '<path d="M11 4H4C3.44772 4 3 4.44772 3 5V20C3 20.5523 3.44772 21 4 21H19C19.5523 21 20 20.5523 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89783 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+                    }
                     </svg>
                     ${newEditMode ? '退出编辑' : '编辑模式'}
                 `;
@@ -13779,7 +15917,7 @@
                 modal.className = 'ai-optimize-modal';
                 modal.style.cssText = `
                     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                    background: var(--surface-contrast);
+                    background: rgba(255, 255, 255, 0.98);
                     z-index: 10002; display: flex; align-items: center; justify-content: center;
                     padding: 20px; animation: fadeIn 0.3s ease;
                 `;
@@ -14112,7 +16250,7 @@
             const title = document.getElementById('slideTitle')?.value.trim() || '';
             const slideType = document.getElementById('slideType')?.value || 'content';
             const description = document.getElementById('slideDescription')?.value.trim() || '';
-            
+
             // 获取所有内容要点
             let contentPoints = [];
             const bulletPointsContainer = document.getElementById('bulletPointsContainer');
@@ -14172,6 +16310,7 @@
                     body: JSON.stringify({
                         outline_content: outlineContent,
                         user_request: userRequest.trim(),
+                        language: projectOutline?.metadata?.language || 'zh',
                         project_info: {
                             topic: projectOutline.title || '未知',
                             scenario: projectOutline.metadata?.scenario || '通用',
@@ -14187,18 +16326,18 @@
                 if (result.success && result.optimized_content) {
                     // 解析优化后的单页数据
                     const optimizedSlide = JSON.parse(result.optimized_content);
-                    
+
                     // 更新弹窗中的表单
                     document.getElementById('slideTitle').value = optimizedSlide.title || '';
                     document.getElementById('slideType').value = optimizedSlide.slide_type || 'content';
                     document.getElementById('slideDescription').value = optimizedSlide.description || '';
-                    
+
                     // 更新内容要点
                     const container = document.getElementById('bulletPointsContainer');
                     if (container && optimizedSlide.content_points && optimizedSlide.content_points.length > 0) {
                         // 清空现有内容
                         container.innerHTML = '';
-                        
+
                         // 添加优化后的要点
                         optimizedSlide.content_points.forEach((point, index) => {
                             const pointDiv = document.createElement('div');
@@ -14214,7 +16353,7 @@
                             container.appendChild(pointDiv);
                         });
                     }
-                    
+
                     showNotification('✅ AI优化完成，请检查后保存', 'success');
 
                 } else {
@@ -14237,4 +16376,5 @@
 
     </script>
 </body>
+
 </html>

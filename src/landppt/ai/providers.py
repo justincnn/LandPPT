@@ -257,9 +257,17 @@ class AnthropicProvider(AIProvider):
         super().__init__(config)
         try:
             import anthropic
-            self.client = anthropic.AsyncAnthropic(
-                api_key=config.get("api_key")
-            )
+            base_url = config.get("base_url")
+            base_url = base_url.strip() if isinstance(base_url, str) else None
+
+            try:
+                if base_url:
+                    self.client = anthropic.AsyncAnthropic(api_key=config.get("api_key"), base_url=base_url)
+                else:
+                    self.client = anthropic.AsyncAnthropic(api_key=config.get("api_key"))
+            except TypeError:
+                # Backwards compatibility with older anthropic SDK versions
+                self.client = anthropic.AsyncAnthropic(api_key=config.get("api_key"))
         except ImportError:
             logger.warning("Anthropic library not installed. Install with: pip install anthropic")
             self.client = None
@@ -310,43 +318,28 @@ class AnthropicProvider(AIProvider):
         return anthropic_message
     
     async def chat_completion(self, messages: List[AIMessage], **kwargs) -> AIResponse:
-        """Generate chat completion using Anthropic Claude"""
+        """Generate chat completion using Anthropic Claude (uses streaming internally to avoid timeout)"""
         if not self.client:
             raise RuntimeError("Anthropic client not available")
 
         config = self._merge_config(**kwargs)
 
-        # Convert messages to Anthropic format
-        system_message = None
-        claude_messages = []
-
-        for msg in messages:
-            if msg.role == MessageRole.SYSTEM:
-                # System messages should be simple text for Anthropic
-                system_message = msg.content if isinstance(msg.content, str) else str(msg.content)
-            else:
-                claude_messages.append(self._convert_message_to_anthropic(msg))
-        
+        # 使用流式响应来避免 SDK 的 10 分钟超时限制
+        # 收集所有流式块后返回完整响应
         try:
-            response = await self.client.messages.create(
-                model=config.get("model", self.model),
-                # max_tokens=config.get("max_tokens", 2000),
-                temperature=config.get("temperature", 0.7),
-                system=system_message,
-                messages=claude_messages
-            )
-            
-            content = response.content[0].text if response.content else ""
+            full_content = ""
+            async for chunk in self.stream_chat_completion(messages, **kwargs):
+                full_content += chunk
             
             return AIResponse(
-                content=content,
-                model=response.model,
+                content=full_content,
+                model=config.get("model", self.model),
                 usage={
-                    "prompt_tokens": response.usage.input_tokens,
-                    "completion_tokens": response.usage.output_tokens,
-                    "total_tokens": response.usage.input_tokens + response.usage.output_tokens
+                    "prompt_tokens": 0,  # 流式响应不提供精确的 token 统计
+                    "completion_tokens": 0,
+                    "total_tokens": 0
                 },
-                finish_reason=response.stop_reason,
+                finish_reason="stop",
                 metadata={"provider": "anthropic"}
             )
             
@@ -358,6 +351,119 @@ class AnthropicProvider(AIProvider):
         """Generate text completion using Anthropic chat format"""
         messages = [AIMessage(role=MessageRole.USER, content=prompt)]
         return await self.chat_completion(messages, **kwargs)
+
+    async def stream_text_completion(
+        self,
+        prompt: str,
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        """Stream text completion using Anthropic Claude for long-running requests"""
+        messages = [AIMessage(role=MessageRole.USER, content=prompt)]
+        async for chunk in self.stream_chat_completion(messages, **kwargs):
+            yield chunk
+
+    async def stream_chat_completion(
+        self,
+        messages: List[AIMessage],
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        """Stream chat completion using Anthropic Claude with proper streaming support"""
+        config = self._merge_config(**kwargs)
+        api_key = config.get("api_key", "")
+        base_url = config.get("base_url", "https://api.anthropic.com")
+        model = config.get("model", self.model)
+        max_tokens = config.get("max_tokens", 65535)
+        temperature = config.get("temperature", 0.7)
+
+        # Convert messages to Anthropic format
+        system_message = None
+        claude_messages = []
+
+        for msg in messages:
+            if msg.role == MessageRole.SYSTEM:
+                system_message = msg.content if isinstance(msg.content, str) else str(msg.content)
+            else:
+                claude_messages.append(self._convert_message_to_anthropic(msg))
+
+        try:
+            import aiohttp
+
+            # Build URL
+            base_url = base_url.rstrip('/')
+            if not base_url.endswith('/v1'):
+                base_url = base_url + '/v1'
+            url = f"{base_url}/messages"
+
+            # Build request body
+            body = {
+                "model": model,
+                "messages": claude_messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True
+            }
+            if system_message:
+                body["system"] = system_message
+
+            # Try both authentication methods
+            auth_methods = [
+                ("x-api-key", {"x-api-key": api_key}),  # Official Anthropic style
+                ("Authorization", {"Authorization": f"Bearer {api_key}"})  # MiniMax/other compatible APIs
+            ]
+
+            for auth_name, auth_header in auth_methods:
+                try:
+                    headers = {
+                        "Content-Type": "application/json",
+                        "anthropic-version": "2023-06-01"
+                    }
+                    headers.update(auth_header)
+
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(url, headers=headers, json=body) as response:
+                            if response.status == 401 and auth_name == "x-api-key":
+                                # x-api-key failed, try Authorization header
+                                logger.debug("x-api-key auth failed, trying Authorization header")
+                                break  # Exit inner loop to try next auth method
+
+                            if response.status != 200:
+                                error_text = await response.text()
+                                if auth_name == "x-api-key":
+                                    # Try next auth method
+                                    logger.debug(f"x-api-key auth failed ({response.status}), trying Authorization")
+                                    break  # Exit inner loop to try next auth method
+                                raise Exception(f"API error {response.status}: {error_text}")
+
+                            # Parse streaming response (SSE format)
+                            async for line in response.content:
+                                line = line.decode('utf-8').strip()
+                                if line.startswith('data: '):
+                                    data = line[6:]
+                                    if data == '[DONE]':
+                                        break
+                                    try:
+                                        import json
+                                        event_data = json.loads(data)
+                                        if event_data.get('type') == 'content_block_delta':
+                                            delta = event_data.get('delta', {})
+                                            if delta.get('type') == 'text_delta':
+                                                text = delta.get('text', '')
+                                                if text:
+                                                    yield text
+                                    except json.JSONDecodeError:
+                                        pass
+                            return  # Success, exit the function
+
+                except Exception as auth_error:
+                    logger.debug(f"Auth method {auth_name} failed: {auth_error}")
+                    continue  # Try next auth method
+
+            # If we get here, all auth methods failed
+            raise Exception("All authentication methods failed")
+
+        except Exception as e:
+            logger.error(f"Anthropic streaming API error: {e}")
+            raise
 
 class GoogleProvider(AIProvider):
     """Google Gemini API provider"""
@@ -741,6 +847,9 @@ class AIProviderManager:
         """Get AI provider instance with caching"""
         if provider_name is None:
             provider_name = ai_config.default_ai_provider
+        if provider_name not in AIProviderFactory._providers:
+            logger.warning(f"Unknown provider '{provider_name}', falling back to 'openai'")
+            provider_name = "openai"
 
         # Get current config for the provider
         current_config = ai_config.get_provider_config(provider_name)

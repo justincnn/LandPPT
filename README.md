@@ -103,7 +103,6 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 - **OpenAI GPT系列**：GPT-4o、GPT-4o-mini 等模型
 - **Anthropic Claude**：Claude-4 Sonnet、Claude-4 Haiku 系列模型
 - **Google Gemini**：Gemini-2.5 Flash、Gemini-2.5 Pro 系列模型，支持自定义端点配置
-- **Azure OpenAI**：企业级AI服务，支持自定义部署
 - **Ollama**：本地部署的开源模型，支持 Llama、Mistral 等
 
 ###  强大的文件处理能力
@@ -416,7 +415,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://img.pub/p/dcfaf039210173f4b1f7.png)
+![LandPPT](https://img.pub/p/7423ac17cf09e9f45963.png)
 ---
 
 <div align="center">

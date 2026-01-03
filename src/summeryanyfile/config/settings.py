@@ -75,8 +75,13 @@ class Settings:
                 kwargs["api_key"] = self.openai_api_key
             if self.openai_base_url:
                 kwargs["base_url"] = self.openai_base_url
-        elif self.llm_provider == "anthropic" and self.anthropic_api_key:
-            kwargs["api_key"] = self.anthropic_api_key
+        elif self.llm_provider == "anthropic":
+            if self.anthropic_api_key:
+                kwargs["api_key"] = self.anthropic_api_key
+            # 检查环境变量中的ANTHROPIC_BASE_URL
+            anthropic_base_url = os.getenv("ANTHROPIC_BASE_URL")
+            if anthropic_base_url:
+                kwargs["base_url"] = anthropic_base_url
         elif self.llm_provider == "azure":
             if self.azure_openai_api_key:
                 kwargs["api_key"] = self.azure_openai_api_key

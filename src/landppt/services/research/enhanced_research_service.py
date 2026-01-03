@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 from ...ai import get_ai_provider, AIMessage, MessageRole
 from ...core.config import ai_config
