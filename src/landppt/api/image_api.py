@@ -30,6 +30,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+_MISSING_IMAGE_PLACEHOLDER_PATH = (
+    Path(__file__).resolve().parents[1] / "web" / "static" / "images" / "placeholder.svg"
+)
+
+
 class ImageGenerationRequest(BaseModel):
     prompt: str
     provider: Optional[str] = None
@@ -560,10 +565,34 @@ async def view_image(
         image_info = await image_service.get_image(image_id)
 
         if not image_info or not image_info.local_path:
+            if _MISSING_IMAGE_PLACEHOLDER_PATH.exists():
+                logger.warning(f"Image not found, serving placeholder: {image_id}")
+                return FileResponse(
+                    path=str(_MISSING_IMAGE_PLACEHOLDER_PATH),
+                    media_type="image/svg+xml",
+                    filename="placeholder.svg",
+                    headers={
+                        "X-LandPPT-Missing-Image": "1",
+                        "X-LandPPT-Missing-Image-Id": image_id,
+                        "Cache-Control": "public, max-age=300",
+                    }
+                )
             raise HTTPException(status_code=404, detail="Image not found")
 
         image_path = Path(image_info.local_path)
         if not image_path.exists():
+            if _MISSING_IMAGE_PLACEHOLDER_PATH.exists():
+                logger.warning(f"Image file missing, serving placeholder: {image_id} -> {image_path}")
+                return FileResponse(
+                    path=str(_MISSING_IMAGE_PLACEHOLDER_PATH),
+                    media_type="image/svg+xml",
+                    filename="placeholder.svg",
+                    headers={
+                        "X-LandPPT-Missing-Image": "1",
+                        "X-LandPPT-Missing-Image-Id": image_id,
+                        "Cache-Control": "public, max-age=300",
+                    }
+                )
             raise HTTPException(status_code=404, detail="Image file not found")
 
         return FileResponse(
