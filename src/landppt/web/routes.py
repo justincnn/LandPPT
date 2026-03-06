@@ -320,6 +320,41 @@ async def web_image_generation_test(
     })
 
 
+def _is_truthy_config_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "on"}
+    return bool(value)
+
+
+def _extract_responses_output_text(response_data: Dict[str, Any]) -> str:
+    output_text = response_data.get("output_text")
+    if isinstance(output_text, str) and output_text:
+        return output_text
+
+    texts: List[str] = []
+    for item in response_data.get("output", []) or []:
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        for content in item.get("content", []) or []:
+            if isinstance(content, dict) and content.get("type") == "output_text" and content.get("text"):
+                texts.append(content["text"])
+
+    return "".join(texts)
+
+
+def _extract_responses_usage(response_data: Dict[str, Any]) -> Dict[str, int]:
+    usage = response_data.get("usage") or {}
+    return {
+        "prompt_tokens": int(usage.get("input_tokens") or 0),
+        "completion_tokens": int(usage.get("output_tokens") or 0),
+        "total_tokens": int(usage.get("total_tokens") or 0),
+    }
+
+
 @router.post("/api/ai/providers/openai/models")
 async def get_openai_models(
     request: Request,
@@ -404,8 +439,15 @@ async def test_openai_provider_proxy(
         base_url = data.get('base_url', 'https://api.openai.com/v1')
         api_key = data.get('api_key', '')
         model = data.get('model', 'gpt-4o')
+        use_responses_api = _is_truthy_config_value(data.get('use_responses_api', False))
+        enable_reasoning = _is_truthy_config_value(data.get('enable_reasoning', False))
+        reasoning_effort = str(data.get('reasoning_effort', 'medium') or 'medium').strip().lower()
         
-        logger.info(f"Frontend requested test with: base_url={base_url}, model={model}")
+        logger.info(
+            f"Frontend requested test with: base_url={base_url}, model={model}, "
+            f"use_responses_api={use_responses_api}, enable_reasoning={enable_reasoning}, "
+            f"reasoning_effort={reasoning_effort}"
+        )
         
         if not api_key:
             return {"success": False, "error": "API Key is required"}
@@ -414,8 +456,8 @@ async def test_openai_provider_proxy(
         if not base_url.endswith('/v1'):
             base_url = base_url.rstrip('/') + '/v1'
         
-        chat_url = f"{base_url}/chat/completions"
-        logger.info(f"Testing OpenAI provider at: {chat_url}")
+        request_url = f"{base_url}/responses" if use_responses_api else f"{base_url}/chat/completions"
+        logger.info(f"Testing OpenAI provider at: {request_url}")
         
         # Make test request to OpenAI API using frontend provided credentials
         async with aiohttp.ClientSession() as session:
@@ -424,19 +466,44 @@ async def test_openai_provider_proxy(
                 'Content-Type': 'application/json'
             }
             
-            payload = {
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "Say 'Hello, I am working!' in exactly 5 words."
-                    }
-                ]
-            }
+            if use_responses_api:
+                payload = {
+                    "model": model,
+                    "input": "Say 'Hello, I am working!' in exactly 5 words.",
+                    "max_output_tokens": 32
+                }
+                if enable_reasoning:
+                    payload["reasoning"] = {"effort": reasoning_effort}
+            else:
+                payload = {
+                    "model": model,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Say 'Hello, I am working!' in exactly 5 words."
+                        }
+                    ]
+                }
+                if enable_reasoning:
+                    payload["reasoning_effort"] = reasoning_effort
             
-            async with session.post(chat_url, headers=headers, json=payload, timeout=30) as response:
+            async with session.post(request_url, headers=headers, json=payload, timeout=30) as response:
                 if response.status == 200:
                     data = await response.json()
+                    response_preview = (
+                        _extract_responses_output_text(data)
+                        if use_responses_api
+                        else data['choices'][0]['message']['content']
+                    )
+                    usage = (
+                        _extract_responses_usage(data)
+                        if use_responses_api
+                        else data.get('usage', {
+                            "prompt_tokens": 0,
+                            "completion_tokens": 0,
+                            "total_tokens": 0
+                        })
+                    )
                     
                     logger.info(f"Test successful for {base_url} with model {model}")
                     
@@ -446,12 +513,9 @@ async def test_openai_provider_proxy(
                         "status": "success",  # Add status field for compatibility
                         "provider": "openai",
                         "model": model,
-                        "response_preview": data['choices'][0]['message']['content'],
-                        "usage": data.get('usage', {
-                            "prompt_tokens": 0,
-                            "completion_tokens": 0,
-                            "total_tokens": 0
-                        })
+                        "api_mode": "responses" if use_responses_api else "chat_completions",
+                        "response_preview": response_preview,
+                        "usage": usage
                     }
                 else:
                     error_text = await response.text()

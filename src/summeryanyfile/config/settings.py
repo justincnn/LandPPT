@@ -34,6 +34,9 @@ class Settings:
     # API配置
     openai_api_key: Optional[str] = None
     openai_base_url: Optional[str] = None
+    openai_use_responses_api: bool = False
+    openai_enable_reasoning: bool = False
+    openai_reasoning_effort: str = "medium"
     anthropic_api_key: Optional[str] = None
     azure_openai_api_key: Optional[str] = None
     azure_openai_endpoint: Optional[str] = None
@@ -75,6 +78,9 @@ class Settings:
                 kwargs["api_key"] = self.openai_api_key
             if self.openai_base_url:
                 kwargs["base_url"] = self.openai_base_url
+            kwargs["use_responses_api"] = self.openai_use_responses_api
+            kwargs["enable_reasoning"] = self.openai_enable_reasoning
+            kwargs["reasoning_effort"] = self.openai_reasoning_effort
         elif self.llm_provider == "anthropic":
             if self.anthropic_api_key:
                 kwargs["api_key"] = self.anthropic_api_key
@@ -177,6 +183,9 @@ def load_settings(
     env_mappings = {
         "OPENAI_API_KEY": "openai_api_key",
         "OPENAI_BASE_URL": "openai_base_url",
+        "OPENAI_USE_RESPONSES_API": "openai_use_responses_api",
+        "OPENAI_ENABLE_REASONING": "openai_enable_reasoning",
+        "OPENAI_REASONING_EFFORT": "openai_reasoning_effort",
         "OPENAI_MODEL": "llm_model",  # 支持OPENAI_MODEL环境变量
         "ANTHROPIC_API_KEY": "anthropic_api_key",
         "AZURE_OPENAI_API_KEY": "azure_openai_api_key",
@@ -211,7 +220,7 @@ def load_settings(
                 except ValueError:
                     logger.warning(f"无效的浮点值 {env_key}={env_value}")
                     continue
-            elif attr_name == "debug_mode":
+            elif attr_name in {"debug_mode", "openai_use_responses_api", "openai_enable_reasoning"}:
                 env_value = env_value.lower() in ("true", "1", "yes", "on")
             
             setattr(settings, attr_name, env_value)
@@ -250,6 +259,9 @@ def create_env_template():
     """创建环境变量模板文件"""
     template_content = """# LLM API Keys
 OPENAI_API_KEY=your_openai_api_key_here
+# OPENAI_USE_RESPONSES_API=false
+# OPENAI_ENABLE_REASONING=false
+# OPENAI_REASONING_EFFORT=medium
 # OPENAI_BASE_URL=https://api.openai.com/v1  # 自定义OpenAI API端点（可选）
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 

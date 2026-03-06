@@ -283,6 +283,9 @@ DEFAULT_AI_PROVIDER=openai  # openai / deepseek / kimi / minimax / anthropic / g
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4o
+OPENAI_USE_RESPONSES_API=false  # 使用 OpenAI 官方 /v1/responses 接口
+OPENAI_ENABLE_REASONING=false   # 启用 OpenAI reasoning 参数
+OPENAI_REASONING_EFFORT=medium  # low / medium / high
 
 # OpenAI兼容提供商（通过 Base URL + API Key 接入）
 DEEPSEEK_API_KEY=

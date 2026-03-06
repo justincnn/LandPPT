@@ -37,6 +37,9 @@ class AIConfig(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     openai_base_url: str = Field(default="https://api.openai.com/v1", env="OPENAI_BASE_URL")
     openai_model: str = Field(default="gpt-3.5-turbo", env="OPENAI_MODEL")
+    openai_use_responses_api: bool = Field(default=False, env="OPENAI_USE_RESPONSES_API")
+    openai_enable_reasoning: bool = Field(default=False, env="OPENAI_ENABLE_REASONING")
+    openai_reasoning_effort: str = Field(default="medium", env="OPENAI_REASONING_EFFORT")
 
     # OpenAI-Compatible Providers
     deepseek_api_key: Optional[str] = Field(default=None, env="DEEPSEEK_API_KEY")
@@ -256,6 +259,9 @@ class AIConfig(BaseSettings):
                 "api_key": self.openai_api_key,
                 "base_url": self.openai_base_url,
                 "model": self.openai_model,
+                "use_responses_api": self.openai_use_responses_api,
+                "enable_reasoning": self.openai_enable_reasoning,
+                "reasoning_effort": self.openai_reasoning_effort,
                 "max_tokens": self.max_tokens,
                 "temperature": self.temperature,
                 "top_p": self.top_p,
@@ -404,6 +410,18 @@ def reload_ai_config():
     ai_config.openai_model = os.environ.get('OPENAI_MODEL', ai_config.openai_model)
     ai_config.openai_base_url = os.environ.get('OPENAI_BASE_URL', ai_config.openai_base_url)
     ai_config.openai_api_key = os.environ.get('OPENAI_API_KEY', ai_config.openai_api_key)
+    ai_config.openai_use_responses_api = os.environ.get(
+        'OPENAI_USE_RESPONSES_API',
+        str(ai_config.openai_use_responses_api),
+    ).lower() == 'true'
+    ai_config.openai_enable_reasoning = os.environ.get(
+        'OPENAI_ENABLE_REASONING',
+        str(ai_config.openai_enable_reasoning),
+    ).lower() == 'true'
+    ai_config.openai_reasoning_effort = os.environ.get(
+        'OPENAI_REASONING_EFFORT',
+        ai_config.openai_reasoning_effort,
+    )
     ai_config.anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY', ai_config.anthropic_api_key)
     ai_config.anthropic_base_url = os.environ.get('ANTHROPIC_BASE_URL', ai_config.anthropic_base_url)
     ai_config.anthropic_model = os.environ.get('ANTHROPIC_MODEL', ai_config.anthropic_model)

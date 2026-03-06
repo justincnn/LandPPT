@@ -284,6 +284,20 @@ class EnhancedPPTService(PPTService):
                     os.environ["OPENAI_BASE_URL"] = provider_config["base_url"]
                 if provider_config.get("model"):
                     os.environ["OPENAI_MODEL"] = provider_config["model"]
+                raw_use_responses_api = provider_config.get("use_responses_api", False) if current_provider == "openai" else False
+                if isinstance(raw_use_responses_api, str):
+                    use_responses_api = raw_use_responses_api.strip().lower() in ("true", "1", "yes", "on")
+                else:
+                    use_responses_api = bool(raw_use_responses_api)
+                os.environ["OPENAI_USE_RESPONSES_API"] = "true" if use_responses_api else "false"
+                raw_enable_reasoning = provider_config.get("enable_reasoning", False) if current_provider == "openai" else False
+                if isinstance(raw_enable_reasoning, str):
+                    enable_reasoning = raw_enable_reasoning.strip().lower() in ("true", "1", "yes", "on")
+                else:
+                    enable_reasoning = bool(raw_enable_reasoning)
+                os.environ["OPENAI_ENABLE_REASONING"] = "true" if enable_reasoning else "false"
+                os.environ["OPENAI_REASONING_EFFORT"] = str(provider_config.get("reasoning_effort", "medium") or "medium")
+                logger.info(f"summeryanyfile OpenAI compatibility mode: use_responses_api={use_responses_api}")
 
                 logger.info(f"已配置summeryanyfile OpenAI兼容API: provider={current_provider}, model={provider_config.get('model')}, base_url={provider_config.get('base_url')}")
 

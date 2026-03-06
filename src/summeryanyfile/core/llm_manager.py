@@ -304,6 +304,23 @@ class LLMManager:
     
     def __init__(self):
         self._llm_cache: Dict[str, BaseChatModel] = {}
+
+    @staticmethod
+    def _is_truthy(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "on"}
+        return bool(value)
+
+    @staticmethod
+    def _normalize_reasoning_effort(effort: Any, use_responses_api: bool) -> str:
+        normalized = str(effort or "medium").strip().lower()
+        if normalized in {"none", "minimal", "low", "medium", "high", "xhigh"}:
+            return normalized
+        return "medium"
     
     def get_llm(
         self,
@@ -331,6 +348,13 @@ class LLMManager:
             ImportError: 缺少必要的依赖
         """
         cache_key = f"{provider}:{model}:{temperature}:{max_tokens}"
+        if provider == "openai":
+            cache_key = (
+                f"{cache_key}:base_url={kwargs.get('base_url') or os.getenv('OPENAI_BASE_URL') or ''}"
+                f":responses={self._is_truthy(kwargs['use_responses_api']) if 'use_responses_api' in kwargs else self._is_truthy(os.getenv('OPENAI_USE_RESPONSES_API'))}"
+                f":reasoning={self._is_truthy(kwargs['enable_reasoning']) if 'enable_reasoning' in kwargs else self._is_truthy(os.getenv('OPENAI_ENABLE_REASONING'))}"
+                f":reasoning_effort={kwargs.get('reasoning_effort') or os.getenv('OPENAI_REASONING_EFFORT') or 'medium'}"
+            )
         
         if cache_key in self._llm_cache:
             return self._llm_cache[cache_key]
@@ -390,6 +414,22 @@ class LLMManager:
 
         # 处理自定义base_url
         base_url = kwargs.get("base_url") or os.getenv("OPENAI_BASE_URL")
+        raw_use_responses_api = (
+            kwargs["use_responses_api"]
+            if "use_responses_api" in kwargs
+            else os.getenv("OPENAI_USE_RESPONSES_API")
+        )
+        use_responses_api = self._is_truthy(raw_use_responses_api)
+        raw_enable_reasoning = (
+            kwargs["enable_reasoning"]
+            if "enable_reasoning" in kwargs
+            else os.getenv("OPENAI_ENABLE_REASONING")
+        )
+        enable_reasoning = self._is_truthy(raw_enable_reasoning)
+        reasoning_effort = self._normalize_reasoning_effort(
+            kwargs.get("reasoning_effort") or os.getenv("OPENAI_REASONING_EFFORT"),
+            use_responses_api,
+        )
 
         # 构建参数
         openai_kwargs = {
@@ -397,7 +437,13 @@ class LLMManager:
             "temperature": temperature,
             # "max_tokens": max_tokens,
             "api_key": api_key,
+            "use_responses_api": use_responses_api,
         }
+        if enable_reasoning:
+            if use_responses_api:
+                openai_kwargs["reasoning"] = {"effort": reasoning_effort}
+            else:
+                openai_kwargs["reasoning_effort"] = reasoning_effort
 
         # 添加base_url（如果提供）
         if base_url:
@@ -405,7 +451,13 @@ class LLMManager:
             logger.info(f"使用自定义OpenAI端点: {base_url}")
 
         # 添加其他参数（排除已处理的）
-        excluded_keys = {"api_key", "base_url"}
+        excluded_keys = {
+            "api_key",
+            "base_url",
+            "use_responses_api",
+            "enable_reasoning",
+            "reasoning_effort",
+        }
         openai_kwargs.update({k: v for k, v in kwargs.items() if k not in excluded_keys})
 
         return ChatOpenAI(**openai_kwargs)

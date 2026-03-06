@@ -50,6 +50,9 @@ class ConfigService:
             "openai_api_key": {"type": "password", "category": "ai_providers"},
             "openai_base_url": {"type": "url", "category": "ai_providers", "default": "https://api.openai.com/v1"},
             "openai_model": {"type": "select", "category": "ai_providers", "default": "gpt-4.1"},
+            "openai_use_responses_api": {"type": "boolean", "category": "ai_providers", "default": "false"},
+            "openai_enable_reasoning": {"type": "boolean", "category": "ai_providers", "default": "false"},
+            "openai_reasoning_effort": {"type": "select", "category": "ai_providers", "default": "medium"},
 
             # OpenAI-Compatible Providers
             "deepseek_api_key": {"type": "password", "category": "ai_providers"},
@@ -223,6 +226,22 @@ class ConfigService:
             "siliconflow_steps": {"type": "number", "category": "image_service", "default": 20},
             "siliconflow_guidance_scale": {"type": "number", "category": "image_service", "default": 7.5},
         }
+        self._ensure_runtime_schema_extensions()
+
+    def _ensure_runtime_schema_extensions(self) -> None:
+        """Backfill recently added config keys for long-lived service instances."""
+        self.config_schema.setdefault(
+            "openai_use_responses_api",
+            {"type": "boolean", "category": "ai_providers", "default": "false"},
+        )
+        self.config_schema.setdefault(
+            "openai_enable_reasoning",
+            {"type": "boolean", "category": "ai_providers", "default": "false"},
+        )
+        self.config_schema.setdefault(
+            "openai_reasoning_effort",
+            {"type": "select", "category": "ai_providers", "default": "medium"},
+        )
         
 
     def _migrate_legacy_ai_defaults(self) -> None:
@@ -258,6 +277,7 @@ class ConfigService:
     
     def get_all_config(self) -> Dict[str, Any]:
         """Get all configuration values"""
+        self._ensure_runtime_schema_extensions()
         config = {}
         
         for key, schema in self.config_schema.items():
@@ -289,6 +309,7 @@ class ConfigService:
     
     def get_config_by_category(self, category: str) -> Dict[str, Any]:
         """Get configuration values by category"""
+        self._ensure_runtime_schema_extensions()
         config = {}
         
         for key, schema in self.config_schema.items():
@@ -321,6 +342,7 @@ class ConfigService:
     
     def update_config(self, config: Dict[str, Any]) -> bool:
         """Update configuration values"""
+        self._ensure_runtime_schema_extensions()
         try:
             for key, value in config.items():
                 if key in self.config_schema:
@@ -499,10 +521,12 @@ class ConfigService:
     
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema"""
+        self._ensure_runtime_schema_extensions()
         return self.config_schema
     
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, List[str]]:
         """Validate configuration values"""
+        self._ensure_runtime_schema_extensions()
         errors = {}
         
         for key, value in config.items():
@@ -589,4 +613,5 @@ config_service = ConfigService()
 
 def get_config_service() -> ConfigService:
     """Get config service instance"""
+    config_service._ensure_runtime_schema_extensions()
     return config_service

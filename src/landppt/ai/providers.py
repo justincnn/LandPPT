@@ -60,6 +60,159 @@ class OpenAIProvider(AIProvider):
 
         return openai_message
 
+    @staticmethod
+    def _is_truthy(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "on"}
+        return bool(value)
+
+    def _should_use_responses_api(self, config: Dict[str, Any]) -> bool:
+        use_responses_api = self._is_truthy(config.get("use_responses_api"))
+        if use_responses_api and not hasattr(self.client, "responses"):
+            raise RuntimeError("Installed openai SDK does not support the Responses API")
+        return use_responses_api
+
+    def _normalize_reasoning_effort(self, effort: Any, use_responses_api: bool) -> str:
+        normalized = str(effort or "medium").strip().lower()
+        if normalized in {"none", "minimal", "low", "medium", "high", "xhigh"}:
+            return normalized
+        return "medium"
+
+    def _build_reasoning_config(self, config: Dict[str, Any], use_responses_api: bool) -> Dict[str, Any]:
+        if not self._is_truthy(config.get("enable_reasoning")):
+            return {}
+
+        effort = self._normalize_reasoning_effort(
+            config.get("reasoning_effort"),
+            use_responses_api,
+        )
+        if use_responses_api:
+            return {"reasoning": {"effort": effort}}
+        return {"reasoning_effort": effort}
+
+    def _convert_message_to_responses_input(self, message: AIMessage) -> Dict[str, Any]:
+        """Convert AIMessage to the OpenAI Responses API input format."""
+        response_message: Dict[str, Any] = {"role": message.role.value}
+
+        if isinstance(message.content, str):
+            response_message["content"] = message.content
+            return response_message
+
+        if isinstance(message.content, list):
+            content_parts = []
+            for part in message.content:
+                if isinstance(part, TextContent):
+                    content_parts.append({
+                        "type": "input_text",
+                        "text": part.text
+                    })
+                elif isinstance(part, ImageContent):
+                    image_url = part.image_url.get("url", "")
+                    if image_url:
+                        content_parts.append({
+                            "type": "input_image",
+                            "image_url": image_url,
+                            "detail": "auto"
+                        })
+            response_message["content"] = content_parts or ""
+            return response_message
+
+        response_message["content"] = str(message.content)
+        return response_message
+
+    def _build_responses_request(self, messages: List[AIMessage], config: Dict[str, Any]) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "model": config.get("model", self.model),
+            "input": [self._convert_message_to_responses_input(msg) for msg in messages],
+            "temperature": config.get("temperature", 0.7),
+            "top_p": config.get("top_p", 1.0),
+        }
+        payload.update(self._build_reasoning_config(config, use_responses_api=True))
+
+        max_tokens = config.get("max_tokens")
+        if max_tokens is not None:
+            payload["max_output_tokens"] = max_tokens
+
+        model_name = str(payload.get("model") or "")
+        reasoning = payload.get("reasoning") or {}
+        if model_name.startswith("gpt-5") and reasoning.get("effort") not in {None, "none"}:
+            payload.pop("temperature", None)
+
+        return payload
+
+    @staticmethod
+    def _extract_responses_usage(response: Any) -> Dict[str, int]:
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
+
+        return {
+            "prompt_tokens": int(getattr(usage, "input_tokens", 0) or 0),
+            "completion_tokens": int(getattr(usage, "output_tokens", 0) or 0),
+            "total_tokens": int(getattr(usage, "total_tokens", 0) or 0)
+        }
+
+    @staticmethod
+    def _extract_responses_finish_reason(response: Any) -> str:
+        incomplete_details = getattr(response, "incomplete_details", None)
+        if incomplete_details and getattr(incomplete_details, "reason", None):
+            return str(incomplete_details.reason)
+
+        status = getattr(response, "status", None)
+        if not status or str(status) == "completed":
+            return "stop"
+
+        return str(status)
+
+    def _filter_stream_chunk(
+        self,
+        chunk_content: str,
+        buffer: str,
+        in_think_tag: bool,
+    ) -> tuple[str, str, bool]:
+        """Filter think-tag content from streaming chunks while preserving partial tags."""
+        buffer += chunk_content
+        processed_content = ""
+        remaining_buffer = buffer
+
+        while remaining_buffer:
+            lowered = remaining_buffer.lower()
+
+            if not in_think_tag:
+                think_start = lowered.find("<think")
+                if think_start == -1:
+                    processed_content += remaining_buffer
+                    remaining_buffer = ""
+                    break
+
+                processed_content += remaining_buffer[:think_start]
+                tag_end = lowered.find(">", think_start)
+                if tag_end == -1:
+                    remaining_buffer = remaining_buffer[think_start:]
+                    break
+
+                in_think_tag = True
+                remaining_buffer = remaining_buffer[tag_end + 1:]
+                continue
+
+            think_end = lowered.find("</think>")
+            if think_end == -1:
+                remaining_buffer = ""
+                break
+
+            in_think_tag = False
+            remaining_buffer = remaining_buffer[think_end + len("</think>"):]
+
+        return processed_content, remaining_buffer, in_think_tag
+
     def _filter_think_content(self, content: str) -> str:
         """
         Filter out content within think tags in all forms
@@ -102,6 +255,33 @@ class OpenAIProvider(AIProvider):
 
         config = self._merge_config(**kwargs)
 
+        if self._should_use_responses_api(config):
+            try:
+                response = await self.client.responses.create(
+                    **self._build_responses_request(messages, config)
+                )
+                filtered_content = self._filter_think_content(getattr(response, "output_text", ""))
+
+                return AIResponse(
+                    content=filtered_content,
+                    model=response.model,
+                    usage=self._extract_responses_usage(response),
+                    finish_reason=self._extract_responses_finish_reason(response),
+                    metadata={"provider": "openai", "api_mode": "responses"}
+                )
+
+            except Exception as e:
+                error_msg = str(e)
+                if "Expecting value" in error_msg:
+                    logger.error(f"OpenAI Responses API JSON parsing error: {error_msg}. This usually indicates the API returned malformed JSON.")
+                elif "timeout" in error_msg.lower():
+                    logger.error(f"OpenAI Responses API timeout error: {error_msg}")
+                elif "rate limit" in error_msg.lower():
+                    logger.error(f"OpenAI Responses API rate limit error: {error_msg}")
+                else:
+                    logger.error(f"OpenAI Responses API error: {error_msg}")
+                raise
+
         # Convert messages to OpenAI format with multimodal support
         openai_messages = [
             self._convert_message_to_openai(msg)
@@ -109,13 +289,20 @@ class OpenAIProvider(AIProvider):
         ]
         
         try:
-            response = await self.client.chat.completions.create(
-                model=config.get("model", self.model),
-                messages=openai_messages,
-                # max_tokens=config.get("max_tokens", 2000),
-                temperature=config.get("temperature", 0.7),
-                top_p=config.get("top_p", 1.0)
-            )
+            request_payload = {
+                "model": config.get("model", self.model),
+                "messages": openai_messages,
+                # "max_tokens": config.get("max_tokens", 2000),
+                "temperature": config.get("temperature", 0.7),
+                "top_p": config.get("top_p", 1.0),
+            }
+            request_payload.update(self._build_reasoning_config(config, use_responses_api=False))
+
+            model_name = str(request_payload.get("model") or "")
+            if model_name.startswith("gpt-5") and "chat" not in model_name and "reasoning_effort" in request_payload:
+                request_payload.pop("temperature", None)
+
+            response = await self.client.chat.completions.create(**request_payload)
             
             choice = response.choices[0]
             # Filter out think content from the response
@@ -130,7 +317,7 @@ class OpenAIProvider(AIProvider):
                     "total_tokens": response.usage.total_tokens
                 },
                 finish_reason=choice.finish_reason,
-                metadata={"provider": "openai"}
+                metadata={"provider": "openai", "api_mode": "chat_completions"}
             )
             
         except Exception as e:
@@ -158,6 +345,39 @@ class OpenAIProvider(AIProvider):
 
         config = self._merge_config(**kwargs)
 
+        if self._should_use_responses_api(config):
+            try:
+                stream = await self.client.responses.create(
+                    **self._build_responses_request(messages, config),
+                    stream=True
+                )
+
+                buffer = ""
+                in_think_tag = False
+
+                async for event in stream:
+                    if getattr(event, "type", None) != "response.output_text.delta":
+                        continue
+
+                    chunk_content = getattr(event, "delta", "")
+                    if not chunk_content:
+                        continue
+
+                    processed_content, buffer, in_think_tag = self._filter_stream_chunk(
+                        chunk_content,
+                        buffer,
+                        in_think_tag,
+                    )
+
+                    if not in_think_tag and processed_content:
+                        yield processed_content
+
+            except Exception as e:
+                logger.error(f"OpenAI Responses streaming error: {e}")
+                raise
+
+            return
+
         # Convert messages to OpenAI format with multimodal support
         openai_messages = [
             self._convert_message_to_openai(msg)
@@ -165,14 +385,21 @@ class OpenAIProvider(AIProvider):
         ]
 
         try:
-            stream = await self.client.chat.completions.create(
-                model=config.get("model", self.model),
-                messages=openai_messages,
-                # max_tokens=config.get("max_tokens", 2000),
-                temperature=config.get("temperature", 0.7),
-                top_p=config.get("top_p", 1.0),
-                stream=True
-            )
+            request_payload = {
+                "model": config.get("model", self.model),
+                "messages": openai_messages,
+                # "max_tokens": config.get("max_tokens", 2000),
+                "temperature": config.get("temperature", 0.7),
+                "top_p": config.get("top_p", 1.0),
+                "stream": True,
+            }
+            request_payload.update(self._build_reasoning_config(config, use_responses_api=False))
+
+            model_name = str(request_payload.get("model") or "")
+            if model_name.startswith("gpt-5") and "chat" not in model_name and "reasoning_effort" in request_payload:
+                request_payload.pop("temperature", None)
+
+            stream = await self.client.chat.completions.create(**request_payload)
 
             buffer = ""
             in_think_tag = False

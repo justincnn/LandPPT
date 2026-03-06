@@ -61,6 +61,41 @@ def filter_think_tags(content: str) -> str:
     return filtered_content
 
 
+def _is_truthy_config_value(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "on"}
+    return bool(value)
+
+
+def _extract_responses_output_text(response_data: dict) -> str:
+    output_text = response_data.get("output_text")
+    if isinstance(output_text, str) and output_text:
+        return output_text
+
+    texts = []
+    for item in response_data.get("output", []) or []:
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        for content in item.get("content", []) or []:
+            if isinstance(content, dict) and content.get("type") == "output_text" and content.get("text"):
+                texts.append(content["text"])
+
+    return "".join(texts)
+
+
+def _extract_responses_usage(response_data: dict) -> dict:
+    usage = response_data.get("usage") or {}
+    return {
+        "prompt_tokens": int(usage.get("input_tokens") or 0),
+        "completion_tokens": int(usage.get("output_tokens") or 0),
+        "total_tokens": int(usage.get("total_tokens") or 0),
+    }
+
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 file_processor = FileProcessor()
@@ -194,6 +229,15 @@ async def test_ai_provider(provider_name: str, request: Request):
             base_url = body.get('base_url')
             api_key = body.get('api_key')
             model = body.get('model', 'gpt-4o')
+            use_responses_api = _is_truthy_config_value(
+                body.get('use_responses_api', getattr(ai_config, 'openai_use_responses_api', False))
+            )
+            enable_reasoning = _is_truthy_config_value(
+                body.get('enable_reasoning', getattr(ai_config, 'openai_enable_reasoning', False))
+            )
+            reasoning_effort = str(
+                body.get('reasoning_effort', getattr(ai_config, 'openai_reasoning_effort', 'medium')) or 'medium'
+            ).strip().lower()
             
             if base_url and api_key:
                 # Use frontend provided config for OpenAI
@@ -203,7 +247,7 @@ async def test_ai_provider(provider_name: str, request: Request):
                 if not base_url.endswith('/v1'):
                     base_url = base_url.rstrip('/') + '/v1'
                 
-                chat_url = f"{base_url}/chat/completions"
+                request_url = f"{base_url}/responses" if use_responses_api else f"{base_url}/chat/completions"
                 
                 async with aiohttp.ClientSession() as session:
                     headers = {
@@ -211,29 +255,48 @@ async def test_ai_provider(provider_name: str, request: Request):
                         'Content-Type': 'application/json'
                     }
                     
-                    payload = {
-                        "model": model,
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": "Say 'Hello, I am working!' in exactly 5 words."
-                            }
-                        ],
-                        "temperature": 0
-                    }
+                    if use_responses_api:
+                        payload = {
+                            "model": model,
+                            "input": "Say 'Hello, I am working!' in exactly 5 words.",
+                            "max_output_tokens": 32
+                        }
+                        if enable_reasoning:
+                            payload["reasoning"] = {"effort": reasoning_effort}
+                    else:
+                        payload = {
+                            "model": model,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": "Say 'Hello, I am working!' in exactly 5 words."
+                                }
+                            ]
+                        }
+                        if enable_reasoning:
+                            payload["reasoning_effort"] = reasoning_effort
                     
-                    async with session.post(chat_url, headers=headers, json=payload, timeout=30) as response:
+                    async with session.post(request_url, headers=headers, json=payload, timeout=30) as response:
                         if response.status == 200:
                             data = await response.json()
                             # Apply think tag filtering to the response
-                            raw_content = data['choices'][0]['message']['content']
+                            raw_content = (
+                                _extract_responses_output_text(data)
+                                if use_responses_api
+                                else data['choices'][0]['message']['content']
+                            )
                             filtered_content = filter_think_tags(raw_content)
                             return {
                                 "provider": provider_name,
                                 "status": "success",
                                 "model": model,
+                                "api_mode": "responses" if use_responses_api else "chat_completions",
                                 "response_preview": filtered_content,
-                                "usage": data.get('usage', {})
+                                "usage": (
+                                    _extract_responses_usage(data)
+                                    if use_responses_api
+                                    else data.get('usage', {})
+                                )
                             }
                         else:
                             error_text = await response.text()

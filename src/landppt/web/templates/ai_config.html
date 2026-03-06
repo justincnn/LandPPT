@@ -198,6 +198,60 @@
                                 </div>
                             </div>
 
+                            {% if provider == "openai" %}
+                            <div class="form-group provider-toggle-option">
+                                <label class="provider-toggle-label">
+                                    <span class="toggle-switch provider-toggle-switch">
+                                        <input type="checkbox" name="openai_use_responses_api"
+                                            {% if current_config.get('openai_use_responses_api', false) %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </span>
+                                    <span class="provider-toggle-copy">
+                                        <span class="provider-toggle-title">启用 /v1/responses 接口</span>
+                                        <small class="provider-toggle-hint">
+                                            勾选后将使用 OpenAI 官方 Responses API，保存后立即生效。
+                                        </small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="form-group provider-toggle-option">
+                                <label class="provider-toggle-label">
+                                    <span class="toggle-switch provider-toggle-switch">
+                                        <input type="checkbox" name="openai_enable_reasoning"
+                                            onchange="syncOpenAIReasoningControls()"
+                                            {% if current_config.get('openai_enable_reasoning', false) %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </span>
+                                    <span class="provider-toggle-copy">
+                                        <span class="provider-toggle-title">启用思考模式</span>
+                                        <small class="provider-toggle-hint">
+                                            开启后会附带 OpenAI reasoning 参数；关闭时保持模型默认行为。
+                                        </small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="form-group provider-reasoning-field" data-openai-reasoning-field>
+                                <label>推理程度</label>
+                                <select name="openai_reasoning_effort" data-openai-reasoning-select>
+                                    <option value="none"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'none' %}selected{% endif %}>none</option>
+                                    <option value="minimal"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'minimal' %}selected{% endif %}>minimal</option>
+                                    <option value="low"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'low' %}selected{% endif %}>low</option>
+                                    <option value="medium"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'medium' %}selected{% endif %}>medium</option>
+                                    <option value="high"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'high' %}selected{% endif %}>high</option>
+                                    <option value="xhigh"
+                                        {% if current_config.get('openai_reasoning_effort', 'medium') == 'xhigh' %}selected{% endif %}>xhigh</option>
+                                </select>
+                                <small class="provider-toggle-hint">
+                                    仅对支持推理参数的 OpenAI 模型生效；不支持时测试或调用会返回参数错误。
+                                </small>
+                            </div>
+                            {% endif %}
+
                             {% elif provider == "anthropic" %}
                             <div class="form-group">
                                 <label>API Key</label>
@@ -1502,7 +1556,8 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-width: 1100px;
+        width: 100%;
+        max-width: none;
         margin: 0 auto;
     }
 
@@ -1512,7 +1567,8 @@
     }
 
     .model-roles-wrapper {
-        max-width: 1100px;
+        width: 100%;
+        max-width: none;
         margin: 0 auto;
     }
 
@@ -1721,8 +1777,87 @@
         color: rgba(17, 17, 17, 0.72);
     }
 
+    .provider-accordion__fields .provider-toggle-option {
+        grid-column: 1 / -1;
+        margin-top: -4px;
+        padding: 14px 16px;
+        border: 1px solid rgba(17, 17, 17, 0.1);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 248, 248, 0.96) 100%);
+    }
+
+    .provider-accordion__fields .form-group .provider-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        user-select: none;
+        margin-bottom: 0;
+    }
+
+    .provider-toggle-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .provider-toggle-title {
+        font-size: 0.98rem;
+        font-weight: 650;
+        color: #161616;
+        line-height: 1.35;
+    }
+
+    .provider-toggle-hint {
+        margin: 0;
+        color: #6c757d;
+        font-size: 0.86rem;
+        line-height: 1.55;
+    }
+
+    .provider-accordion__fields .provider-toggle-switch {
+        width: 44px;
+        height: 24px;
+        margin-right: 0;
+    }
+
+    .provider-accordion__fields .provider-toggle-switch input[type="checkbox"] {
+        width: 0;
+        height: 0;
+        padding: 0;
+        border: 0;
+        margin: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .provider-accordion__fields .provider-toggle-switch .toggle-slider:before {
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        bottom: 3px;
+    }
+
+    .provider-accordion__fields .provider-toggle-switch input:checked+.toggle-slider:before {
+        transform: translateX(20px);
+    }
+
     .provider-accordion__model-row {
         grid-column: 1 / -1;
+    }
+
+    .provider-reasoning-field {
+        grid-column: 1 / -1;
+        transition: opacity 0.2s ease;
+    }
+
+    .provider-reasoning-field.is-disabled {
+        opacity: 0.58;
+    }
+
+    .provider-reasoning-field select:disabled {
+        cursor: not-allowed;
     }
 
     @media (max-width: 900px) {
@@ -2714,6 +2849,13 @@
         .main-toggle-option {
             padding: 16px;
         }
+        .provider-accordion__fields .form-group .provider-toggle-label {
+            align-items: flex-start;
+        }
+
+        .provider-accordion__fields .provider-toggle-option {
+            padding: 14px;
+        }
 
         /* 复选框和单选框响应式 */
         .form-group input[type="checkbox"],
@@ -3004,6 +3146,23 @@
         initModelRoleProviderListeners();
     });
 
+    function isConfigTruthy(value) {
+        return value === true || value === 1 || value === 'true' || value === '1' || value === 'yes' || value === 'on';
+    }
+
+    function syncOpenAIReasoningControls() {
+        const checkbox = document.querySelector('input[name="openai_enable_reasoning"]');
+        const reasoningField = document.querySelector('[data-openai-reasoning-field]');
+        const reasoningSelect = document.querySelector('[data-openai-reasoning-select]');
+        if (!checkbox || !reasoningField || !reasoningSelect) {
+            return;
+        }
+
+        const enabled = checkbox.checked;
+        reasoningSelect.disabled = !enabled;
+        reasoningField.classList.toggle('is-disabled', !enabled);
+    }
+
     // provider accordion actions are handled via stopPropagation on buttons/radios
 
     // 初始化搜索选择框
@@ -3128,6 +3287,10 @@
             inputs.forEach(input => {
                 if (input.name && input.name !== 'default_provider') {
                     // 获取输入的值，不管是否为空
+                    if (input.type === 'checkbox') {
+                        config[input.name] = input.checked;
+                        return;
+                    }
                     const value = input.value.trim();
                     if (value) {
                         config[input.name] = value;
@@ -3187,6 +3350,22 @@
             let apiKey = config[`${provider}_api_key`];
             let baseUrl = config[`${provider}_base_url`];
             let model = config[`${provider}_model`];
+            const hasResponsesToggle = Object.prototype.hasOwnProperty.call(config, 'openai_use_responses_api');
+            let useResponsesApi = false;
+            if (provider === 'openai' && hasResponsesToggle) {
+                const rawResponsesValue = config['openai_use_responses_api'];
+                useResponsesApi = isConfigTruthy(rawResponsesValue);
+            }
+            const hasReasoningToggle = Object.prototype.hasOwnProperty.call(config, 'openai_enable_reasoning');
+            let enableReasoning = false;
+            if (provider === 'openai' && hasReasoningToggle) {
+                enableReasoning = isConfigTruthy(config['openai_enable_reasoning']);
+            }
+            const hasReasoningEffort = Object.prototype.hasOwnProperty.call(config, 'openai_reasoning_effort');
+            let reasoningEffort = 'medium';
+            if (provider === 'openai' && hasReasoningEffort && config['openai_reasoning_effort']) {
+                reasoningEffort = String(config['openai_reasoning_effort']).trim().toLowerCase();
+            }
 
             // 如果前端没有填写API Key，尝试从后端获取
             if (!apiKey || !baseUrl || !model) {
@@ -3201,6 +3380,16 @@
                     }
                     if (!model && configResult.success && configResult.config && configResult.config[`${provider}_model`]) {
                         model = configResult.config[`${provider}_model`];
+                    }
+                    if (provider === 'openai' && !hasResponsesToggle && configResult.success && configResult.config) {
+                        const rawResponsesValue = configResult.config['openai_use_responses_api'];
+                        useResponsesApi = isConfigTruthy(rawResponsesValue);
+                    }
+                    if (provider === 'openai' && !hasReasoningToggle && configResult.success && configResult.config) {
+                        enableReasoning = isConfigTruthy(configResult.config['openai_enable_reasoning']);
+                    }
+                    if (provider === 'openai' && !hasReasoningEffort && configResult.success && configResult.config && configResult.config['openai_reasoning_effort']) {
+                        reasoningEffort = String(configResult.config['openai_reasoning_effort']).trim().toLowerCase();
                     }
                 }
             }
@@ -3234,7 +3423,10 @@
                 body: JSON.stringify({
                     base_url: baseUrl,
                     api_key: apiKey,
-                    model: model
+                    model: model,
+                    use_responses_api: provider === 'openai' ? useResponsesApi : false,
+                    enable_reasoning: provider === 'openai' ? enableReasoning : false,
+                    reasoning_effort: provider === 'openai' ? reasoningEffort : 'medium'
                 })
             });
 
@@ -3779,9 +3971,12 @@
 
             inputs.forEach(input => {
                 const configKey = input.name;
-                if (currentConfig[configKey]) {
+                if (currentConfig[configKey] !== undefined) {
                     if (input.type === 'checkbox') {
-                        input.checked = currentConfig[configKey] === 'true';
+                        const normalized = typeof currentConfig[configKey] === 'string'
+                            ? currentConfig[configKey].toLowerCase()
+                            : currentConfig[configKey];
+                        input.checked = normalized === true || normalized === 1 || normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
                     } else if (input.type === 'password') {
                         // 对于密码字段，如果有配置值且输入框为空，则显示配置值
                         if (!input.value && currentConfig[configKey]) {
@@ -3800,6 +3995,8 @@
                 }
             });
         });
+
+        syncOpenAIReasoningControls();
     }
 
     // 切换模型任务配置显示
@@ -4220,12 +4417,18 @@
         const inputs = card.querySelectorAll('input, select');
 
         inputs.forEach(input => {
-            if (input.name && input.value) {
+            if (input.name) {
                 // 跳过 default_provider radio 按钮，因为它通过专门的 API 处理
                 if (input.name === 'default_provider') {
                     return;
                 }
-                config[input.name] = input.value;
+                if (input.type === 'checkbox') {
+                    config[input.name] = input.checked;
+                    return;
+                }
+                if (input.value) {
+                    config[input.name] = input.value;
+                }
             }
         });
 
@@ -4409,12 +4612,18 @@
             document.querySelectorAll('.provider-config-card').forEach(card => {
                 const inputs = card.querySelectorAll('input, select');
                 inputs.forEach(input => {
-                    if (input.name && input.value) {
+                    if (input.name) {
                         // 跳过 default_provider radio 按钮，因为它通过专门的 API 处理
                         if (input.name === 'default_provider') {
                             return;
                         }
-                        allConfig[input.name] = input.value;
+                        if (input.type === 'checkbox') {
+                            allConfig[input.name] = input.checked;
+                            return;
+                        }
+                        if (input.value) {
+                            allConfig[input.name] = input.value;
+                        }
                     }
                 });
             });
