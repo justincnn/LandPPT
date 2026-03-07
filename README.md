@@ -46,7 +46,7 @@
 
 LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿
 
-[文档指南](http://landppt-doc.52yyds.top/docs)
+[在线体验站](https://cloud.landppt.com) | [文档指南](http://landppt-doc.52yyds.top/docs)
 
 ### 主界面
 
@@ -102,7 +102,7 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 ##  核心功能
 
 ###  多AI提供商支持
-- **OpenAI GPT系列**：GPT-4o、GPT-4o-mini 等模型
+- **OpenAI GPT系列**：GPT-4o、GPT-4o-mini 等模型，支持官方 Responses API 与 reasoning effort 推理程度参数
 - **OpenAI兼容提供商**：DeepSeek、Kimi、MiniMax 等（通过 Base URL + API Key 接入）
 - **Anthropic Claude**：Claude-4 Sonnet、Claude-4 Haiku 系列模型
 - **Google Gemini**：Gemini-2.5 Flash、Gemini-2.5 Pro 系列模型，支持自定义端点配置
@@ -342,6 +342,8 @@ MAX_TOKENS=8192
 TEMPERATURE=0.7
 ```
 
+说明：OpenAI 提供商可通过 `OPENAI_USE_RESPONSES_API=true` 切换到官方 `/v1/responses` 接口，并在启用 `OPENAI_ENABLE_REASONING=true` 后使用 `OPENAI_REASONING_EFFORT=low|medium|high` 配置推理程度。
+
 ##  API文档
 
 启动服务后访问：
@@ -403,7 +405,7 @@ TEMPERATURE=0.7
 ##  常见问题
 
 ### Q: 支持哪些AI模型？
-A: 支持 OpenAI、Anthropic Claude、Google Gemini、Ollama，以及 OpenAI 兼容提供商（DeepSeek / Kimi / MiniMax / 302.AI）。可以在配置页面切换不同的AI提供商。
+A: 支持 OpenAI、Anthropic Claude、Google Gemini、Ollama，以及 OpenAI 兼容提供商（DeepSeek / Kimi / MiniMax / 302.AI）。可以在配置页面切换不同的AI提供商。其中 OpenAI 提供商支持 Responses API 请求模式和 reasoning effort 推理程度参数。
 
 ### Q: 如何配置图像功能？
 A: 在 `.env` 文件中配置相应的API密钥：
@@ -454,7 +456,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 - **交流群**: https://t.me/+EaOfoceoNwdhNDVlsh
 
-![LandPPT](https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260225/9022b99e57584a7f9bcee9124d946c6c.png)
+![LandPPT](https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260307/ac0535087c9f4cb9a9cca0090fd6fbf0.jpg)
 ---
 
 <div align="center">

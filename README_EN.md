@@ -41,6 +41,8 @@ If you're interested in my projects or have suitable collaboration opportunities
 
 LandPPT is an intelligent presentation generation platform powered by Large Language Models (LLMs) that automatically converts document content into professional PPT presentations. The platform integrates multiple AI models, intelligent image processing, deep research capabilities, and rich template systems, enabling users to effortlessly create high-quality presentations.
 
+[Live Demo](https://cloud.landppt.com)
+
 
 ### Main Interface
 ![image](https://img.pub/p/7d5c3c1a4b625abeb4c1.png)
@@ -79,6 +81,7 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 - **Visual Reference**: AI editing assistant supports image upload and visual content analysis
 - **Multiple File Upload**: Support uploading multiple files simultaneously for efficient batch processing
 - **Custom Model Selection**: Customize model selection by function module for precise cost control
+- **Enhanced OpenAI Support**: Supports the official Responses API and configurable reasoning effort parameters
 - **Config Center**: Visual configuration for AI providers & models, one-click test, model list fetch, and role-based provider/model assignment
 - **Free Master Template**: AI-generated project-specific master template, responsive 16:9 edge-to-edge rendering, suitable for title/agenda/content/ending slides
 - **Notes Export**: Support exporting speech scripts to PPT notes
@@ -89,7 +92,7 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 ##  Key Features
 
 ###  Multi-AI Provider Support
-- **OpenAI**: GPT-4o, GPT-4o-mini and other latest models
+- **OpenAI**: GPT-4o, GPT-4o-mini and other latest models, with support for the official Responses API and reasoning effort parameters
 - **OpenAI-Compatible**: DeepSeek / Kimi / MiniMax / 302.AI (via Base URL + API Key)
 - **Anthropic Claude**: Claude-4 series models
 - **Google Gemini**: Gemini-2.5 series models with custom endpoint support
@@ -331,6 +334,8 @@ MAX_TOKENS=8192
 TEMPERATURE=0.7
 ```
 
+Note: For the OpenAI provider, set `OPENAI_USE_RESPONSES_API=true` to use the official `/v1/responses` endpoint, and enable `OPENAI_ENABLE_REASONING=true` with `OPENAI_REASONING_EFFORT=low|medium|high` to control reasoning depth.
+
 ##  API Documentation
 
 After starting the service, visit:
@@ -393,7 +398,7 @@ If you find bugs or have feature suggestions, please create a new issue on the [
 ##  FAQ
 
 ### Q: Which AI models are supported?
-A: Supports OpenAI, Anthropic Claude, Google Gemini, Ollama, and OpenAI-compatible providers (DeepSeek / Kimi / MiniMax / 302.AI). You can switch providers in the configuration page.
+A: Supports OpenAI, Anthropic Claude, Google Gemini, Ollama, and OpenAI-compatible providers (DeepSeek / Kimi / MiniMax / 302.AI). You can switch providers in the configuration page. The OpenAI provider also supports the Responses API request mode and reasoning effort parameters.
 
 ### Q: How to configure image functionality?
 A: Configure the corresponding API keys in the `.env` file:
