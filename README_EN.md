@@ -441,7 +441,6 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE
 - **Project Homepage**: https://github.com/sligter/LandPPT
 - **Issue Reporting**: https://github.com/sligter/LandPPT/issues
 - **Discussions**: https://github.com/sligter/LandPPT/discussions
-- **Community**: https://t.me/+EaOfoceoNwdhNDVl
 
 ![LandPPT](https://github.com/sligter/LandPPT/assets/e3aeeb9f-9d52-46a5-8768-387c7fa3a427)
 ---
