@@ -70,6 +70,12 @@ class PPTPromptsManager:
     # 设计相关提示词
     def get_style_gene_extraction_prompt(self, *args, **kwargs):
         return self.design.get_style_gene_extraction_prompt(*args, **kwargs)
+
+    def get_project_design_guide_prompt(self, *args, **kwargs):
+        return self.design.get_project_design_guide_prompt(*args, **kwargs)
+
+    def get_slide_design_guide_prompt(self, *args, **kwargs):
+        return self.design.get_slide_design_guide_prompt(*args, **kwargs)
     
     def get_unified_design_guide_prompt(self, *args, **kwargs):
         return self.design.get_unified_design_guide_prompt(*args, **kwargs)
@@ -82,6 +88,9 @@ class PPTPromptsManager:
 
     def get_style_genes_extraction_prompt(self, *args, **kwargs):
         return self.design.get_style_genes_extraction_prompt(*args, **kwargs)
+
+    def get_combined_style_genes_and_guide_prompt(self, *args, **kwargs):
+        return self.design.get_combined_style_genes_and_guide_prompt(*args, **kwargs)
 
     def get_creative_template_context_prompt(self, *args, **kwargs):
         return self.design.get_creative_template_context_prompt(*args, **kwargs)

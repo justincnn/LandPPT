@@ -99,6 +99,20 @@ class EnhancedPPTService(PPTService):
         # Per-project lock to avoid duplicate free-template generation under parallel slide generation
         self._free_template_generation_locks: Dict[str, asyncio.Lock] = {}
 
+    @staticmethod
+    def _build_current_time_prompt_context() -> str:
+        """Build current-time context so prompts can reason about present time explicitly."""
+        now = datetime.now().astimezone()
+        quarter = (now.month - 1) // 3 + 1
+        timezone_name = now.tzname() or "Local"
+        return "\n".join([
+            f"- 当前本地时间：{now:%Y-%m-%d %H:%M:%S} ({timezone_name})",
+            f"- 当前年份：{now:%Y}年",
+            f"- 当前月份：{now.month}月",
+            f"- 当前季度：Q{quarter}",
+            "- 若模板需要体现“当前 / 今年 / 本月 / 本季度 / 最近”的时间氛围或日期语义，请以上述时间为准；若项目需求、大纲内容或源材料已给出明确时间，优先使用原始时间，不要覆盖。"
+        ])
+
     def _get_auto_layout_debug_dir(self) -> Path:
         """Directory to persist auto layout repair debug artifacts (HTML & screenshots)."""
         project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -3517,7 +3531,8 @@ Please fully utilize the above research information to enrich the PPT content, e
             # 如果有选中的全局母版，使用模板生成
             if selected_template:
                 return await self._generate_slide_with_template(
-                    slide_data, selected_template, page_number, total_pages, confirmed_requirements
+                    slide_data, selected_template, page_number, total_pages, confirmed_requirements,
+                    all_slides=all_slides, project_id=project_id
                 )
 
 
@@ -3542,7 +3557,14 @@ Please fully utilize the above research information to enrich the PPT content, e
                           f"AI生成{images_collection.ai_generated_count}张")
 
             # 生成统一的创意设计指导
-            unified_design_guide = await self._generate_unified_design_guide(slide_data, page_number, total_pages)
+            unified_design_guide = await self._generate_unified_design_guide(
+                slide_data,
+                page_number,
+                total_pages,
+                confirmed_requirements=confirmed_requirements,
+                all_slides=all_slides,
+                template_html=template_html,
+            )
 
             # Build context information for better coherence
             context_info = self._build_slide_context(page_number, total_pages)
@@ -3588,11 +3610,62 @@ Please fully utilize the above research information to enrich the PPT content, e
             logger.error(f"图片处理器处理失败: {e}")
             return None
 
+    def _build_creative_slides_summary(self, all_slides: Optional[List[Dict[str, Any]]]) -> str:
+        """Build a compact deck summary for creative guidance prompts."""
+        if not all_slides:
+            return "(未提供完整大纲摘要)"
+
+        lines: List[str] = []
+        max_chars = 3000
+        current_chars = 0
+
+        for idx, slide in enumerate(all_slides, start=1):
+            if not isinstance(slide, dict):
+                continue
+
+            title = str(slide.get('title') or f'第{idx}页').strip()
+            slide_type = str(slide.get('slide_type') or slide.get('type') or '').strip()
+            content_points = slide.get('content_points') or slide.get('content') or []
+
+            if isinstance(content_points, list):
+                point_texts: List[str] = []
+                for item in content_points:
+                    text = str(item).strip()
+                    if text:
+                        point_texts.append(text[:32])
+                    if len(point_texts) >= 2:
+                        break
+                points_summary = "；".join(point_texts)
+            else:
+                points_summary = str(content_points).strip()[:80] if content_points else ""
+
+            line_parts: List[str] = []
+            if slide_type:
+                line_parts.append(f"类型：{slide_type}")
+            if points_summary:
+                line_parts.append(f"要点：{points_summary}")
+
+            line = f"{idx}. {title}"
+            if line_parts:
+                line += f"（{'；'.join(line_parts)}）"
+
+            projected_chars = current_chars + len(line) + 1
+            if projected_chars > max_chars:
+                remaining = len(all_slides) - idx + 1
+                lines.append(f"... 其余 {remaining} 页略写，请结合前文摘要延续整体节奏。")
+                break
+
+            lines.append(line)
+            current_chars = projected_chars
+
+        return "\n".join(lines) if lines else "(未提供完整大纲摘要)"
 
 
     async def _generate_slide_with_template(self, slide_data: Dict[str, Any], template: Dict[str, Any],
                                           page_number: int, total_pages: int,
-                                          confirmed_requirements: Dict[str, Any]) -> str:
+                                          confirmed_requirements: Dict[str, Any],
+                                          all_slides: List[Dict[str, Any]] = None,
+                                          project_id: str = None) -> str:
         """使用选定的模板生成幻灯片HTML - AI参考模板风格生成新HTML"""
         try:
             # 获取模板HTML作为风格参考
@@ -3603,7 +3676,8 @@ Please fully utilize the above research information to enrich the PPT content, e
 
             # 构建创意模板参考上下文
             context = await self._build_creative_template_context(
-                slide_data, template_html, template_name, page_number, total_pages, confirmed_requirements
+                slide_data, template_html, template_name, page_number, total_pages, confirmed_requirements,
+                all_slides=all_slides, project_id=project_id
             )
 
             # 使用AI生成风格一致但内容创新的HTML
@@ -3628,12 +3702,14 @@ Please fully utilize the above research information to enrich the PPT content, e
 
     async def _build_creative_template_context(self, slide_data: Dict[str, Any], template_html: str,
                                        template_name: str, page_number: int, total_pages: int,
-                                       confirmed_requirements: Dict[str, Any]) -> str:
+                                       confirmed_requirements: Dict[str, Any],
+                                       all_slides: List[Dict[str, Any]] = None,
+                                       project_id: str = None) -> str:
         """构建创意模板参考上下文，平衡风格一致性与创意多样性（优化版本）"""
 
-        # 获取项目ID，检查是否已缓存设计基因
-        project_id = confirmed_requirements.get('project_id')
-        style_genes = None
+        # 获取项目ID：优先使用传入参数，其次从 confirmed_requirements 提取
+        if not project_id:
+            project_id = confirmed_requirements.get('project_id')
 
         # 设计基因只在第一页提取一次，后续都使用第一页的
         style_genes = await self._get_or_extract_style_genes(project_id, template_html, page_number)
@@ -3648,7 +3724,14 @@ Please fully utilize the above research information to enrich the PPT content, e
             logger.info(f"为模板生成的第{page_number}页添加{images_collection.total_count}张图片")
 
         # 生成统一的创意设计指导（合并创意变化指导和内容驱动的设计建议）
-        unified_design_guide = await self._generate_unified_design_guide(slide_data, page_number, total_pages)
+        unified_design_guide = await self._generate_unified_design_guide(
+            slide_data,
+            page_number,
+            total_pages,
+            confirmed_requirements=confirmed_requirements,
+            all_slides=all_slides,
+            template_html=template_html,
+        )
 
         # 获取实际内容要点
         slide_title = slide_data.get('title', f'第{page_number}页')
@@ -3694,7 +3777,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                 temperature=0.3
             )
 
-            ai_genes = response.content.strip()
+            ai_genes = self._strip_think_tags(response.content.strip())
 
             # 如果AI分析失败，回退到基础提取
             if not ai_genes or len(ai_genes) < 50:
@@ -3755,24 +3838,27 @@ Please fully utilize the above research information to enrich the PPT content, e
         return "\n".join(genes) if genes else "- 使用现代简洁的设计风格"
 
     async def _get_or_extract_style_genes(self, project_id: str, template_html: str, page_number: int) -> str:
-        """获取或提取设计基因，只在第一页提取一次，后续复用"""
+        """获取或提取设计基因，支持并行场景下单次提取后复用。"""
         import json
         import hashlib
-        from pathlib import Path
 
-        # 如果没有项目ID，直接提取
+        default_genes = "- 使用现代简洁的设计风格\n- 保持页面整体一致性\n- 采用清晰的视觉层次"
+        cache_attr = '_cached_style_genes'
+        event_attr = '_style_genes_ready_events'
+
+        if not template_html or not template_html.strip():
+            return default_genes
+
         if not project_id:
-            if page_number == 1:
+            try:
                 return await self._extract_style_genes(template_html)
-            else:
-                return "- 使用现代简洁的设计风格\n- 保持页面整体一致性\n- 采用清晰的视觉层次"
+            except Exception:
+                return default_genes
 
-        # 检查内存缓存
-        if hasattr(self, '_cached_style_genes') and project_id in self._cached_style_genes:
+        if hasattr(self, cache_attr) and project_id in getattr(self, cache_attr, {}):
             logger.info(f"从内存缓存获取项目 {project_id} 的设计基因")
-            return self._cached_style_genes[project_id]
+            return getattr(self, cache_attr)[project_id]
 
-        # 检查文件缓存（如果有缓存目录配置）
         style_genes = None
         if hasattr(self, 'cache_dirs') and self.cache_dirs:
             cache_file = self.cache_dirs['style_genes'] / f"{project_id}_style_genes.json"
@@ -3785,45 +3871,78 @@ Please fully utilize the above research information to enrich the PPT content, e
                 except Exception as e:
                     logger.warning(f"读取设计基因缓存文件失败: {e}")
 
-        # 如果没有缓存且是第一页，提取设计基因
-        if not style_genes and page_number == 1:
-            style_genes = await self._extract_style_genes(template_html)
+        if style_genes:
+            if not hasattr(self, cache_attr):
+                setattr(self, cache_attr, {})
+            getattr(self, cache_attr)[project_id] = style_genes
+            return style_genes
 
-            # 缓存到内存
-            if not hasattr(self, '_cached_style_genes'):
-                self._cached_style_genes = {}
-            self._cached_style_genes[project_id] = style_genes
+        if not hasattr(self, event_attr):
+            setattr(self, event_attr, {})
+        events_dict = getattr(self, event_attr)
 
-            # 缓存到文件（如果有缓存目录配置）
-            if hasattr(self, 'cache_dirs') and self.cache_dirs:
-                try:
-                    cache_file = self.cache_dirs['style_genes'] / f"{project_id}_style_genes.json"
-                    cache_data = {
-                        'project_id': project_id,
-                        'style_genes': style_genes,
-                        'created_at': time.time(),
-                        'template_hash': hashlib.md5(template_html.encode()).hexdigest()[:8]
-                    }
-                    with open(cache_file, 'w', encoding='utf-8') as f:
-                        json.dump(cache_data, f, ensure_ascii=False, indent=2)
-                    logger.info(f"第一页提取并缓存项目 {project_id} 的设计基因到文件")
-                except Exception as e:
-                    logger.warning(f"保存设计基因缓存文件失败: {e}")
+        if project_id not in events_dict:
+            event = asyncio.Event()
+            events_dict[project_id] = event
+            try:
+                style_genes = await self._extract_style_genes(template_html)
 
-            logger.info(f"第一页提取并缓存项目 {project_id} 的设计基因")
+                if not hasattr(self, cache_attr):
+                    setattr(self, cache_attr, {})
+                getattr(self, cache_attr)[project_id] = style_genes
 
-        elif not style_genes and page_number > 1:
-            # 如果不是第一页且没有缓存的设计基因，使用默认设计基因
-            style_genes = "- 使用现代简洁的设计风格\n- 保持页面整体一致性\n- 采用清晰的视觉层次"
-            logger.warning(f"第{page_number}页未找到缓存的设计基因，使用默认设计基因（设计基因应在第一页提取）")
+                if hasattr(self, 'cache_dirs') and self.cache_dirs:
+                    try:
+                        cache_file = self.cache_dirs['style_genes'] / f"{project_id}_style_genes.json"
+                        cache_data = {
+                            'project_id': project_id,
+                            'style_genes': style_genes,
+                            'created_at': time.time(),
+                            'template_hash': hashlib.md5(template_html.encode()).hexdigest()[:8]
+                        }
+                        with open(cache_file, 'w', encoding='utf-8') as f:
+                            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                        logger.info(f"提取并缓存项目 {project_id} 的设计基因到文件")
+                    except Exception as e:
+                        logger.warning(f"保存设计基因缓存文件失败: {e}")
 
-        return style_genes or "- 使用现代简洁的设计风格\n- 保持页面整体一致性\n- 采用清晰的视觉层次"
+                logger.info(f"提取并缓存项目 {project_id} 的设计基因")
+                return style_genes
+            except Exception as e:
+                logger.warning(f"提取项目 {project_id} 的设计基因失败，使用默认值: {e}")
+                if not hasattr(self, cache_attr):
+                    setattr(self, cache_attr, {})
+                getattr(self, cache_attr)[project_id] = default_genes
+                return default_genes
+            finally:
+                event.set()
 
-    async def _generate_unified_design_guide(self, slide_data: Dict[str, Any], page_number: int, total_pages: int) -> str:
+        event = events_dict[project_id]
+        if not event.is_set():
+            try:
+                logger.info(f"第{page_number}页等待项目 {project_id} 的设计基因提取完成")
+                await asyncio.wait_for(event.wait(), timeout=600.0)
+            except asyncio.TimeoutError:
+                logger.warning(f"第{page_number}页等待设计基因缓存超时，使用默认设计基因")
+                return default_genes
+
+        return getattr(self, cache_attr, {}).get(project_id, default_genes)
+
+    async def _generate_unified_design_guide(self, slide_data: Dict[str, Any], page_number: int, total_pages: int,
+                                             confirmed_requirements: Optional[Dict[str, Any]] = None,
+                                             all_slides: Optional[List[Dict[str, Any]]] = None,
+                                             template_html: str = "") -> str:
         """生成统一的创意设计指导（合并创意变化指导和内容驱动的设计建议）"""
         try:
             # 使用新的提示词模块
-            prompt = prompts_manager.get_unified_design_guide_prompt(slide_data, page_number, total_pages)
+            prompt = prompts_manager.get_slide_design_guide_prompt(
+                slide_data=slide_data,
+                confirmed_requirements=confirmed_requirements or {},
+                slides_summary=self._build_creative_slides_summary(all_slides),
+                page_number=page_number,
+                total_pages=total_pages,
+                template_html=template_html,
+            )
 
             # 调用AI生成指导
             response = await self._text_completion_for_role("creative",
@@ -3832,7 +3951,7 @@ Please fully utilize the above research information to enrich the PPT content, e
                 temperature=0.7  # 适中温度平衡创意性和实用性
             )
 
-            ai_guide = response.content.strip()
+            ai_guide = self._strip_think_tags(response.content.strip())
 
             # 如果AI生成失败，回退到基础指导
             if not ai_guide or len(ai_guide) < 50:
@@ -7174,17 +7293,10 @@ Please fully utilize the above research information to enrich the PPT content, e
                     target_audience = confirmed.get('target_audience') or ''
                     ppt_style = confirmed.get('ppt_style') or ''
                     custom_style_prompt = confirmed.get('custom_style_prompt') or ''
+                    current_time_context = self._build_current_time_prompt_context()
 
                     prompt_parts = [
-                        "作为专业的PPT模板设计师，请根据以下PPT大纲生成一个项目专属的HTML母版模板（自由模板）。",
-                        "",
-                        "请按照以下步骤思考并生成：",
-                        "1. 首先分析PPT大纲的主题、场景和受众",
-                        "2. 设计模板的整体风格和布局（你自行决定最合适的风格、配色、字体与装饰元素）",
-                        "3. 确定色彩方案和字体选择",
-                        "4. 编写HTML结构",
-                        "5. 添加CSS样式",
-                        "6. 优化和完善",
+                        "你是一位获得全球红点设计大奖的顶级 PPT 视觉设计师与前端艺术家。请为以下项目设计一个**独一无二、高度契合主题且具有极强视觉张力**的 HTML 幻灯片母版。",
                         "",
                         "===== 项目信息 =====",
                         f"主题：{topic}" if topic else "",
@@ -7193,26 +7305,45 @@ Please fully utilize the above research information to enrich the PPT content, e
                         f"风格偏好：{ppt_style}" if ppt_style else "",
                         f"自定义风格补充：{custom_style_prompt}" if custom_style_prompt else "",
                         "",
-                        "===== PPT大纲（最多展示前5页）=====",
+                        "===== 🕒 当前时间参考 =====",
+                        current_time_context,
+                        "",
+                        "===== PPT部分大纲(仅供内容结构参考) =====",
                         "\n".join(slide_lines) if slide_lines else "(无)",
                         "",
-                        "===== 设计要求 =====",
-                        "1. **严格尺寸控制**：页面尺寸必须为1280x720像素（16:9比例）",
-                        "2. **完整HTML结构**：包含<!DOCTYPE html>、head、body等完整结构",
-                        "3. **内联样式**：所有CSS样式必须内联，确保自包含性",
-                        "4. **占位符支持**：在适当位置使用占位符：",
-                        "   - {{ page_title }} - 页面标题",
-                        "   - {{ page_content }} - 页面内容",
-                        "   - {{ current_page_number }} - 当前页码",
-                        "   - {{ total_page_count }} - 总页数",
-                        "5. **技术要求**：",
-                        "   - 使用内联CSS样式（支持Tailwind CSS风格）",
-                        "   - 支持Font Awesome图标",
-                        "   - 支持Chart.js、ECharts.js、D3.js等图表库",
-                        "   - 确保所有内容在720px高度内完全显示",
-                        "   - 绝对不允许出现任何滚动条",
+                        "===== 🎨 核心视觉与创意设计指导 =====",
+                        "1. **意象与色彩锚定（最重要）**：",
+                        "   - 在写代码前，深度剖析【主题】的内核。例如：环保主题必须提取自然绿/木色/阳光；医疗主题提取纯净白/信任蓝；艺术主题提取高级灰/莫兰迪色或强烈对比色。",
+                        "   - **绝对禁止无脑套用“深色背景+发光荧光色”的科技风**（除非主题明确要求）。",
+                        "   - “惊艳”不等于“炫酷/深色”，极简留白、高级质感（如毛玻璃 Glassmorphism）、细腻的光影、报纸排版风、低饱和度优雅风同样令人惊艳。",
                         "",
-                        "请详细说明你的设计思路，然后生成完整的HTML模板代码，使用```html代码块格式返回。",
+                        "2. **视觉层级与排版张力**：",
+                        "   - 拒绝平庸的居中对齐或简单的左右分栏。尝试不规则布局、黄金比例分割、超大号半透明水印文字（Typography）作为背景装饰。",
+                        "   - 提取主题相关的几何图形或抽象 SVG 曲线作为背景装饰层，强化主题沉浸感。",
+                        "   - 确保 {{ page_title }} 具有绝对的视觉焦点，与背景形成极佳的对比度。",
+                        "",
+                        "3. **⚠️ 审美红线（严格遵守）**：",
+                        "   - ❌ 严禁与主题无关的默认深色科技风/赛博朋克风。",
+                        "   - ❌ 严禁使用过时的亮色高饱和度渐变（如大红大紫）。",
+                        "   - ❌ 严禁枯燥的“纯白底+黑字”，即使是浅色背景，也必须有细腻的网格、散斑（Noise）、柔和的渐变光晕或肌理感。",
+                        "",
+                        "===== 💻 严格技术要求 =====",
+                        "1. **尺寸与物理限制**：严格控制为 1280x720 像素（16:9比例），绝对不允许出现横向或纵向滚动条，所有内容必须在 720px 高度内完美收拢。采用 `overflow: hidden;`。",
+                        "2. **主题驱动的 CSS 变量**：",
+                        "   - 必须在 `<style>` 顶部定义 `:root` 变量，将你提取的【主题色彩】转化为变量（如 `--primary-color`, `--bg-main`, `--accent-color`, `--text-main` 等），并在后续样式中严格使用，确保风格高度统一。",
+                        "3. **前端技术栈**：",
+                        "   - 包含完整 `<!DOCTYPE html>` 结构。",
+                        "   - 所有 CSS 采用内联 `<style>`（支持现代 CSS 特性：Flex/Grid, clamp(), backdrop-filter, clip-path 等）。",
+                        "   - 允许使用 Font Awesome CDN 引入契合主题的图标。",
+                        "4. **占位符规范**：",
+                        "   - 页面标题：{{ page_title }}",
+                        "   - 页面内容：{{ page_content }}（此处请设计一个优美的容器或排版骨架来承载内容）",
+                        "   - 页码信息：{{ current_page_number }} / {{ total_page_count }}（设计精美的页眉/页脚挂件）",
+                        "5. **结构复用与防错**：",
+                        "   - 采用 Header(H) + Main(H) + Footer(H) 结构。利用 CSS Grid 或 Flexbox 的 `calc()` 或 `fr` 单位分配空间，确保主体区自适应且不超出画布。",
+                        "   - 字号需具有响应式缩放感，大标题足够震撼，正文清晰易读（推荐使用 `clamp(min, val, max)`）。",
+                        "",
+                        "直接生成完整的 HTML 模板代码，使用 ```html 代码块格式返回。不要输出任何解释性文字或设计思路。",
                     ]
                     free_prompt = "\n".join([p for p in prompt_parts if p]).strip()
 
@@ -7258,16 +7389,24 @@ Please fully utilize the above research information to enrich the PPT content, e
     def clear_cached_style_genes(self, project_id: Optional[str] = None):
         """清理缓存的设计基因"""
         if not hasattr(self, '_cached_style_genes'):
+            if project_id and hasattr(self, '_style_genes_ready_events'):
+                self._style_genes_ready_events.pop(project_id, None)
+            elif hasattr(self, '_style_genes_ready_events'):
+                self._style_genes_ready_events.clear()
             return
 
         if project_id:
             # 清理特定项目的缓存
             if project_id in self._cached_style_genes:
                 del self._cached_style_genes[project_id]
+            if hasattr(self, '_style_genes_ready_events'):
+                self._style_genes_ready_events.pop(project_id, None)
                 logger.info(f"清理项目 {project_id} 的设计基因缓存")
         else:
             # 清理所有缓存
             self._cached_style_genes.clear()
+            if hasattr(self, '_style_genes_ready_events'):
+                self._style_genes_ready_events.clear()
             logger.info("清理所有设计基因缓存")
 
     def get_cached_style_genes_info(self) -> Dict[str, Any]:
