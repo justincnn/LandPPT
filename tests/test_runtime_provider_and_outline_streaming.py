@@ -189,3 +189,91 @@ async def test_streaming_outline_parser_falls_back_to_text_outline_when_json_is_
     assert outline["title"] == "三体解析"
     assert len(outline["slides"]) == 2
     assert len(stub.parsed_content_calls) == 1
+
+
+class _ProjectManagerStub:
+    def __init__(self, project):
+        self.project = project
+        self.projects = {}
+        self.status_updates = []
+
+    async def get_project(self, project_id):
+        return self.project
+
+    async def update_project_status(self, project_id, status):
+        self.status_updates.append((project_id, status))
+
+
+class _OutlineStreamingFreshGenerationStubService:
+    def __init__(self, project):
+        self.project_manager = _ProjectManagerStub(project)
+        self.stage_updates = []
+
+    async def _update_outline_generation_stage(self, project_id, outline):
+        self.stage_updates.append((project_id, outline))
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_streaming_force_regenerate_skips_saved_outline(monkeypatch):
+    project = SimpleNamespace(
+        topic="fresh topic",
+        outline={
+            "title": "cached",
+            "slides": [{"page_number": 1, "title": "cached"}],
+            "metadata": {"generated_with_file": True},
+        },
+        confirmed_requirements={"content_source": "file"},
+        project_metadata={},
+        todo_board=None,
+        updated_at=0,
+    )
+    stub = _OutlineStreamingFreshGenerationStubService(project)
+    service = ProjectOutlineStreamingService(stub)
+    extract_calls = []
+
+    def _fake_extract_saved_file_outline(project_outline, confirmed_requirements, ignore_saved_outline=False):
+        extract_calls.append(ignore_saved_outline)
+        return None
+
+    async def _fake_run_streaming_outline_research(project_id, current_project, confirmed_requirements, network_mode):
+        yield {
+            "outline": {
+                "title": "fresh",
+                "slides": [{"page_number": 1, "title": "fresh"}],
+                "metadata": {"generated_with_file": True},
+            },
+            "llm_call_count": 0,
+        }
+
+    class _FakeDatabaseProjectManager:
+        async def save_project_outline(self, project_id, outline):
+            return True
+
+    monkeypatch.setattr(
+        "landppt.services.file_outline_utils.should_force_file_outline_regeneration",
+        lambda confirmed_requirements: False,
+    )
+    monkeypatch.setattr(
+        "landppt.services.file_outline_utils.extract_saved_file_outline",
+        _fake_extract_saved_file_outline,
+    )
+    monkeypatch.setattr(
+        "landppt.services.db_project_manager.DatabaseProjectManager",
+        _FakeDatabaseProjectManager,
+    )
+    monkeypatch.setattr(
+        service,
+        "_run_streaming_outline_research",
+        _fake_run_streaming_outline_research,
+        raising=False,
+    )
+
+    events = []
+    async for chunk in service.generate_outline_streaming("project-1", force_regenerate=True):
+        events.append(chunk)
+
+    assert extract_calls == [True]
+    assert stub.project_manager.status_updates == [("project-1", "in_progress")]
+    assert stub.stage_updates
+    assert project.outline["title"] == "fresh"
+    assert any('"done": true' in chunk for chunk in events)

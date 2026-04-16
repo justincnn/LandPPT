@@ -296,8 +296,11 @@ class EnhancedPPTService(PPTService):
         return await self.project_outline_workflow._execute_project_workflow(project_id, request, user_id)
 
 
-    async def generate_outline_streaming(self, project_id: str):
-        async for item in self.project_outline_workflow.generate_outline_streaming(project_id):
+    async def generate_outline_streaming(self, project_id: str, *, force_regenerate: bool = False):
+        async for item in self.project_outline_workflow.generate_outline_streaming(
+            project_id,
+            force_regenerate=force_regenerate,
+        ):
             yield item
 
 
