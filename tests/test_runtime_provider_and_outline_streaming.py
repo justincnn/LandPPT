@@ -1,5 +1,6 @@
 import sys
 import types
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -19,6 +20,7 @@ if "langchain_core.documents" not in sys.modules:
     setattr(langchain_core_module, "documents", documents_module)
 
 from landppt.ai.base import AIResponse, MessageRole
+from landppt.services.outline.project_outline_research_service import ProjectOutlineResearchService
 from landppt.services.outline.project_outline_streaming_service import ProjectOutlineStreamingService
 from landppt.services.runtime import runtime_research_service as runtime_research_module
 from landppt.services.runtime.runtime_provider_service import RuntimeProviderService
@@ -227,6 +229,43 @@ class _OutlineStreamingStubService:
             ],
             "metadata": {},
         }
+
+
+class _OutlineResearchStubService:
+    enhanced_research_service = None
+    enhanced_report_generator = None
+
+    def _initialize_research_services(self):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_project_outline_research_service_uses_direct_file_processor_import(monkeypatch, tmp_path):
+    service = ProjectOutlineResearchService(_OutlineResearchStubService())
+
+    fake_module = types.ModuleType("landppt.services.file_processor")
+
+    class _FakeFileProcessor:
+        async def process_file(self, file_path, filename, file_processing_mode=None):
+            return SimpleNamespace(
+                processed_content=f"{filename}:{file_processing_mode or 'default'}:{file_path}"
+            )
+
+    fake_module.FileProcessor = _FakeFileProcessor
+    monkeypatch.setitem(sys.modules, "landppt.services.file_processor", fake_module)
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+
+    merged_path = await service.conduct_research_and_merge_with_files(
+        topic="Test Topic",
+        language="zh",
+        file_paths=["dummy.txt"],
+        context={"file_processing_mode": "markitdown"},
+    )
+
+    merged_content = Path(merged_path).read_text(encoding="utf-8")
+    assert "dummy.txt" in merged_content
+    assert "markitdown" in merged_content
+    assert str(tmp_path) in str(Path(merged_path).parent.parent)
 
 
 @pytest.mark.asyncio
