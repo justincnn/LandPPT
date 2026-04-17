@@ -93,7 +93,9 @@ def test_enhanced_ppt_service_delegates_extracted_service_logic():
     assert "self.slide_generation = SlideGenerationService(self)" in service_text
     assert "self.layout_repair = LayoutRepairService(self)" in service_text
     assert "self.template_selection = TemplateSelectionService(self)" in service_text
-    assert "self.runtime_support._initialize_research_services()" in service_text
+    assert "self.enhanced_research_service = None" in service_text
+    assert "self.enhanced_report_generator = None" in service_text
+    assert "self._initialize_research_services()" in service_text
     assert "self.runtime_support._initialize_image_service()" in service_text
 
     assert "async for chunk in self.slide_generation._generate_slides_streaming_impl(project_id):" in service_text
@@ -130,7 +132,8 @@ def test_enhanced_ppt_service_delegates_extracted_service_logic():
     assert "self._slides_generation_cancel_key(project_id)" in slide_stream_text
     assert "async def generate_slides_streaming(self, project_id: str):" in slide_authoring_text
     assert "credits_should_bill = False" in slide_generation_text
-    assert 'template_name=f"自由模板-' in template_text
+    assert 'template_name = f"' in template_text
+    assert "project_id[:8]" in template_text
 
 
 def test_split_workflow_runtime_and_slide_services_are_class_based_and_delegated():
@@ -168,6 +171,11 @@ def test_split_workflow_runtime_and_slide_services_are_class_based_and_delegated
     assert "def _owner(self):" in runtime_image_text
     assert "return self._service._service" in runtime_image_text
     assert "self._owner.image_service = ImageService(image_config)" in runtime_image_text
+    assert "def _owner(self):" in runtime_research_text
+    assert "self._owner.enhanced_research_service = EnhancedResearchService(user_id=self.user_id)" in runtime_research_text
+    assert "self._owner.enhanced_report_generator = EnhancedReportGenerator" in runtime_research_text
+    assert "self._owner.research_service = DEEPResearchService(user_id=self.user_id)" in runtime_research_text
+    assert "self._owner.report_generator = ResearchReportGenerator" in runtime_research_text
 
     assert len(project_wrapper_text.splitlines()) < 250
     assert len(slide_wrapper_text.splitlines()) < 250

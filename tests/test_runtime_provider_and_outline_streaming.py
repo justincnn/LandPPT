@@ -20,7 +20,9 @@ if "langchain_core.documents" not in sys.modules:
 
 from landppt.ai.base import AIResponse, MessageRole
 from landppt.services.outline.project_outline_streaming_service import ProjectOutlineStreamingService
+from landppt.services.runtime import runtime_research_service as runtime_research_module
 from landppt.services.runtime.runtime_provider_service import RuntimeProviderService
+from landppt.services.runtime.runtime_research_service import RuntimeResearchService
 
 
 class _FakeProvider:
@@ -63,6 +65,76 @@ class _FakeProvider:
 class _RuntimeStubService:
     user_id = None
     provider_name = None
+
+
+class _RuntimeResearchSupportStub:
+    def __init__(self, owner):
+        self._service = owner
+
+    def __getattr__(self, name):
+        return getattr(self._service, name)
+
+
+class _FakeEnhancedResearchService:
+    def __init__(self, user_id=None):
+        self.user_id = user_id
+
+    def get_available_providers(self):
+        return ["fake-enhanced"]
+
+    def is_available(self):
+        return True
+
+
+class _FakeEnhancedReportGenerator:
+    def __init__(self, reports_dir="research_reports"):
+        self.reports_dir = reports_dir
+
+
+class _FakeLegacyResearchService:
+    def __init__(self, user_id=None):
+        self.user_id = user_id
+
+    def is_available(self):
+        return True
+
+
+class _FakeLegacyReportGenerator:
+    def __init__(self, reports_dir="research_reports"):
+        self.reports_dir = reports_dir
+
+
+def test_runtime_research_service_initializes_research_attrs_on_owner(monkeypatch):
+    owner = SimpleNamespace(user_id=42)
+    support = _RuntimeResearchSupportStub(owner)
+    service = RuntimeResearchService(support)
+
+    fake_deep_module = types.ModuleType("landppt.services.deep_research_service")
+    fake_deep_module.DEEPResearchService = _FakeLegacyResearchService
+    fake_report_module = types.ModuleType("landppt.services.research_report_generator")
+    fake_report_module.ResearchReportGenerator = _FakeLegacyReportGenerator
+
+    monkeypatch.setattr(
+        runtime_research_module,
+        "EnhancedResearchService",
+        _FakeEnhancedResearchService,
+    )
+    monkeypatch.setattr(
+        runtime_research_module,
+        "EnhancedReportGenerator",
+        _FakeEnhancedReportGenerator,
+    )
+    monkeypatch.setitem(sys.modules, "landppt.services.deep_research_service", fake_deep_module)
+    monkeypatch.setitem(sys.modules, "landppt.services.research_report_generator", fake_report_module)
+
+    service._initialize_research_services()
+
+    assert isinstance(owner.enhanced_research_service, _FakeEnhancedResearchService)
+    assert isinstance(owner.enhanced_report_generator, _FakeEnhancedReportGenerator)
+    assert isinstance(owner.research_service, _FakeLegacyResearchService)
+    assert isinstance(owner.report_generator, _FakeLegacyReportGenerator)
+    assert service.enhanced_research_service is owner.enhanced_research_service
+    assert service._get_preferred_outline_research_runtime()["service"] is owner.enhanced_research_service
 
 
 @pytest.mark.asyncio

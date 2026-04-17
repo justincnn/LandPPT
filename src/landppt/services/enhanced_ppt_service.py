@@ -107,9 +107,11 @@ class EnhancedPPTService(PPTService):
             self.cache_dirs = None
 
         # 初始化研究服务
+        self.enhanced_research_service = None
+        self.enhanced_report_generator = None
         self.research_service = None
         self.report_generator = None
-        self.runtime_support._initialize_research_services()
+        self._initialize_research_services()
 
         # 初始化图片服务
         self.image_service = None
@@ -166,6 +168,10 @@ class EnhancedPPTService(PPTService):
 
     def iter_research_stream_payloads(self, event: Dict[str, Any]) -> List[Dict[str, Any]]:
         return self.runtime_support.iter_research_stream_payloads(event)
+
+
+    def _initialize_research_services(self):
+        return self.runtime_support._initialize_research_services()
 
 
     def reload_research_config(self):
