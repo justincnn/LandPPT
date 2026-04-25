@@ -10,6 +10,54 @@ from pathlib import Path
 class SystemPrompts:
     """PPT系统提示词和默认配置集合"""
 
+    CACHE_STABLE_PREFIX = """LandPPT 系统提示词 v2
+角色：你是 LandPPT 的演示文稿规划、内容与HTML幻灯片生成助手。
+稳定原则：
+- 优先保证事实准确、结构清晰、输出格式可解析。
+- 项目主题、页数、语言、模板、图片等变量只来自用户消息，不在系统层臆造。
+- 生成HTML时遵守固定画布、资源可达性和性能约束。
+- 若任务要求JSON或HTML，只输出指定格式，不附加解释。"""
+
+    @staticmethod
+    def with_cache_prefix(task_prompt: str) -> str:
+        """给系统提示词添加稳定前缀，提高多次调用的KV cache命中率。"""
+        task_prompt = (task_prompt or "").strip()
+        prefix = SystemPrompts.CACHE_STABLE_PREFIX.strip()
+        if not task_prompt:
+            return prefix
+        if task_prompt.startswith(prefix):
+            return task_prompt
+        return f"{prefix}\n\n{task_prompt}"
+
+    @staticmethod
+    def with_text_cache_prefix(prompt: str) -> str:
+        """给纯文本补全 prompt 添加稳定前缀，减少分散调用的首段差异。"""
+        return SystemPrompts.with_cache_prefix(prompt)
+
+    @staticmethod
+    def normalize_messages_for_cache(messages):
+        """确保聊天补全的首条 system 消息具备稳定前缀。"""
+        from ...ai import AIMessage, MessageRole
+
+        normalized = list(messages or [])
+        if not normalized:
+            return [AIMessage(role=MessageRole.SYSTEM, content=SystemPrompts.CACHE_STABLE_PREFIX.strip())]
+
+        first = normalized[0]
+        if first.role == MessageRole.SYSTEM and isinstance(first.content, str):
+            normalized[0] = AIMessage(
+                role=first.role,
+                content=SystemPrompts.with_cache_prefix(first.content),
+                name=first.name,
+            )
+            return normalized
+
+        normalized.insert(0, AIMessage(
+            role=MessageRole.SYSTEM,
+            content=SystemPrompts.CACHE_STABLE_PREFIX.strip(),
+        ))
+        return normalized
+
     @staticmethod
     def get_resource_performance_prompt() -> str:
         """获取资源可达性与性能优化约束提示词"""
@@ -23,7 +71,7 @@ class SystemPrompts:
     @staticmethod
     def get_default_ppt_system_prompt() -> str:
         """获取默认PPT生成系统提示词"""
-        return """你是一个专业的PPT设计师和HTML开发专家。
+        return SystemPrompts.with_cache_prefix("""你是一个专业的PPT设计师和HTML开发专家。
 
 核心职责：
 - 根据幻灯片内容生成高质量的HTML页面
@@ -36,12 +84,12 @@ class SystemPrompts:
 - 风格统一协调：保持整体PPT的视觉一致性
 - 创意与一致性平衡：在保持风格一致性的前提下展现创意
 
-""" + SystemPrompts.get_resource_performance_prompt()
+""" + SystemPrompts.get_resource_performance_prompt())
 
     @staticmethod
     def get_keynote_style_prompt() -> str:
         """获取Keynote风格提示词"""
-        return """请生成Apple风格的发布会PPT页面，具有以下特点：
+        return SystemPrompts.with_cache_prefix("""请生成Apple风格的发布会PPT页面，具有以下特点：
 1. 黑色背景，简洁现代的设计
 2. 卡片式布局，突出重点信息
 3. 使用科技蓝或品牌色作为高亮色
@@ -53,7 +101,7 @@ class SystemPrompts:
 特别注意：
 - **结尾页（thankyou/conclusion类型）**：必须设计得令人印象深刻！使用Apple风格的特殊背景效果、发光文字、动态装饰、庆祝元素等，留下深刻的最后印象
 
-""" + SystemPrompts.get_resource_performance_prompt()
+""" + SystemPrompts.get_resource_performance_prompt())
 
     @staticmethod
     def load_prompts_md_system_prompt() -> str:
@@ -67,7 +115,7 @@ class SystemPrompts:
             if prompts_file.exists():
                 with open(prompts_file, 'r', encoding='utf-8') as f:
                     content = f.read()
-                return content
+                return SystemPrompts.with_cache_prefix(content)
             else:
                 # 如果文件不存在，返回默认提示词
                 return SystemPrompts.get_default_ppt_system_prompt()
@@ -78,7 +126,7 @@ class SystemPrompts:
     @staticmethod
     def get_ai_assistant_system_prompt() -> str:
         """获取AI助手系统提示词"""
-        return """你是一个专业的PPT制作助手，具备以下能力：
+        return SystemPrompts.with_cache_prefix("""你是一个专业的PPT制作助手，具备以下能力：
 
 1. **内容理解与分析**：
    - 深入理解用户需求和项目背景
@@ -100,12 +148,12 @@ class SystemPrompts:
    - 确保跨平台兼容性
    - 优化用户体验
 
-请始终以专业、准确、高效的方式完成任务。"""
+请始终以专业、准确、高效的方式完成任务。""")
 
     @staticmethod
     def get_html_generation_system_prompt() -> str:
         """获取HTML生成系统提示词"""
-        return """你是一个专业的前端开发专家，专门负责生成PPT页面的HTML代码。
+        return SystemPrompts.with_cache_prefix("""你是一个专业的前端开发专家，专门负责生成PPT页面的HTML代码。
 
 技术要求：
 1. **代码质量**：
@@ -125,12 +173,12 @@ class SystemPrompts:
 
 请确保生成的HTML代码符合现代Web标准。
 
-""" + SystemPrompts.get_resource_performance_prompt()
+""" + SystemPrompts.get_resource_performance_prompt())
 
     @staticmethod
     def get_content_analysis_system_prompt() -> str:
         """获取内容分析系统提示词"""
-        return """你是一个专业的内容分析专家，负责分析和优化PPT内容。
+        return SystemPrompts.with_cache_prefix("""你是一个专业的内容分析专家，负责分析和优化PPT内容。
 
 分析维度：
 1. **内容结构**：
@@ -158,15 +206,15 @@ class SystemPrompts:
    - 提供可视化方案建议
    - 增强信息的表达力
 
-请提供专业、准确的内容分析和优化建议。"""
+请提供专业、准确的内容分析和优化建议。""")
 
     @staticmethod
     def get_custom_style_prompt(custom_prompt: str) -> str:
         """获取自定义风格提示词"""
-        return f"""
+        return SystemPrompts.with_cache_prefix(f"""
                 请根据以下自定义风格要求生成PPT页面：
 
                 {custom_prompt}
 
                 请确保生成的HTML页面符合上述风格要求，同时保持良好的可读性和用户体验。
-                """
+                """)

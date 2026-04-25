@@ -325,6 +325,7 @@ class DesignPrompts:
         label_map = {
             "cover": "首页/封面",
             "catalog": "目录/大纲",
+            "transition": "章节过渡页",
             "ending": "结尾/感谢",
             "content": "普通内容页",
         }
@@ -854,6 +855,13 @@ class DesignPrompts:
 - 不显示页码，锚点可以自由设计。
 - 核心是结构导航：章节关系、主次层级一眼可辨。
 - 与首页风格衔接，作为从开篇到正文的过渡。
+"""
+
+        if str(slide_type).lower() == "transition":
+            return """**特殊页面：章节过渡页**
+- 用于章节分隔和演示节奏控制，需要与普通内容页明显不同。
+- 优先突出章节标题、短转场语和下一部分方向，不展开正文。
+- 可以弱化页码和细节元素，让页面更像阶段切换。
 """
 
         if page_number == total_pages:
