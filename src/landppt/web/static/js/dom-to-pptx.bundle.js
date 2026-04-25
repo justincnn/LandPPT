@@ -63113,10 +63113,168 @@
     return 'none';
   }
 
+  function getLinearGradientVector(directionRaw, width, height) {
+    const direction = String(directionRaw || '').trim().toLowerCase();
+    if (!direction || direction === 'to bottom') return { x0: 0, y0: 0, x1: 0, y1: height };
+    if (direction === 'to top') return { x0: 0, y0: height, x1: 0, y1: 0 };
+    if (direction === 'to right') return { x0: 0, y0: 0, x1: width, y1: 0 };
+    if (direction === 'to left') return { x0: width, y0: 0, x1: 0, y1: 0 };
+    if (direction === 'to bottom right' || direction === 'to right bottom') {
+      return { x0: 0, y0: 0, x1: width, y1: height };
+    }
+    if (direction === 'to bottom left' || direction === 'to left bottom') {
+      return { x0: width, y0: 0, x1: 0, y1: height };
+    }
+    if (direction === 'to top right' || direction === 'to right top') {
+      return { x0: 0, y0: height, x1: width, y1: 0 };
+    }
+    if (direction === 'to top left' || direction === 'to left top') {
+      return { x0: width, y0: height, x1: 0, y1: 0 };
+    }
+    if (/^-?[\d.]+deg$/.test(direction)) {
+      const deg = parseFloat(direction);
+      const rad = ((deg - 90) * Math.PI) / 180;
+      const cx = width / 2;
+      const cy = height / 2;
+      const len = Math.abs(width * Math.cos(rad)) + Math.abs(height * Math.sin(rad));
+      return {
+        x0: cx - (Math.cos(rad) * len) / 2,
+        y0: cy - (Math.sin(rad) * len) / 2,
+        x1: cx + (Math.cos(rad) * len) / 2,
+        y1: cy + (Math.sin(rad) * len) / 2,
+      };
+    }
+    return { x0: 0, y0: 0, x1: 0, y1: height };
+  }
+
+  function buildLinearMaskGradient(ctx, maskImage, width, height) {
+    const content = extractFirstLinearGradientContent(maskImage);
+    if (!content) return null;
+
+    const parts = splitTopLevelCommaParts(content);
+    if (parts.length < 2) return null;
+
+    let direction = 'to bottom';
+    if (/^(to\s+|[-\d.]+deg\b|[-\d.]+rad\b|[-\d.]+turn\b)/i.test(parts[0])) {
+      direction = parts.shift();
+    }
+
+    const stops = parts
+      .map((part, index) => {
+        const colorMatch = String(part).trim().match(/^(.*?)(?:\s+(-?[\d.]+(?:%|px)?))?$/);
+        if (!colorMatch) return null;
+        const colorText = String(colorMatch[1] || '').trim();
+        const color = parseColor(colorText);
+        if (!color.hex && color.opacity <= 0) {
+          return { offset: null, alpha: 0, index };
+        }
+        const rawOffset = colorMatch[2] || '';
+        const offset = normalizeGradientOffset(rawOffset, index, parts.length, height);
+        const offsetValue = offset && offset.endsWith('%') ? parseFloat(offset) / 100 : null;
+        return {
+          offset: Number.isFinite(offsetValue) ? Math.max(0, Math.min(1, offsetValue)) : null,
+          alpha: Math.max(0, Math.min(1, Number.isFinite(color.opacity) ? color.opacity : 1)),
+          index,
+        };
+      })
+      .filter(Boolean);
+
+    if (stops.length < 2) return null;
+    stops.forEach((stop, index) => {
+      if (!Number.isFinite(stop.offset)) {
+        stop.offset = stops.length <= 1 ? 0 : index / (stops.length - 1);
+      }
+    });
+
+    const vector = getLinearGradientVector(direction, width, height);
+    const gradient = ctx.createLinearGradient(vector.x0, vector.y0, vector.x1, vector.y1);
+    stops.forEach((stop) => {
+      gradient.addColorStop(stop.offset, `rgba(0, 0, 0, ${stop.alpha})`);
+    });
+    return gradient;
+  }
+
+  function applyCssMaskToCanvas(ctx, maskImage, width, height) {
+    const mask = String(maskImage || '').trim();
+    if (!mask || mask === 'none') return false;
+    const gradient = buildLinearMaskGradient(ctx, mask, width, height);
+    if (!gradient) return false;
+
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+    return true;
+  }
+
   function normalizeBackgroundPositionValue(backgroundPosition) {
     const raw = String(backgroundPosition || '').trim();
     if (!raw || raw === 'initial' || raw === 'inherit' || raw === 'unset') return '50% 50%';
     return raw;
+  }
+
+  function rectToPlainObject(rect) {
+    if (!rect) return null;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    };
+  }
+
+  function intersectPlainRects(a, b) {
+    if (!a || !b) return a || b || null;
+    const left = Math.max(a.left, b.left);
+    const top = Math.max(a.top, b.top);
+    const right = Math.min(a.right, b.right);
+    const bottom = Math.min(a.bottom, b.bottom);
+    if (right <= left || bottom <= top) return null;
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
+
+  function getOverflowClipRect(node, root) {
+    let clipRect = null;
+    let current = node && node.parentElement;
+    while (current && current.nodeType === 1) {
+      const win = getNodeWindow(current);
+      const style = win.getComputedStyle(current);
+      const overflowValue = `${style.overflowX || style.overflow || ''} ${style.overflowY || style.overflow || ''}`.toLowerCase();
+      if (/\b(hidden|clip|auto|scroll)\b/.test(overflowValue)) {
+        const rect = rectToPlainObject(current.getBoundingClientRect());
+        clipRect = clipRect ? intersectPlainRects(clipRect, rect) : rect;
+        if (!clipRect) return null;
+      }
+      if (current === root) break;
+      current = current.parentElement;
+    }
+    return clipRect;
+  }
+
+  function clipPptOptionsToOverflow(options, node, config) {
+    const clipRect = getOverflowClipRect(node, config.root);
+    if (!clipRect) return options;
+
+    const clipX = config.offX + (clipRect.left - config.rootX) * PX_TO_INCH * config.scale;
+    const clipY = config.offY + (clipRect.top - config.rootY) * PX_TO_INCH * config.scale;
+    const clipW = clipRect.width * PX_TO_INCH * config.scale;
+    const clipH = clipRect.height * PX_TO_INCH * config.scale;
+    const left = Math.max(options.x, clipX);
+    const top = Math.max(options.y, clipY);
+    const right = Math.min(options.x + options.w, clipX + clipW);
+    const bottom = Math.min(options.y + options.h, clipY + clipH);
+    if (right <= left || bottom <= top) return null;
+    return {
+      ...options,
+      x: left,
+      y: top,
+      w: right - left,
+      h: bottom - top,
+    };
   }
 
   const GENERIC_CSS_FONT_FAMILIES = new Set([
@@ -64447,9 +64605,9 @@
         }
         if (!colorToken || /^url\(/i.test(colorToken)) return;
         const parsedColor = parseColor(colorToken);
-        if (!parsedColor || !parsedColor.hex) return;
+        if (!parsedColor || (!parsedColor.hex && parsedColor.opacity > 0)) return;
         parsedStops.push({
-          color: '#' + parsedColor.hex,
+          color: '#' + (parsedColor.hex || '000000'),
           opacity: Number.isFinite(parsedColor.opacity) ? Math.max(0, Math.min(parsedColor.opacity, 1)) : 1,
           offsetRaw,
         });
@@ -64766,7 +64924,8 @@
     radius,
     objectFit = 'fill',
     objectPosition = '50% 50%',
-    opacity = 1
+    opacity = 1,
+    cssMaskImage = null
   ) {
     try {
       const imageSource = await loadRuntimeImageForCanvas(src);
@@ -64873,6 +65032,9 @@
         ctx.globalAlpha = safeOpacity;
       ctx.drawImage(imageSource, renderX, renderY, renderW, renderH);
         ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+
+      applyCssMaskToCanvas(ctx, cssMaskImage, targetW, targetH);
 
       if (typeof imageSource.close === 'function') imageSource.close();
       return canvas.toDataURL('image/png');
@@ -65272,10 +65434,11 @@
     let domOrderCounter = 0;
 
     // Sync Traversal Function
-    function collect(node, parentZIndex, parentOpacity) {
+    function collect(node, parentZIndex, parentOpacity, zIndexScale = 1) {
       const order = domOrderCounter++;
 
       let currentZ = parentZIndex;
+      let childZIndexScale = zIndexScale;
       let currentOpacity = Number.isFinite(parentOpacity) ? Math.max(0, Math.min(1, parentOpacity)) : 1;
       let nodeStyle = null;
       const nodeType = node.nodeType;
@@ -65292,7 +65455,11 @@
           return;
         }
         if (nodeStyle.zIndex !== 'auto') {
-          currentZ = parseInt(nodeStyle.zIndex);
+          const parsedZIndex = parseInt(nodeStyle.zIndex, 10);
+          if (Number.isFinite(parsedZIndex)) {
+            currentZ = parentZIndex + parsedZIndex * zIndexScale;
+            childZIndexScale = zIndexScale / 1000;
+          }
         }
         const nodeOpacity = parseFloat(nodeStyle.opacity);
         if (Number.isFinite(nodeOpacity)) {
@@ -65328,7 +65495,7 @@
       // Recurse children synchronously
       const childNodes = node.childNodes;
       for (let i = 0; i < childNodes.length; i++) {
-        collect(childNodes[i], currentZ, currentOpacity);
+        collect(childNodes[i], currentZ, currentOpacity, childZIndexScale);
       }
     }
 
@@ -66097,6 +66264,14 @@
     return value < 0 ? 0 : value;
   }
 
+  const LOCAL_Z_LAYER_STEP = 0.0001;
+
+  function nextRenderableZIndex(zIndexRaw, steps = 1) {
+    const base = normalizeRenderableZIndex(zIndexRaw);
+    const safeSteps = Number.isFinite(steps) ? Math.max(1, steps) : 1;
+    return base + LOCAL_Z_LAYER_STEP * safeSteps;
+  }
+
   function decodePseudoContentValue(contentRaw) {
     let s = String(contentRaw || '').trim();
     if (!s || s === 'none' || s === 'normal' || s === '""' || s === "''") return '';
@@ -66200,7 +66375,7 @@
 
       const item = {
         type: 'image',
-        zIndex: zIndex + 1,
+        zIndex: nextRenderableZIndex(zIndex),
         domOrder: domOrder + 0.01 + index * 0.001,
         options: {
           x: config.offX + (rect.left - config.rootX) * PX_TO_INCH * config.scale,
@@ -66713,7 +66888,7 @@
 
         items.push({
           type: 'text',
-          zIndex: zIndex + 1,
+          zIndex: nextRenderableZIndex(zIndex),
           domOrder,
           textParts: listItems,
           options: {
@@ -66826,6 +67001,7 @@
 
       const objectFit = style.objectFit || 'fill'; // default CSS behavior is fill
       const objectPosition = style.objectPosition || '50% 50%';
+      const cssMaskImage = style.webkitMaskImage || style.maskImage || null;
 
       const item = {
         type: 'image',
@@ -66842,7 +67018,8 @@
           radii,
           objectFit,
           objectPosition,
-          safeOpacity
+          safeOpacity,
+          cssMaskImage
         );
         if (processed) item.options.data = processed;
         else item.skip = true;
@@ -67140,19 +67317,27 @@
       }
 
       if (bgData) {
-        items.push({
-          type: 'image',
-          zIndex,
-          domOrder,
-          options: {
-            data: bgData,
-            x: x - padIn,
-            y: y - padIn,
-            w: w + padIn * 2,
-            h: h + padIn * 2,
-            rotate: rotation,
-          },
-        });
+        const gradientOptions = {
+          data: bgData,
+          x: x - padIn,
+          y: y - padIn,
+          w: w + padIn * 2,
+          h: h + padIn * 2,
+          rotate: rotation,
+        };
+        const visualLeafGradient =
+          !textPayload && !hasLeafTextContent && !hasLeafChildren && !softEdge;
+        const clippedGradientOptions = visualLeafGradient
+          ? clipPptOptionsToOverflow(gradientOptions, node, config)
+          : gradientOptions;
+        if (clippedGradientOptions) {
+          items.push({
+            type: 'image',
+            zIndex,
+            domOrder,
+            options: clippedGradientOptions,
+          });
+        }
       }
 
       if (textPayload) {
@@ -67160,7 +67345,7 @@
           Math.floor(textPayload.text[0]?.options?.fontSize) || 12;
         items.push({
           type: 'text',
-          zIndex: zIndex + 1,
+          zIndex: nextRenderableZIndex(zIndex),
           domOrder,
           textParts: textPayload.text,
           options: {
@@ -67201,6 +67386,7 @@
       const finalAlpha = safeOpacity * bgColorObj.opacity;
       const transparency = (1 - finalAlpha) * 100;
       const useSolidFill = bgColorObj.hex && !isImageWrapper;
+      const splitUniformBorderOverlay = hasUniformBorder && hasLeafChildren && !textPayload;
 
       if (hasPartialBorderRadius && useSolidFill && !textPayload) {
         const shapeSvg = generateCustomShapeSVG(
@@ -67232,7 +67418,7 @@
           fill: useSolidFill
             ? { color: bgColorObj.hex, transparency: transparency }
             : { type: 'none' },
-          line: hasUniformBorder ? borderInfo.options : null,
+          line: hasUniformBorder && !splitUniformBorderOverlay ? borderInfo.options : null,
         };
 
         if (hasShadow) shapeOpts.shadow = getVisibleShadow(shadowStr, config.scale);
@@ -67292,13 +67478,33 @@
             textParts: textPayload.text,
             options: textOptions,
           });
-        } else if (!hasPartialBorderRadius) {
+        } else if (!hasPartialBorderRadius && (useSolidFill || hasShadow || !splitUniformBorderOverlay)) {
           items.push({
             type: 'shape',
             zIndex,
             domOrder,
             shapeType,
             options: shapeOpts,
+          });
+        }
+
+        if (splitUniformBorderOverlay) {
+          const borderOverlayOpts = {
+            x,
+            y,
+            w,
+            h,
+            rotate: rotation,
+            fill: { type: 'none' },
+            line: borderInfo.options,
+          };
+          if (shapeOpts.rectRadius) borderOverlayOpts.rectRadius = shapeOpts.rectRadius;
+          items.push({
+            type: 'shape',
+            zIndex: nextRenderableZIndex(zIndex),
+            domOrder,
+            shapeType,
+            options: borderOverlayOpts,
           });
         }
       }
@@ -67313,7 +67519,7 @@
         if (borderSvgData) {
           items.push({
             type: 'image',
-            zIndex: zIndex + 1,
+            zIndex: nextRenderableZIndex(zIndex),
             domOrder,
             options: { data: borderSvgData, x, y, w, h, rotate: rotation },
           });
@@ -67437,7 +67643,7 @@
   function createCompositeBorderItems(sides, x, y, w, h, scale, zIndex, domOrder) {
     const items = [];
     const pxToInch = 1 / 96;
-    const common = { zIndex: zIndex + 1, domOrder, shapeType: 'rect' };
+    const common = { zIndex: nextRenderableZIndex(zIndex), domOrder, shapeType: 'rect' };
 
     if (sides.top.width > 0)
       items.push({
@@ -67481,7 +67687,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-04-25-font-lang-v17';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-04-25-layer-clip-v21';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;

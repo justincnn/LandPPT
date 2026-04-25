@@ -415,8 +415,8 @@
             }
         }
 
-        const DOM_TO_PPTX_BUNDLE_VERSION = '20260425-font-lang-v17';
-        const DOM_TO_PPTX_EXPECTED_PATCH_VERSION = '2026-04-25-font-lang-v17';
+        const DOM_TO_PPTX_BUNDLE_VERSION = '20260425-layer-clip-v21';
+        const DOM_TO_PPTX_EXPECTED_PATCH_VERSION = '2026-04-25-layer-clip-v21';
         let domToPptxReloadPromise = null;
 
         function isDomToPptxPatchedInstance(instance) {
