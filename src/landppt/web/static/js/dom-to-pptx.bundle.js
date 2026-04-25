@@ -64192,6 +64192,84 @@
 
   // src/image-processor.js
 
+  function normalizeRuntimeResourceUrl(rawUrl, baseUrl = null) {
+    const value = String(rawUrl || '').trim();
+    if (!value || value.startsWith('#') || /^(data|blob|javascript|mailto|tel|about):/i.test(value)) {
+      return value;
+    }
+    try {
+      const fallbackBase =
+        baseUrl ||
+        (typeof document !== 'undefined' && document.baseURI) ||
+        (typeof window !== 'undefined' && window.location ? window.location.href : '');
+      const parsed = new URL(value, fallbackBase);
+      const appOwnedPath = /^\/(?:api\/image\/view\/|api\/image\/thumbnail\/|static\/|temp\/)/i.test(
+        parsed.pathname || ''
+      );
+      const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)$/i.test(parsed.hostname || '');
+      if (
+        appOwnedPath &&
+        localHost &&
+        typeof window !== 'undefined' &&
+        window.location &&
+        window.location.origin
+      ) {
+        return `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.href;
+    } catch (e) {
+      return value;
+    }
+  }
+
+  function loadImageElementForExport(src, useCors = true) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      if (useCors && !String(src || '').startsWith('data:')) img.crossOrigin = 'Anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  async function loadRuntimeImageForCanvas(src) {
+    const normalizedSrc = normalizeRuntimeResourceUrl(src);
+    if (!normalizedSrc) return null;
+
+    if (typeof fetch === 'function') {
+      try {
+        const response = await fetch(normalizedSrc, {
+          credentials: 'same-origin',
+          mode: 'cors',
+        });
+        if (response && response.ok) {
+          const blob = await response.blob();
+          if (blob && blob.size > 0) {
+            if (typeof createImageBitmap === 'function') {
+              const bitmap = await createImageBitmap(blob);
+              if (bitmap) return bitmap;
+            }
+
+            const objectUrl = URL.createObjectURL(blob);
+            try {
+              const img = await loadImageElementForExport(objectUrl, false);
+              if (img) return img;
+            } finally {
+              URL.revokeObjectURL(objectUrl);
+            }
+          }
+        }
+      } catch (_) {
+        // Fall back to Image loading below.
+      }
+    }
+
+    return (
+      (await loadImageElementForExport(normalizedSrc, true)) ||
+      (await loadImageElementForExport(normalizedSrc, false))
+    );
+  }
+
   async function getProcessedImage(
     src,
     targetW,
@@ -64201,16 +64279,16 @@
     objectPosition = '50% 50%',
     opacity = 1
   ) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
+    try {
+      const imageSource = await loadRuntimeImageForCanvas(src);
+      if (!imageSource) return null;
 
-      img.onload = () => {
         const canvas = document.createElement('canvas');
         const scale = 2; // Double resolution
         canvas.width = targetW * scale;
         canvas.height = targetH * scale;
         const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
         ctx.scale(scale, scale);
 
         // Normalize radius
@@ -64255,25 +64333,27 @@
         ctx.globalCompositeOperation = 'source-in';
 
         // 3. Draw Image with Object Fit logic
-        const wRatio = targetW / img.width;
-        const hRatio = targetH / img.height;
+      const sourceW = imageSource.width || targetW || 1;
+      const sourceH = imageSource.height || targetH || 1;
+        const wRatio = targetW / sourceW;
+        const hRatio = targetH / sourceH;
         let renderW, renderH;
 
         if (objectFit === 'contain') {
           const fitScale = Math.min(wRatio, hRatio);
-          renderW = img.width * fitScale;
-          renderH = img.height * fitScale;
+        renderW = sourceW * fitScale;
+        renderH = sourceH * fitScale;
         } else if (objectFit === 'cover') {
           const coverScale = Math.max(wRatio, hRatio);
-          renderW = img.width * coverScale;
-          renderH = img.height * coverScale;
+        renderW = sourceW * coverScale;
+        renderH = sourceH * coverScale;
         } else if (objectFit === 'none') {
-          renderW = img.width;
-          renderH = img.height;
+        renderW = sourceW;
+        renderH = sourceH;
         } else if (objectFit === 'scale-down') {
           const scaleDown = Math.min(1, Math.min(wRatio, hRatio));
-          renderW = img.width * scaleDown;
-          renderH = img.height * scaleDown;
+        renderW = sourceW * scaleDown;
+        renderH = sourceH * scaleDown;
         } else {
           // 'fill' (default)
           renderW = targetW;
@@ -64302,15 +64382,14 @@
 
         const safeOpacity = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
         ctx.globalAlpha = safeOpacity;
-        ctx.drawImage(img, renderX, renderY, renderW, renderH);
+      ctx.drawImage(imageSource, renderX, renderY, renderW, renderH);
         ctx.globalAlpha = 1;
 
-        resolve(canvas.toDataURL('image/png'));
-      };
-
-      img.onerror = () => resolve(null);
-      img.src = src;
-    });
+      if (typeof imageSource.close === 'function') imageSource.close();
+      return canvas.toDataURL('image/png');
+    } catch (_) {
+      return null;
+    }
   }
 
   // src/index.js
@@ -66391,11 +66470,50 @@
     const isBgClipText = bgClip === 'text';
     const backgroundImageValue = String(style.backgroundImage || '');
     const hasGradient = !isBgClipText && backgroundImageValue.includes('linear-gradient');
+    const hasAnyGradientBackground =
+      !isBgClipText &&
+      /\b(?:linear|radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(
+        backgroundImageValue
+      );
     const hasUrlBackgroundImage = !isBgClipText && /\burl\s*\(/i.test(backgroundImageValue);
     const hasLeafTextContent = !!(node.textContent && node.textContent.trim().length > 0);
     const hasLeafChildren = node.children && node.children.length > 0;
+    const gradientLayerCount = splitTopLevelCommaParts(backgroundImageValue).filter((part) =>
+      /\b(?:linear|radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(part)
+    ).length;
+    const hasMaskImage =
+      String(style.webkitMaskImage || style.maskImage || '').trim() &&
+      String(style.webkitMaskImage || style.maskImage || '').trim() !== 'none';
+    const isComplexLeafGradientBackground =
+      hasAnyGradientBackground &&
+      !hasUrlBackgroundImage &&
+      !hasLeafTextContent &&
+      !hasLeafChildren &&
+      (gradientLayerCount > 1 ||
+        /\b(?:radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(backgroundImageValue) ||
+        hasMaskImage);
     const isVisualLeafWithUrlBackground =
       hasUrlBackgroundImage && !hasLeafTextContent && !hasLeafChildren;
+
+    if (isComplexLeafGradientBackground) {
+      const item = {
+        type: 'image',
+        zIndex,
+        domOrder,
+        options: { x, y, w, h, rotate: rotation, data: null },
+      };
+
+      const job = async () => {
+        const rasterData = await elementToCanvasImage(node, widthPx, heightPx, {
+          padding: 0,
+          scale: 2,
+        });
+        if (rasterData) item.options.data = rasterData;
+        else item.skip = true;
+      };
+
+      return { items: [item], job, stopRecursion: true };
+    }
 
     if (isVisualLeafWithUrlBackground) {
       const item = {
@@ -66853,7 +66971,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-04-05-font-resolve-v3';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-04-25-gradient-overlay-v14';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;
