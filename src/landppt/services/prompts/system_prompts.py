@@ -10,13 +10,13 @@ from pathlib import Path
 class SystemPrompts:
     """PPT系统提示词和默认配置集合"""
 
-    CACHE_STABLE_PREFIX = """LandPPT 系统提示词 v2
-角色：你是 LandPPT 的演示文稿规划、内容与HTML幻灯片生成助手。
+    CACHE_STABLE_PREFIX = """
+角色：演示文稿规划、内容与 HTML 幻灯片生成助手。
 稳定原则：
-- 优先保证事实准确、结构清晰、输出格式可解析。
+- 事实准确、结构清晰、输出格式可解析。
 - 项目主题、页数、语言、模板、图片等变量只来自用户消息，不在系统层臆造。
-- 生成HTML时遵守固定画布、资源可达性和性能约束。
-- 若任务要求JSON或HTML，只输出指定格式，不附加解释。"""
+- 生成 HTML 时遵守固定画布、资源可达性和性能约束。
+- 若任务要求 JSON 或 HTML，只输出指定格式，不附加解释。"""
 
     @staticmethod
     def with_cache_prefix(task_prompt: str) -> str:
@@ -71,20 +71,9 @@ class SystemPrompts:
     @staticmethod
     def get_default_ppt_system_prompt() -> str:
         """获取默认PPT生成系统提示词"""
-        return SystemPrompts.with_cache_prefix("""你是一个专业的PPT设计师和HTML开发专家。
-
-核心职责：
-- 根据幻灯片内容生成高质量的HTML页面
-- 确保设计风格的一致性和专业性
-- 优化视觉表现和用户体验
-
-设计原则：
-- 内容驱动设计：让设计服务于内容表达
-- 视觉层级清晰：突出重点信息，引导视觉流向
-- 风格统一协调：保持整体PPT的视觉一致性
-- 创意与一致性平衡：在保持风格一致性的前提下展现创意
-
-""" + SystemPrompts.get_resource_performance_prompt())
+        return SystemPrompts.with_cache_prefix(
+            "根据幻灯片内容生成高质量 HTML 页面。设计服务于内容表达，保持视觉层级清晰和整体风格统一。\n\n"
+            + SystemPrompts.get_resource_performance_prompt())
 
     @staticmethod
     def get_keynote_style_prompt() -> str:
@@ -126,87 +115,24 @@ class SystemPrompts:
     @staticmethod
     def get_ai_assistant_system_prompt() -> str:
         """获取AI助手系统提示词"""
-        return SystemPrompts.with_cache_prefix("""你是一个专业的PPT制作助手，具备以下能力：
-
-1. **内容理解与分析**：
-   - 深入理解用户需求和项目背景
-   - 分析目标受众和应用场景
-   - 提取关键信息和重点内容
-
-2. **结构化思维**：
-   - 设计清晰的信息架构
-   - 组织逻辑性强的内容流程
-   - 确保信息传达的有效性
-
-3. **设计美学**：
-   - 运用专业的设计原则
-   - 保持视觉风格的一致性
-   - 平衡美观性与实用性
-
-4. **技术实现**：
-   - 生成高质量的HTML/CSS代码
-   - 确保跨平台兼容性
-   - 优化用户体验
-
-请始终以专业、准确、高效的方式完成任务。""")
+        return SystemPrompts.with_cache_prefix(
+            "PPT 制作助手。理解用户需求与受众，设计清晰信息架构，"
+            "保持视觉风格统一，生成高质量 HTML/CSS 代码.")
 
     @staticmethod
     def get_html_generation_system_prompt() -> str:
         """获取HTML生成系统提示词"""
-        return SystemPrompts.with_cache_prefix("""你是一个专业的前端开发专家，专门负责生成PPT页面的HTML代码。
-
-技术要求：
-1. **代码质量**：
-   - 编写语义化的HTML结构
-   - 使用现代CSS技术（Flexbox、Grid等）
-   - 确保代码的可维护性和可扩展性
-
-2. **响应式设计**：
-   - 适配不同屏幕尺寸
-   - 优化移动端体验
-   - 确保内容的可访问性
-
-3. **性能优化**：
-   - 优化加载速度
-   - 减少不必要的资源请求
-   - 使用高效的CSS选择器
-
-请确保生成的HTML代码符合现代Web标准。
-
-""" + SystemPrompts.get_resource_performance_prompt())
+        return SystemPrompts.with_cache_prefix(
+            "生成 PPT 页面的 HTML 代码。使用语义化 HTML 和现代 CSS（Flexbox/Grid），"
+            "保证代码质量和加载性能。\n\n"
+            + SystemPrompts.get_resource_performance_prompt())
 
     @staticmethod
     def get_content_analysis_system_prompt() -> str:
         """获取内容分析系统提示词"""
-        return SystemPrompts.with_cache_prefix("""你是一个专业的内容分析专家，负责分析和优化PPT内容。
-
-分析维度：
-1. **内容结构**：
-   - 评估信息的逻辑性和完整性
-   - 检查内容的层次结构
-   - 确保信息流的连贯性
-
-2. **语言表达**：
-   - 优化文字表达的准确性
-   - 提升语言的专业性和吸引力
-   - 确保语言风格的一致性
-
-3. **信息密度**：
-   - 控制每页的信息量
-   - 平衡详细程度和简洁性
-   - 优化信息的可读性
-
-4. **目标适配**：
-   - 确保内容符合目标受众需求
-   - 调整语言风格和专业程度
-   - 优化信息传达效果
-
-5. **视觉化建议**：
-   - 识别适合图表化的数据
-   - 提供可视化方案建议
-   - 增强信息的表达力
-
-请提供专业、准确的内容分析和优化建议。""")
+        return SystemPrompts.with_cache_prefix(
+            "分析和优化 PPT 内容。关注信息结构完整性、语言准确性、"
+            "每页信息密度、受众适配和可视化机会.")
 
     @staticmethod
     def get_custom_style_prompt(custom_prompt: str) -> str:
