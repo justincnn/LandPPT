@@ -71,6 +71,7 @@ dependencies = [
     "langchain-community>=0.3.27",
     "edge-tts>=6.1.0",
     "resend>=2.21.0",
+    "pymupdf>=1.23.0",
 ]
 
 

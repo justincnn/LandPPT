@@ -286,7 +286,8 @@ class GlobalMasterTemplateGenerateRequest(BaseModel):
     description: Optional[str] = Field("", description="Template description")
     tags: Optional[List[str]] = Field([], description="Template tags")
     generation_mode: str = Field("text_only", description="Generation mode: text_only, reference_style, exact_replica, pptx_extract")
-    reference_image: Optional[ReferenceImageData] = Field(None, description="Reference image for multimodal generation")
+    reference_image: Optional[ReferenceImageData] = Field(None, description="Reference image for multimodal generation (single, legacy)")
+    reference_images: Optional[List[ReferenceImageData]] = Field(None, description="Multiple reference images (cover, title, TOC, transition, ending, etc.)")
     reference_pptx: Optional[ReferencePptxData] = Field(None, description="Reference PPTX for template extraction")
 
 
