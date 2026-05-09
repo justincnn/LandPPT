@@ -7,6 +7,7 @@ import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ..prompts import prompts_manager
+from ..prompts.prompt_utils import should_include_page_numbers
 
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,8 @@ class CreativeDesignService:
     ) -> str:
         """Generate slide HTML from the selected template style."""
         try:
+            if isinstance(slide_data, dict):
+                slide_data["_include_page_numbers"] = should_include_page_numbers(confirmed_requirements)
             template_html = template["html_template"]
             template_name = template.get("template_name", "未知模板")
             logger.info("使用模板 %s 作为风格参考生成第%s页", template_name, page_number)
@@ -217,6 +220,7 @@ class CreativeDesignService:
             project_style=confirmed_requirements.get("ppt_style", "general"),
             global_constitution=global_constitution,
             current_page_brief=current_page_brief,
+            include_page_numbers=should_include_page_numbers(confirmed_requirements),
         )
 
     async def _extract_style_genes(self, template_html: str) -> str:
@@ -502,6 +506,14 @@ class CreativeDesignService:
     # 三层架构：全局宪法 + 页面类型指导 + 单页自由喂料
     # ================================================================
 
+    def _default_global_constitution(
+        self,
+        confirmed_requirements: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        if should_include_page_numbers(confirmed_requirements):
+            return "- 使用模板配色和字体体系\n- 普通内容页保持模板标题锚点与页码锚点\n- 首尾页可自由设计"
+        return "- 使用模板配色和字体体系\n- 普通内容页保持模板标题锚点\n- 首尾页可自由设计"
+
     async def _get_or_generate_global_constitution(
         self,
         project_id: str,
@@ -513,7 +525,7 @@ class CreativeDesignService:
         """Layer 1: Get or generate global visual constitution, with cache."""
         cache_attr = "_cached_global_constitutions"
         event_attr = "_global_constitution_ready_events"
-        default = "- 使用模板配色和字体体系\n- 普通内容页保持模板标题锚点与页码锚点\n- 首尾页可自由设计"
+        default = self._default_global_constitution(confirmed_requirements)
 
         if not project_id:
             return await self._generate_global_constitution(
@@ -589,7 +601,7 @@ class CreativeDesignService:
         first_slide_data: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Call LLM to generate global visual constitution."""
-        default = "- 使用模板配色和字体体系\n- 普通内容页保持模板标题锚点与页码锚点\n- 首尾页可自由设计"
+        default = self._default_global_constitution(confirmed_requirements)
         try:
             prompt = prompts_manager.get_global_visual_constitution_prompt(
                 confirmed_requirements=confirmed_requirements or {},
@@ -1229,7 +1241,15 @@ class CreativeDesignService:
         return "\n".join(guides)
 
     def _build_slide_context(self, slide_data: Dict[str, Any], page_number: int, total_pages: int) -> str:
-        return prompts_manager.get_slide_context_prompt(slide_data, page_number, total_pages)
+        include_page_numbers = True
+        if isinstance(slide_data, dict) and "_include_page_numbers" in slide_data:
+            include_page_numbers = bool(slide_data.get("_include_page_numbers"))
+        return prompts_manager.get_slide_context_prompt(
+            slide_data,
+            page_number,
+            total_pages,
+            include_page_numbers=include_page_numbers,
+        )
 
     def _extract_style_template(self, existing_slides: List[Dict[str, Any]]) -> List[str]:
         """Extract a reusable style template from existing slides."""

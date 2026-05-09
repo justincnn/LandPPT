@@ -694,6 +694,10 @@
                 }
 
                 const formData = new FormData(requirementsForm);
+                const includePageNumbersInput = document.getElementById('include_page_numbers');
+                if (includePageNumbersInput) {
+                    formData.set('include_page_numbers', includePageNumbersInput.checked ? 'true' : 'false');
+                }
                 if (selectedSource === 'url' && urlInput) {
                     formData.set('content_urls', urlInput.value);
                 }

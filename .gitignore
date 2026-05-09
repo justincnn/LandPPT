@@ -23,6 +23,7 @@ CLAUDE.md
 .uploads
 # Virtual environments
 .venv
+.claude
 
 # Temporary files and cache
 temp/

@@ -26,6 +26,7 @@ from ...ai.base import TextContent, ImageContent
 from ...core.config import ai_config, app_config
 from ..runtime.ai_execution import ExecutionContext
 from ..prompts import prompts_manager
+from ..prompts.prompt_utils import should_include_page_numbers
 from ..research.enhanced_research_service import EnhancedResearchService
 from ..research.enhanced_report_generator import EnhancedReportGenerator
 from ..pyppeteer_pdf_converter import get_pdf_converter
@@ -52,6 +53,8 @@ class SlideMediaService:
     async def _generate_single_slide_html_with_prompts(self, slide_data: Dict[str, Any], confirmed_requirements: Dict[str, Any], system_prompt: str, page_number: int, total_pages: int, all_slides: List[Dict[str, Any]]=None, existing_slides_data: List[Dict[str, Any]]=None, project_id: str=None) -> str:
         """Generate HTML for a single slide using prompts.md and first step information with template selection"""
         try:
+            if isinstance(slide_data, dict):
+                slide_data["_include_page_numbers"] = should_include_page_numbers(confirmed_requirements)
             if not project_id:
                 project_id = confirmed_requirements.get('project_id')
             selected_template = None

@@ -546,24 +546,24 @@ class GlobalMasterTemplateService:
             if generation_mode == "reference_style":
                 if total_images > 1:
                     mode_instruction = f"""
-你收到了 {total_images} 张参考截图，分别展示了PPT模板的不同页面类型（可能包含：封面、目录页、章节过渡页、内容页、标题页、结尾页等）。
+你收到了 {total_images} 张参考截图，可能展示了PPT模板的不同页面场景。
 请**逐张仔细观察**每张截图的配色、字体、布局、装饰元素，综合提炼出统一的视觉风格体系。
-生成超级模板时，为每种页面类型输出独立的 `<section data-slide-type="xxx">`，参考对应截图的布局特征但按母版需求重新组织。
+生成单页母版时，只输出一个通用 1280×720 页面模板，吸收参考截图的共同风格和可复用结构。
 """
                 else:
                     mode_instruction = """
-请参考上传图片的气质、配色和版式逻辑，生成包含所有页面类型（cover/toc/transition/content/title/ending）的超级模板。
+请参考上传图片的气质、配色和版式逻辑，生成一个通用 1280×720 单页母版。
 """
             else:  # exact_replica
                 if total_images > 1:
                     mode_instruction = f"""
-你收到了 {total_images} 张参考截图，分别对应PPT模板的不同页面类型（封面、目录、章节过渡、内容、标题、结尾等）。
-请**逐张精确还原**每张截图中的视觉设计：配色方案、字体层级、元素位置、背景样式、装饰图形。
-每张截图对应超级模板中的一个 `<section data-slide-type="xxx">`，必须包含所有截图展示的页面类型变体。
+你收到了 {total_images} 张参考截图，可能对应PPT模板的不同页面场景。
+请**逐张提取**每张截图中的视觉设计：配色方案、字体层级、元素位置、背景样式、装饰图形。
+生成单页母版时，只输出一个通用 1280×720 页面模板，优先还原这些截图的共同风格和稳定版式特征。
 """
                 else:
                     mode_instruction = """
-请尽量贴近上传图片的风格和版式特征，生成包含所有页面类型（cover/toc/transition/content/title/ending）的超级模板。
+请尽量贴近上传图片的风格和版式特征，生成一个通用 1280×720 单页母版。
 """
 
             ai_prompt = prompt if prompt_is_ready else self._build_template_generation_prompt(
@@ -677,11 +677,11 @@ class GlobalMasterTemplateService:
             # 多模态生成模式
             if generation_mode == "reference_style":
                 mode_instruction = """
-请参考上传图片的气质、配色和版式逻辑，生成包含所有页面类型（cover/toc/transition/content/title/ending）的超级模板。
+请参考上传图片的气质、配色和版式逻辑，生成一个通用 1280×720 单页母版。
 """
             else:  # exact_replica
                 mode_instruction = """
-请尽量贴近上传图片的风格和版式特征，生成包含所有页面类型（cover/toc/transition/content/title/ending）的超级模板。
+请尽量贴近上传图片的风格和版式特征，生成一个通用 1280×720 单页母版。
 """
 
             ai_prompt = prompt if prompt_is_ready else self._build_template_generation_prompt(
