@@ -171,8 +171,17 @@
                                                 <div class="speech-compact-field">
                                                     <span class="speech-compact-label">语音服务</span>
                                                     <select class="speech-form-select" id="narrationTtsProvider" style="width: 180px;" onchange="handleNarrationProviderChange()">
-                                                        <option value="edge_tts" ${narrationTtsProvider === 'comfyuiapi' ? '' : 'selected'}>Edge-TTS</option>
+                                                        <option value="edge_tts" ${narrationTtsProvider === 'edge_tts' ? 'selected' : ''}>Edge-TTS</option>
+                                                        <option value="xiaomimimo" ${narrationTtsProvider === 'xiaomimimo' ? 'selected' : ''}>Xiaomi Mimo TTS</option>
+                                                        <option value="custom_tts_api" ${narrationTtsProvider === 'custom_tts_api' ? 'selected' : ''}>Custom TTS API</option>
                                                         <option value="comfyuiapi" ${narrationTtsProvider === 'comfyuiapi' ? 'selected' : ''}>ComfyUI Qwen3-TD</option>
+                                                    </select>
+                                                </div>
+                                                <div class="speech-compact-field" id="speechMimoModeField" style="display: ${narrationTtsProvider === 'xiaomimimo' ? 'flex' : 'none'};">
+                                                    <span class="speech-compact-label">Mimo 模式</span>
+                                                    <select class="speech-form-select" id="narrationMimoMode" style="width: 180px;" onchange="handleNarrationProviderChange()">
+                                                        <option value="voicedesign" selected>文本设计音色</option>
+                                                        <option value="voiceclone">上传音频克隆</option>
                                                     </select>
                                                 </div>
                                                 <div class="speech-compact-field" id="speechRefAudioField" style="display: ${narrationTtsProvider === 'comfyuiapi' ? 'flex' : 'none'};">
@@ -184,7 +193,12 @@
                                                             ${narrationReferenceAudioPath ? '已上传参考音频' : '未上传参考音频'}
                                                         </span>
                                                     </div>
-                                                    <span class="speech-compact-help">仅 Qwen3-TD 需要，用于提供参考音色。</span>
+                                                    <span class="speech-compact-help" id="speechRefAudioHelp">仅 Qwen3-TD 需要，用于提供参考音色。</span>
+                                                </div>
+                                                <div class="speech-compact-field" id="speechMimoVoicePromptField" style="display: ${narrationTtsProvider === 'xiaomimimo' ? 'flex' : 'none'};">
+                                                    <span class="speech-compact-label">音色描述</span>
+                                                    <textarea class="speech-form-textarea" id="narrationMimoVoicePrompt" rows="3" placeholder="例如：年轻、放松、语速偏快，像 Tom 猫那种俏皮又有点夸张的卡通感；说话轻快自然、有活力，吐字清楚，不要正式播音腔。"></textarea>
+                                                    <span class="speech-compact-help">留空则使用 AI 设置里的 Xiaomi Mimo 默认音色描述。</span>
                                                 </div>
                                                 <div class="speech-compact-field">
                                                     <span class="speech-compact-label">音频准备</span>

@@ -576,7 +576,23 @@ class AppConfig(BaseSettings):
     comfyui_base_url: str = Field(default="http://127.0.0.1:8188", env="COMFYUI_BASE_URL")
     comfyui_tts_workflow_path: str = Field(default="tests/Qwen3-TD-TTS.json", env="COMFYUI_TTS_WORKFLOW_PATH")
     comfyui_tts_timeout_seconds: int = Field(default=600, env="COMFYUI_TTS_TIMEOUT_SECONDS")
-    
+
+    # Xiaomi Mimo (optional, for TTS voice design and cloning)
+    mimo_api_key: Optional[str] = Field(default=None, env="MIMO_API_KEY")
+    mimo_base_url: str = Field(default="https://api.xiaomimimo.com/v1", env="MIMO_BASE_URL")
+    mimo_tts_model: str = Field(default="mimo-v2.5-tts-voicedesign", env="MIMO_TTS_MODEL")
+    mimo_tts_clone_model: str = Field(default="mimo-v2.5-tts-voiceclone", env="MIMO_TTS_CLONE_MODEL")
+    mimo_tts_voice_prompt: str = Field(
+        default="年轻、放松、语速偏快，像 Tom 猫那种俏皮又有点夸张的卡通感；说话轻快自然、有活力，吐字清楚，不要正式播音腔。",
+        env="MIMO_TTS_VOICE_PROMPT",
+    )
+
+    # Custom TTS API (GET endpoint with text/speaker/speed/novasr query params)
+    custom_tts_api_url: str = Field(default="http://localhost:9880/", env="CUSTOM_TTS_API_URL")
+    custom_tts_api_speaker: str = Field(default="TOM女", env="CUSTOM_TTS_API_SPEAKER")
+    custom_tts_api_speed: str = Field(default="1", env="CUSTOM_TTS_API_SPEED")
+    custom_tts_api_novasr: str = Field(default="1", env="CUSTOM_TTS_API_NOVASR")
+
     # Cache Configuration
     cache_ttl: int = Field(default=3600, env="CACHE_TTL")  # 1 hour
     cache_backend: str = Field(default="memory", env="CACHE_BACKEND")  # memory, valkey

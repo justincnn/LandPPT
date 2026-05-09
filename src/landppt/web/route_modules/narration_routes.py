@@ -4,6 +4,7 @@ Narration audio and narration video routes extracted from the legacy web router.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -38,6 +39,7 @@ class NarrationGenerateRequest(BaseModel):
     rate: str = "+0%"
     reference_audio_path: Optional[str] = None
     reference_text: str = ""
+    voice_prompt: str = ""
     force_regenerate: bool = False
 
 
@@ -56,6 +58,7 @@ class NarrationAudioExportRequest(BaseModel):
     rate: str = "+0%"
     reference_audio_path: Optional[str] = None
     reference_text: str = ""
+    voice_prompt: str = ""
     force_regenerate: bool = False
 
 
@@ -168,8 +171,30 @@ async def generate_narration_audio(
                 },
             )
 
+        task_id = task_manager.create_task(
+            "narration_generation",
+            {
+                "project_id": project_id,
+                "project_topic": project.topic,
+                "language": language,
+                "provider": provider,
+                "user_id": user.id,
+            },
+        )
+
         async def narration_task():
+            from ...services.background_tasks import TaskStatus
             from ...services.narration_service import NarrationService
+
+            async def update_audio_progress(done_count: int, total_count: int) -> None:
+                if total_count <= 0:
+                    return
+                progress = min(99.0, max(1.0, round(done_count * 100.0 / total_count, 2)))
+                await task_manager.update_task_status_async(
+                    task_id,
+                    TaskStatus.RUNNING,
+                    progress=progress,
+                )
 
             service = NarrationService(user_id=user.id)
             items = await service.generate_project_slide_audios(
@@ -181,8 +206,10 @@ async def generate_narration_audio(
                 rate=request.rate,
                 reference_audio_path=reference_audio_path,
                 reference_text=(request.reference_text or ""),
+                voice_prompt=(request.voice_prompt or ""),
                 force_regenerate=bool(request.force_regenerate),
                 uploads_dir="uploads",
+                progress_callback=update_audio_progress,
             )
             return {
                 "success": True,
@@ -202,17 +229,9 @@ async def generate_narration_audio(
                 ],
             }
 
-        task_id = task_manager.submit_task(
-            task_type="narration_generation",
-            func=narration_task,
-            metadata={
-                "project_id": project_id,
-                "project_topic": project.topic,
-                "language": language,
-                "provider": provider,
-                "user_id": user.id,
-            },
-        )
+        async_task = asyncio.create_task(task_manager.execute_task(task_id, narration_task))
+        task_manager.running_tasks[task_id] = async_task
+
         return JSONResponse(
             {
                 "status": "processing",
@@ -494,6 +513,7 @@ async def export_narration_audio(
                 rate=request.rate,
                 reference_audio_path=reference_audio_path,
                 reference_text=(request.reference_text or ""),
+                voice_prompt=(request.voice_prompt or ""),
                 force_regenerate=bool(request.force_regenerate),
                 uploads_dir="uploads",
             )

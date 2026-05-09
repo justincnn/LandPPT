@@ -783,6 +783,96 @@
                             </small>
                         </div>
 
+                        <!-- Xiaomi Mimo TTS (optional) -->
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Xiaomi Mimo API Key (TTS)
+                            </label>
+                            <input type="password" name="mimo_api_key" placeholder="MIMO_API_KEY"
+                                value="{{ current_config.get('mimo_api_key', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                                xiaomimimo TTS 的 API Key；也可通过环境变量 MIMO_API_KEY 配置。
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Xiaomi Mimo Base URL
+                            </label>
+                            <input type="url" name="mimo_base_url" placeholder="https://api.xiaomimimo.com/v1"
+                                value="{{ current_config.get('mimo_base_url', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Xiaomi Mimo TTS Model
+                            </label>
+                            <input type="text" name="mimo_tts_model" placeholder="mimo-v2.5-tts-voicedesign"
+                                value="{{ current_config.get('mimo_tts_model', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Xiaomi Mimo Clone Model
+                            </label>
+                            <input type="text" name="mimo_tts_clone_model" placeholder="mimo-v2.5-tts-voiceclone"
+                                value="{{ current_config.get('mimo_tts_clone_model', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Xiaomi Mimo 默认音色描述
+                            </label>
+                            <textarea name="mimo_tts_voice_prompt" rows="3"
+                                placeholder="例如：年轻、放松、语速偏快，像 Tom 猫那种俏皮又有点夸张的卡通感；说话轻快自然、有活力，吐字清楚，不要正式播音腔。"
+                                style="font-family: inherit; font-size: 0.9em; margin-bottom: 8px;">{{ current_config.get('mimo_tts_voice_prompt', '') }}</textarea>
+                        </div>
+
+                        <!-- Custom TTS API (optional) -->
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Custom TTS API URL
+                            </label>
+                            <input type="url" name="custom_tts_api_url" placeholder="http://localhost:9880/"
+                                value="{{ current_config.get('custom_tts_api_url', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            <small style="color: #6c757d; font-size: 0.85em; line-height: 1.4;">
+                                GET 接口会追加 text、speaker、speed、novasr 查询参数。
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                Custom TTS Speaker
+                            </label>
+                            <input type="text" name="custom_tts_api_speaker" placeholder="TOM女"
+                                value="{{ current_config.get('custom_tts_api_speaker', '') }}"
+                                style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                    Custom TTS Speed
+                                </label>
+                                <input type="text" name="custom_tts_api_speed" placeholder="1"
+                                    value="{{ current_config.get('custom_tts_api_speed', '') }}"
+                                    style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
+                                    Custom TTS novasr
+                                </label>
+                                <input type="text" name="custom_tts_api_novasr" placeholder="1"
+                                    value="{{ current_config.get('custom_tts_api_novasr', '') }}"
+                                    style="font-family: monospace; font-size: 0.9em; margin-bottom: 8px;">
+                            </div>
+                        </div>
+
                         <!-- ComfyUI TTS (optional) -->
                         <div class="form-group">
                             <label style="font-weight: 600; color: #495057; margin-bottom: 8px; display: block;">
