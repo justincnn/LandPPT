@@ -302,7 +302,8 @@ class ImageCacheManager:
                     '.jpeg': ImageFormat.JPEG,
                     '.png': ImageFormat.PNG,
                     '.webp': ImageFormat.WEBP,
-                    '.gif': ImageFormat.GIF
+                    '.gif': ImageFormat.GIF,
+                    '.svg': ImageFormat.SVG,
                 }
 
                 image_format = format_map.get(file_extension, ImageFormat.JPEG)
@@ -339,7 +340,7 @@ class ImageCacheManager:
     async def _discover_cache_info(self, cache_key: str) -> Optional[ImageCacheInfo]:
         """Discover a cached image file on disk and rebuild a minimal cache index entry."""
         cache_dirs = [self.ai_generated_dir, self.web_search_dir, self.local_storage_dir]
-        exts = [".webp", ".jpg", ".jpeg", ".png", ".gif"]
+        exts = [".webp", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".bmp", ".tiff", ".tif"]
 
         def _find_file() -> Optional[Path]:
             for base_dir in cache_dirs:
@@ -506,7 +507,7 @@ class ImageCacheManager:
                 if cache_dir.exists():
                     # 递归扫描所有图片文件
                     for file_path in cache_dir.rglob('*'):
-                        if file_path.is_file() and file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+                        if file_path.is_file() and file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.bmp', '.tiff', '.tif']:
                             try:
                                 # 使用文件名作为缓存键
                                 cache_key = file_path.stem

@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import logging
 import os
 import tempfile
@@ -9,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict
 from ...ai import AIMessage, MessageRole, get_ai_provider
 from ...ai.base import ImageContent, TextContent
 from ...core.config import ai_config
+from ..prompt_asset_service import upload_image_bytes_for_prompt
 from ..prompts.prompt_utils import strip_page_number_footer_guidance
 from ..pyppeteer_pdf_converter import get_pdf_converter
 
@@ -287,7 +287,17 @@ class LayoutRepairService:
                             exc_info=True
                         )
 
-                    screenshot_b64 = base64.b64encode(screenshot_path.read_bytes()).decode("utf-8")
+                    screenshot_url = await upload_image_bytes_for_prompt(
+                        screenshot_path.read_bytes(),
+                        "image/png",
+                        user_id=self.user_id,
+                    )
+                    if not screenshot_url:
+                        logger.warning(
+                            "Auto layout repair skipped: screenshot hosting failed for slide %s",
+                            page_number,
+                        )
+                        return html_content
 
                 inspection_prompt = self._build_layout_inspection_prompt(slide_data, page_number, total_pages)
 
@@ -300,7 +310,7 @@ class LayoutRepairService:
                         role=MessageRole.USER,
                         content=[
                             TextContent(text=inspection_prompt),
-                            ImageContent(image_url={"url": f"data:image/png;base64,{screenshot_b64}"})
+                            ImageContent(image_url={"url": screenshot_url})
                         ]
                     )
                 ]

@@ -8,6 +8,7 @@ import logging
 
 from .system_prompts import SystemPrompts
 from .prompt_utils import apply_page_number_prompt_filter
+from ..prompt_asset_service import strip_base64_image_payloads_for_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ class DesignPrompts:
 
     @staticmethod
     def _build_template_html_context(template_html: str) -> str:
-        return template_html or ""
+        return strip_base64_image_payloads_for_prompt(template_html or "")
 
     @staticmethod
     def _build_locked_zones_context(template_html: str, page_number: int,

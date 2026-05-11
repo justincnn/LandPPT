@@ -18,6 +18,7 @@ from ...database.service import DatabaseService
 from ...database.database import AsyncSessionLocal
 from ..prompts.system_prompts import SystemPrompts
 from ..prompts.template_prompts import TemplatePrompts
+from ..prompt_asset_service import materialize_base64_image_data_urls_for_prompt
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -90,6 +91,43 @@ class GlobalMasterTemplateService:
         # Fall back to global config
         logger.warning("Falling back to global get_role_provider")
         return get_role_provider("template", provider_override=self.provider_name)
+
+    async def _prompt_safe_image_url_from_reference(self, image_ref: Dict[str, Any]) -> Optional[str]:
+        """Return a hosted URL for a reference image without sending base64 to the model."""
+        if not image_ref:
+            return None
+
+        image_data = str(image_ref.get("data") or "").strip()
+        if not image_data:
+            return None
+
+        if image_data.startswith(("http://", "https://")):
+            return image_data
+
+        if image_data.startswith("/"):
+            try:
+                from ..url_service import build_absolute_url
+
+                return build_absolute_url(image_data)
+            except Exception:
+                return image_data
+
+        if not image_data.startswith("data:"):
+            image_type = image_ref.get("type", "image/png") or "image/png"
+            image_data = f"data:{image_type};base64,{image_data}"
+
+        hosted_url = await materialize_base64_image_data_urls_for_prompt(
+            image_data,
+            user_id=self.user_id,
+        )
+        if hosted_url and hosted_url.startswith(("http://", "https://", "/")):
+            return hosted_url
+
+        logger.warning(
+            "Reference image could not be materialized for prompt use: %s",
+            image_ref.get("filename") or "unknown",
+        )
+        return None
 
     async def _text_completion(self, *, prompt: str, **kwargs):
         provider, settings = await self._get_template_role_provider_async()
@@ -571,12 +609,10 @@ class GlobalMasterTemplateService:
                 mode_instruction=mode_instruction,
             )
 
-            # 构建多模态消息
-            # 确保图片URL格式正确
-            image_data = reference_image['data']
-            if not image_data.startswith("data:"):
-                # 如果是纯base64数据,添加data URL前缀
-                image_data = f"data:{reference_image['type']};base64,{image_data}"
+            # 构建多模态消息：图片必须先落到系统图床，避免把 base64 直接发给模型。
+            image_data = await self._prompt_safe_image_url_from_reference(reference_image)
+            if not image_data:
+                raise ValueError("参考图片上传到系统图床失败，已取消发送 base64 图片")
 
             content_parts = [
                 {"type": "text", "text": ai_prompt},
@@ -588,10 +624,8 @@ class GlobalMasterTemplateService:
 
             # Append all extra reference images (user-uploaded or PPTX screenshots)
             for extra_img in extra_images:
-                extra_data = extra_img.get('data', '')
+                extra_data = await self._prompt_safe_image_url_from_reference(extra_img)
                 if extra_data:
-                    if not extra_data.startswith("data:"):
-                        extra_data = f"data:{extra_img.get('type', 'image/png')};base64,{extra_data}"
                     content_parts.append({
                         "type": "image_url",
                         "image_url": {"url": extra_data}
@@ -622,9 +656,9 @@ class GlobalMasterTemplateService:
                         if part["type"] == "text":
                             content_parts.append(TextContent(text=part["text"]))
                         elif part["type"] == "image_url":
-                            # 提取图片URL (已经是完整的data URL格式)
+                            # 提取图片URL (已上传系统图床或为可访问URL)
                             image_url = part["image_url"]["url"]
-                            if image_url.startswith("data:"):
+                            if image_url:
                                 content_parts.append(ImageContent(
                                     image_url={"url": image_url},
                                     content_type=MessageContentType.IMAGE_URL
@@ -696,12 +730,9 @@ class GlobalMasterTemplateService:
             # 构建AI消息
             if generation_mode != "text_only" and reference_image:
                 # 多模态消息
-                # 确保图片URL格式正确 (OpenAI需要完整的data URL格式)
-                image_url = reference_image["data"]
-                if not image_url.startswith("data:"):
-                    # 如果是纯base64数据,添加data URL前缀
-                    image_type = reference_image.get("type", "image/png")
-                    image_url = f"data:{image_type};base64,{image_url}"
+                image_url = await self._prompt_safe_image_url_from_reference(reference_image)
+                if not image_url:
+                    raise ValueError("参考图片上传到系统图床失败，已取消发送 base64 图片")
 
                 content_parts = [
                     TextContent(text=ai_prompt),
@@ -1110,7 +1141,9 @@ class GlobalMasterTemplateService:
 
     async def _upload_pptx_image_to_hosting(self, image_bytes: bytes, content_type: str, filename: str) -> Optional[str]:
         """Upload an extracted PPTX image to the local image hosting and return its absolute URL."""
+        token = None
         try:
+            from ...auth.request_context import current_user_id
             from ..image.image_service import get_image_service
             from ..image.models import (
                 ImageUploadRequest, ImageInfo, ImageMetadata,
@@ -1136,9 +1169,15 @@ class GlobalMasterTemplateService:
             elif 'bmp' in ct_lower:
                 ext = 'bmp'
                 fmt = ImageFormat.BMP
+            elif 'svg' in ct_lower:
+                ext = 'svg'
+                fmt = ImageFormat.SVG
 
             if not filename.endswith(f'.{ext}'):
                 filename = f"{filename}.{ext}"
+
+            if self.user_id is not None and current_user_id.get() != self.user_id:
+                token = current_user_id.set(self.user_id)
 
             image_service = get_image_service()
             if not image_service.initialized:
@@ -1166,6 +1205,9 @@ class GlobalMasterTemplateService:
                 logger.warning(f"Image upload failed for {filename}: {getattr(result, 'message', 'unknown')}")
         except Exception as e:
             logger.warning(f"Failed to upload PPTX image to hosting: {e}")
+        finally:
+            if token is not None:
+                current_user_id.reset(token)
         return None
 
     def _classify_image_role(self, left_ratio, top_ratio, width_ratio, height_ratio, slide_width, slide_height, area) -> str:
@@ -1970,7 +2012,7 @@ class GlobalMasterTemplateService:
                 logger.debug(f"Failed to upload pptx extracted image: {e}")
 
         # --- Render per-slide screenshots --------------------------------------
-        slide_screenshots: List[Dict[str, Any]] = []  # {slide_idx, url, b64_data}
+        slide_screenshots: List[Dict[str, Any]] = []  # {slide_idx, url}
         try:
             rendered = await self._render_pptx_slides_to_images(
                 pptx_bytes, max_slides=len(sampled_slides), dpi=150,
@@ -1991,11 +2033,7 @@ class GlobalMasterTemplateService:
                         screenshot_entry['url'] = url
                 except Exception:
                     pass
-                # Also keep base64 for multimodal image messages
-                if len(rimg['blob']) <= 5 * 1024 * 1024:
-                    b64 = base64.b64encode(rimg['blob']).decode('utf-8')
-                    screenshot_entry['b64_data'] = f"data:{rimg['content_type']};base64,{b64}"
-                    screenshot_entry['content_type'] = rimg['content_type']
+                screenshot_entry['content_type'] = rimg['content_type']
                 slide_screenshots.append(screenshot_entry)
         except Exception as e:
             logger.warning(f"Slide screenshot rendering failed: {e}")
@@ -2015,34 +2053,39 @@ class GlobalMasterTemplateService:
         # --- Build reference image for multimodal AI ---------------------------
         # Prefer the first slide screenshot as reference; fall back to best picture
         reference_image = None
-        if slide_screenshots and slide_screenshots[0].get('b64_data'):
+        if slide_screenshots and slide_screenshots[0].get('url'):
             first = slide_screenshots[0]
             reference_image = {
                 "filename": f"slide1_screenshot.png",
-                "size": len(first.get('b64_data', '')),
+                "size": 0,
                 "type": first.get('content_type', 'image/png'),
-                "data": first['b64_data'],
+                "data": first['url'],
             }
         elif best_picture and best_picture.get("blob") and len(best_picture["blob"]) <= 10 * 1024 * 1024:
-            img_b64 = base64.b64encode(best_picture["blob"]).decode("utf-8")
             content_type = best_picture.get("content_type") or "image/png"
-            reference_image = {
-                "filename": best_picture.get("filename") or "pptx_reference_image",
-                "size": len(best_picture["blob"]),
-                "type": content_type,
-                "data": f"data:{content_type};base64,{img_b64}",
-            }
+            hosted_url = await self._upload_pptx_image_to_hosting(
+                best_picture["blob"],
+                content_type,
+                best_picture.get("filename") or "pptx_reference_image",
+            )
+            if hosted_url:
+                reference_image = {
+                    "filename": best_picture.get("filename") or "pptx_reference_image",
+                    "size": len(best_picture["blob"]),
+                    "type": content_type,
+                    "data": hosted_url,
+                }
 
         # --- Build additional slide images for multimodal AI -------------------
         # Include remaining slide screenshots as extra reference images
         extra_reference_images: List[Dict[str, Any]] = []
         for ss in slide_screenshots[1:]:  # skip first (already used as reference_image)
-            if ss.get('b64_data'):
+            if ss.get('url'):
                 extra_reference_images.append({
                     "filename": f"slide{ss['slide_idx']}_screenshot.png",
-                    "size": len(ss.get('b64_data', '')),
+                    "size": 0,
                     "type": ss.get('content_type', 'image/png'),
-                    "data": ss['b64_data'],
+                    "data": ss['url'],
                     "slide_idx": ss['slide_idx'],
                 })
 

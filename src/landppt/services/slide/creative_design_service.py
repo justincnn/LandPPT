@@ -6,6 +6,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ..prompt_asset_service import materialize_base64_image_data_urls_for_prompt
 from ..prompts import prompts_manager
 from ..prompts.prompt_utils import should_include_page_numbers
 
@@ -112,7 +113,10 @@ class CreativeDesignService:
         try:
             if isinstance(slide_data, dict):
                 slide_data["_include_page_numbers"] = should_include_page_numbers(confirmed_requirements)
-            template_html = template["html_template"]
+            template_html = await materialize_base64_image_data_urls_for_prompt(
+                template["html_template"],
+                user_id=self.user_id,
+            )
             template_name = template.get("template_name", "未知模板")
             logger.info("使用模板 %s 作为风格参考生成第%s页", template_name, page_number)
 
@@ -162,6 +166,11 @@ class CreativeDesignService:
     ) -> str:
         """Build slide-generation prompt context with consistent style guidance."""
         del template_name
+
+        template_html = await materialize_base64_image_data_urls_for_prompt(
+            template_html,
+            user_id=self.user_id,
+        )
 
         if not project_id:
             project_id = confirmed_requirements.get("project_id")
@@ -226,6 +235,10 @@ class CreativeDesignService:
     async def _extract_style_genes(self, template_html: str) -> str:
         """Extract core design genes from a template with AI fallback."""
         try:
+            template_html = await materialize_base64_image_data_urls_for_prompt(
+                template_html,
+                user_id=self.user_id,
+            )
             prompt = prompts_manager.get_style_genes_extraction_prompt(template_html)
             response = await self._text_completion_for_role(
                 "creative",
@@ -930,6 +943,10 @@ class CreativeDesignService:
         all_slides: Optional[List[Dict[str, Any]]] = None,
     ) -> tuple[str, str, str]:
         """组装设计基因、全局宪法和当前页指导。"""
+        template_html = await materialize_base64_image_data_urls_for_prompt(
+            template_html,
+            user_id=self.user_id,
+        )
         style_genes = await self._get_or_extract_style_genes(project_id, template_html, page_number)
 
         first_slide = (all_slides[0] if all_slides else slide_data) or {}
@@ -979,6 +996,10 @@ class CreativeDesignService:
     ) -> tuple[str, str]:
         """Single-call extraction of style genes plus design guidance."""
         try:
+            template_html = await materialize_base64_image_data_urls_for_prompt(
+                template_html,
+                user_id=self.user_id,
+            )
             prompt = prompts_manager.get_combined_style_genes_and_guide_prompt(
                 template_html,
                 slide_data,
