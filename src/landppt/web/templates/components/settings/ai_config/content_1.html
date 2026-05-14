@@ -562,7 +562,7 @@
                             <div class="parallel-showcase-control">
                                 <input type="number" name="parallel_slides_count" id="parallel_slides_count"
                                     value="{{ current_config.get('parallel_slides_count', '3') }}" min="1" max="10"
-                                    oninput="updateParallelSlidesDisplay(this.value); document.getElementById('parallel_slides_range').value = this.value; document.getElementById('parallel_slides_range').dispatchEvent(new Event('input'));">
+                                    oninput="document.getElementById('parallel_slides_range').value = this.value; updateParallelSlidesDisplay(this.value);">
                                 <div class="modern-range" style="flex: 1;">
                                     <input type="range" id="parallel_slides_range" min="1" max="10" step="1"
                                         value="{{ current_config.get('parallel_slides_count', '3') }}"

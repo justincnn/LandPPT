@@ -1368,7 +1368,7 @@
             const tab = document.getElementById('generation-params');
             if (!tab) return;
 
-            const inputs = tab.querySelectorAll('input, select');
+            const inputs = tab.querySelectorAll('input, select, textarea');
             inputs.forEach(input => {
                 const configKey = input.name;
                 const configValue = currentConfig[configKey];
@@ -1843,7 +1843,7 @@
 
             const config = {};
             const tavilyDefaultBaseUrl = 'https://api.tavily.com';
-            const inputs = tab.querySelectorAll('input, select');
+            const inputs = tab.querySelectorAll('input, select, textarea');
 
             inputs.forEach(input => {
                 if (input.name) {
@@ -1946,7 +1946,7 @@
                 ['generation-params', 'app-config'].forEach(tabId => {
                     const tab = document.getElementById(tabId);
                     if (tab) {
-                        const inputs = tab.querySelectorAll('input, select');
+                        const inputs = tab.querySelectorAll('input, select, textarea');
                         inputs.forEach(input => {
                             if (input.name) {
                                 if (input.type === 'checkbox') {
