@@ -1276,13 +1276,93 @@
             }
         }
 
-        // 更新并行页数显示
+        // 更新并行页数显示（仅数字，单位由 HTML 提供）
         function updateParallelSlidesDisplay(value) {
             const displaySpan = document.getElementById('parallel_slides_display');
             if (displaySpan) {
-                displaySpan.textContent = value + ' 页';
+                displaySpan.textContent = value;
             }
+            const rangeEl = document.getElementById('parallel_slides_range');
+            if (rangeEl) updateRangeGradient(rangeEl);
         }
+
+        // 计算并应用现代化滑块的渐变填充（CSS 变量 --range-fill）
+        function updateRangeGradient(rangeEl) {
+            if (!rangeEl) return;
+            const min = parseFloat(rangeEl.min || 0);
+            const max = parseFloat(rangeEl.max || 100);
+            const val = parseFloat(rangeEl.value);
+            const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+            rangeEl.style.setProperty('--range-fill', pct.toFixed(2) + '%');
+        }
+
+        // 格式化参数值徽章显示
+        function formatParamValueBadge(name, value) {
+            if (value === null || value === undefined || value === '') return value;
+            // 大数字加千位分隔
+            if (name === 'max_tokens' || name === 'research_max_content_length') {
+                const n = Number(value);
+                if (!isNaN(n)) return n.toLocaleString('en-US');
+            }
+            return value;
+        }
+
+        // 同步参数卡内的 range / number / badge
+        function bindParamCardSync() {
+            const tab = document.getElementById('generation-params');
+            if (!tab) return;
+
+            const ranges = tab.querySelectorAll('input[type="range"][data-range-for]');
+            ranges.forEach(range => {
+                const name = range.getAttribute('data-range-for');
+                const numberEl = tab.querySelector('input[type="number"][data-number-for="' + name + '"]');
+                const badgeEl = tab.querySelector('[data-value-for="' + name + '"]');
+
+                updateRangeGradient(range);
+                if (badgeEl) badgeEl.textContent = formatParamValueBadge(name, range.value);
+
+                range.addEventListener('input', () => {
+                    if (numberEl) numberEl.value = range.value;
+                    if (badgeEl) badgeEl.textContent = formatParamValueBadge(name, range.value);
+                    updateRangeGradient(range);
+                });
+
+                if (numberEl) {
+                    numberEl.addEventListener('input', () => {
+                        const v = numberEl.value;
+                        if (v === '' || isNaN(Number(v))) return;
+                        range.value = v;
+                        if (badgeEl) badgeEl.textContent = formatParamValueBadge(name, v);
+                        updateRangeGradient(range);
+                    });
+                }
+            });
+
+            // 并行生成滑块（id 形式，无 data-range-for）
+            const parallelRange = document.getElementById('parallel_slides_range');
+            if (parallelRange) updateRangeGradient(parallelRange);
+        }
+
+        // 切换 toggle-row 的激活态视觉（基于内部 checkbox 的 checked 状态）
+        function bindToggleRowState() {
+            document.querySelectorAll('.toggle-row').forEach(row => {
+                const cb = row.querySelector('input[type="checkbox"]');
+                if (!cb) return;
+                const sync = () => row.classList.toggle('is-active', cb.checked);
+                sync();
+                cb.addEventListener('change', sync);
+            });
+        }
+
+        // 页面加载完成后初始化生成参数 UI 同步
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                bindParamCardSync();
+                bindToggleRowState();
+            } catch (e) {
+                console && console.warn && console.warn('gen-params init failed:', e);
+            }
+        });
 
         function populateGenerationParams() {
             const tab = document.getElementById('generation-params');
@@ -1336,7 +1416,32 @@
                 if (countInput) {
                     updateParallelSlidesDisplay(countInput.value || countInput.getAttribute('value') || '0');
                 }
+                // 同步参数卡片的滑块/徽章状态
+                syncParamCardsFromInputs();
+                // 刷新 toggle-row 视觉态
+                document.querySelectorAll('.toggle-row').forEach(row => {
+                    const cb = row.querySelector('input[type="checkbox"]');
+                    if (cb) row.classList.toggle('is-active', cb.checked);
+                });
             }, 100);
+        }
+
+        // 在外部填充数字输入后，将 range 与 badge 同步到当前 number 值
+        function syncParamCardsFromInputs() {
+            const tab = document.getElementById('generation-params');
+            if (!tab) return;
+            const ranges = tab.querySelectorAll('input[type="range"][data-range-for]');
+            ranges.forEach(range => {
+                const name = range.getAttribute('data-range-for');
+                const numberEl = tab.querySelector('input[type="number"][data-number-for="' + name + '"]');
+                const badgeEl = tab.querySelector('[data-value-for="' + name + '"]');
+                // 数字输入优先；为空时回退到 range 自带默认值（不强制写回，避免覆盖"使用默认"语义）
+                const numVal = numberEl ? numberEl.value : '';
+                const src = numVal !== '' ? numVal : range.value;
+                range.value = src;
+                if (badgeEl) badgeEl.textContent = formatParamValueBadge(name, src);
+                updateRangeGradient(range);
+            });
         }
 
 
