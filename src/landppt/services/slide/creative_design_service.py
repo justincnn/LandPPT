@@ -6,12 +6,21 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from ...core.config import ai_config, resolve_timeout_seconds
 from ..prompt_asset_service import materialize_base64_image_data_urls_for_prompt
 from ..prompts import prompts_manager
 from ..prompts.prompt_utils import should_include_page_numbers
 
 
 logger = logging.getLogger(__name__)
+
+
+def _llm_wait_timeout(default: float = 600.0) -> float:
+    """Resolve the orchestration-level wait timeout from the user-configured LLM timeout."""
+    try:
+        return float(resolve_timeout_seconds(ai_config.llm_timeout_seconds, int(default)))
+    except Exception:
+        return float(default)
 
 
 if TYPE_CHECKING:
@@ -369,7 +378,7 @@ class CreativeDesignService:
         event = events_dict[project_id]
         if not event.is_set():
             try:
-                await asyncio.wait_for(event.wait(), timeout=600.0)
+                await asyncio.wait_for(event.wait(), timeout=_llm_wait_timeout())
             except asyncio.TimeoutError:
                 logger.warning("第%s页等待设计基因缓存超时，使用默认设计基因", page_number)
                 return default_genes
@@ -601,7 +610,7 @@ class CreativeDesignService:
         event = events[project_id]
         if not event.is_set():
             try:
-                await asyncio.wait_for(event.wait(), timeout=600.0)
+                await asyncio.wait_for(event.wait(), timeout=_llm_wait_timeout())
             except asyncio.TimeoutError:
                 return default
         return getattr(self, cache_attr, {}).get(project_id, default)
@@ -711,7 +720,7 @@ class CreativeDesignService:
         event = events[project_id]
         if not event.is_set():
             try:
-                await asyncio.wait_for(event.wait(), timeout=600.0)
+                await asyncio.wait_for(event.wait(), timeout=_llm_wait_timeout())
             except asyncio.TimeoutError:
                 return []
         return getattr(self, cache_attr, {}).get(project_id, [])
@@ -865,7 +874,7 @@ class CreativeDesignService:
         event = events[cache_key]
         if not event.is_set():
             try:
-                await asyncio.wait_for(event.wait(), timeout=600.0)
+                await asyncio.wait_for(event.wait(), timeout=_llm_wait_timeout())
             except asyncio.TimeoutError:
                 logger.warning("第%s页等待单页创意指导超时，使用 fallback", page_number)
                 return fallback
@@ -1159,7 +1168,7 @@ class CreativeDesignService:
             if not event.is_set():
                 logger.info("第%s页等待合并设计数据就绪（项目 %s）...", page_number, project_id)
                 try:
-                    await asyncio.wait_for(event.wait(), timeout=600.0)
+                    await asyncio.wait_for(event.wait(), timeout=_llm_wait_timeout())
                 except asyncio.TimeoutError:
                     logger.warning("第%s页等待合并设计数据超时，使用 fallback", page_number)
                     return (

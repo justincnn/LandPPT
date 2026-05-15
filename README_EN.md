@@ -92,8 +92,8 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 ##  Key Features
 
 ###  Multi-AI Provider Support
-- **OpenAI GPT Series**: GPT-4o, GPT-4o-mini and other OpenAI models
-- **OpenAI-Compatible Platforms / 302.AI**: Supports DeepSeek, Moonshot, Qwen, and other OpenAI-compatible endpoints
+- **OpenAI GPT Series**: GPT-5.5 and other OpenAI models
+- **OpenAI-Compatible Platforms**: Supports DeepSeek, Moonshot, Qwen, and other OpenAI-compatible endpoints
 - **Anthropic Claude**: Claude series models
 - **Google Gemini**: Gemini series models with custom endpoint support
 - **Azure OpenAI**: Enterprise-grade AI services with custom deployments
@@ -150,7 +150,6 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 - **Background Task System**: Long-running PDF/PPTX/narration-video exports run asynchronously with polling support
 - **Automatic Database Migrations**: Pending migrations run on startup, and default templates are imported on first boot
 - **OpenAI-Compatible Endpoints**: Exposes `/v1/chat/completions`, `/v1/completions`, and `/v1/models`
-- **Optional GPU Acceleration**: Video export supports Playwright + ffmpeg GPU-encoding configuration
 - **Optional Monetization Modules**: Credits system, SMTP/Resend email, registration throttling, and Cloudflare Turnstile
 
 ##  Quick Start
@@ -300,7 +299,6 @@ Configure your AI API keys in the settings page:
 - OpenAI API Key
 - Anthropic API Key
 - Google API Key
-- 302.AI API Key
 - Or configure local Ollama service
 
 ### 3. Create PPT Projects

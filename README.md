@@ -11,8 +11,6 @@
 
 ---
 
-##  Open to Opportunities
-
 如果你对我的项目感兴趣，欢迎联系我！
 
 [![Email](https://img.shields.io/badge/_Email-ai%40yydsapp.com-blue?style=for-the-badge)](mailto:ai@yydsapp.com)
@@ -44,7 +42,7 @@
   </p>
 </div>
 
-LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，让用户能够轻松创建高质量的演示文稿
+LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台，能够自动将文档内容转换为专业的PPT演示文稿。平台集成了多种AI模型、智能图像处理、深度研究功能和丰富的模板系统，提供一站式的AIPPT服务。
 
 [文档指南](http://landppt-doc.52yyds.top/docs)
 
@@ -105,10 +103,10 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 ##  核心功能
 
 ###  多AI提供商支持
-- **OpenAI GPT系列**：GPT-4o、GPT-4o-mini 等模型
-- **OpenAI兼容平台 / 302.AI**：支持 DeepSeek、Moonshot、Qwen 等兼容 OpenAI 协议的模型与中转平台
+- **OpenAI GPT系列**：GPT-5.5 等模型
+- **OpenAI兼容平台**：支持 DeepSeek、Moonshot、Qwen 等兼容 OpenAI 协议的模型与中转平台
 - **Anthropic Claude**：Claude-4 Sonnet、Claude-4 Haiku 系列模型
-- **Google Gemini**：Gemini-2.5 Flash、Gemini-2.5 Pro 系列模型，支持自定义端点配置
+- **Google Gemini**：Gemini-3.1 Flash、Gemini-3.0 Pro 系列模型，支持自定义端点配置
 - **Azure OpenAI**：企业级AI服务，支持自定义部署
 - **Ollama**：本地部署的开源模型，支持 Llama、Mistral 等
 
@@ -161,7 +159,6 @@ LandPPT 是一个基于大语言模型（LLM）的智能演示文稿生成平台
 - **Docker / Docker Compose**：同时提供单容器运行和 `docker-compose.yml` / `docker-compose-dev.yaml` 多服务编排
 - **PostgreSQL + Valkey**：生产编排内置数据库与缓存/任务协调服务，适合多用户与后台任务场景
 - **后台任务系统**：PDF/PPTX/讲解视频等长任务异步执行，支持任务轮询与多 Worker 容错
-- **自动数据库迁移**：应用启动时自动执行迁移，并在首次启动时导入默认模板
 - **OpenAI 兼容接口**：提供 `/v1/chat/completions`、`/v1/completions`、`/v1/models`
 - **可选商业化模块**：支持积分系统、SMTP/Resend、注册限流与 Cloudflare Turnstile
 
@@ -312,7 +309,6 @@ docker compose -f docker-compose-dev.yaml logs -f landppt-dev
 - OpenAI API Key(支持openai 兼容model api，例如deepseek、moonshot、qwen等等)
 - Anthropic API Key
 - Google API Key
-- 302.AI API Key
 - 或配置本地Ollama服务
 
 ### 3. 创建PPT项目
@@ -334,7 +330,7 @@ docker compose -f docker-compose-dev.yaml logs -f landppt-dev
 - 支持批量处理和模板复用
 
 ### 5. 自动化与开放接口
-- 支持通过 API Key 将项目流程接入 n8n、CI、脚本和自定义后端
+- 支持通过 API Key 将项目流程接入 CI、脚本和自定义后端
 - 提供 OpenAI 兼容接口：`/v1/chat/completions`、`/v1/completions`、`/v1/models`
 - 提供项目级导出/分享/讲稿接口，适合非浏览器自动化工作流
 
@@ -613,7 +609,7 @@ A: 大多数AI提供商支持并发请求，但可能有不同的限制。建议
 - **问题反馈**: https://github.com/sligter/LandPPT/issues
 - **讨论区**: https://github.com/sligter/LandPPT/discussions
 
-<a href="https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260413/052dae6fa31246aab7c34ada2ba32a84.jpg">LandPPT</a>
+<a href="https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260515/9c2bb1e3f67945f3b147181d6351eaf0.png">LandPPT</a>
 ---
 
 <div align="center">
