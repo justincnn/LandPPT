@@ -599,7 +599,7 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE
 - **Issue Reporting**: https://github.com/sligter/LandPPT/issues
 - **Discussions**: https://github.com/sligter/LandPPT/discussions
 
-![LandPPT](https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260413/052dae6fa31246aab7c34ada2ba32a84.jpg)
+![image](https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260515/9c2bb1e3f67945f3b147181d6351eaf0.png)
 ---
 
 <div align="center">

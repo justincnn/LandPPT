@@ -579,26 +579,7 @@ async def export_narration_video(
             raise HTTPException(status_code=404, detail="Project not found")
 
         if not bool(getattr(user, "is_admin", False)):
-            if not app_config.enable_credits_system:
-                raise HTTPException(status_code=403, detail="Permission denied")
-            try:
-                from ...services.credits_service import CreditsService
-                from ...database.database import AsyncSessionLocal
-
-                async with AsyncSessionLocal() as session:
-                    credits_service = CreditsService(session)
-                    balance = await credits_service.get_balance(user.id)
-                if int(balance) <= 1_000_000:
-                    raise HTTPException(status_code=403, detail="Permission denied")
-            except HTTPException:
-                raise
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Failed to check credits for narration video export (user_id=%s): %s",
-                    user.id,
-                    exc,
-                )
-                raise HTTPException(status_code=403, detail="Permission denied")
+            raise HTTPException(status_code=403, detail="Permission denied")
 
         from ...services.background_tasks import get_task_manager
 

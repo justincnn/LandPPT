@@ -850,6 +850,8 @@ async def download_task_result(
 
     # Special-case narration video: allow download even if legacy result didn't persist cleanly.
     if task.task_type == "narration_video_export":
+        if not bool(getattr(user, "is_admin", False)):
+            raise HTTPException(status_code=403, detail="Permission denied")
         if not video_path:
             video_path = task.metadata.get("video_path")
 

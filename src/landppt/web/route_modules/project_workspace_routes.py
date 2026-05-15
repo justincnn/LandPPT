@@ -177,7 +177,7 @@ async def edit_project_ppt(
                 "request": request,
                 "project": project,
                 "enable_auto_layout_repair": ai_config.enable_auto_layout_repair,
-                "narration_video_tools_enabled": getattr(app_config, "narration_video_tools_enabled", True),
+                "narration_video_tools_enabled": bool(getattr(user, "is_admin", False)) and getattr(app_config, "narration_video_tools_enabled", True),
                 "has_speech_scripts": has_speech_scripts,
                 "narration_languages": narration_languages,
             },
