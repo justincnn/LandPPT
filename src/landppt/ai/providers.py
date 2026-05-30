@@ -214,10 +214,6 @@ class OpenAIProvider(AIProvider):
         if stream:
             request_kwargs["stream"] = True
 
-        max_output_tokens = config.get("max_output_tokens")
-        if max_output_tokens is not None:
-            request_kwargs["max_tokens"] = max_output_tokens
-
         self._apply_reasoning_config(request_kwargs, config, responses_api=False)
 
         return request_kwargs
@@ -233,10 +229,6 @@ class OpenAIProvider(AIProvider):
             "temperature": config.get("temperature", 0.7),
             "top_p": config.get("top_p", 1.0),
         }
-
-        max_output_tokens = config.get("max_output_tokens")
-        if max_output_tokens is not None:
-            request_kwargs["max_output_tokens"] = max_output_tokens
 
         self._apply_reasoning_config(request_kwargs, config, responses_api=True)
 
@@ -635,9 +627,6 @@ class AnthropicProvider(AIProvider):
         api_key = config.get("api_key", "")
         base_url = config.get("base_url", "https://api.anthropic.com")
         model = config.get("model", self.model)
-        # NOTE: `MAX_TOKENS` in this project refers to chunking/splitting, not model output length.
-        # Anthropic Messages API requires `max_tokens`, so we use a conservative fixed default here.
-        max_output_tokens = config.get("max_output_tokens", 32768)
         temperature = config.get("temperature", 0.7)
 
         # Convert messages to Anthropic format
@@ -663,7 +652,6 @@ class AnthropicProvider(AIProvider):
             body = {
                 "model": model,
                 "messages": claude_messages,
-                "max_tokens": max_output_tokens,
                 "temperature": temperature,
                 "stream": True
             }
@@ -1032,9 +1020,6 @@ class GoogleProvider(AIProvider):
                 "temperature": config.get("temperature", 0.7),
                 "topP": config.get("top_p", 1.0),
             }
-            max_output_tokens = config.get("max_output_tokens")
-            if max_output_tokens is not None:
-                generation_config["maxOutputTokens"] = max_output_tokens
 
             prompt_text = self._messages_to_plaintext_prompt(messages)
             data = await self._rest_generate_content(
@@ -1059,15 +1044,10 @@ class GoogleProvider(AIProvider):
 
         try:
             # Configure generation parameters
-            # 确保max_tokens不会太小，至少1000个token用于生成内容
             generation_config = {
                 "temperature": config.get("temperature", 0.7),
                 "top_p": config.get("top_p", 1.0),
             }
-            max_output_tokens = config.get("max_output_tokens")
-            if max_output_tokens is not None:
-                generation_config["max_output_tokens"] = max_output_tokens
-
             # 配置安全设置 - 设置为较宽松的安全级别以减少误拦截
             safety_settings = [
                 {
@@ -1242,9 +1222,6 @@ class OllamaProvider(AIProvider):
                 "temperature": config.get("temperature", 0.7),
                 "top_p": config.get("top_p", 1.0),
             }
-            max_output_tokens = config.get("max_output_tokens")
-            if max_output_tokens is not None:
-                options["num_predict"] = max_output_tokens
 
             response = await asyncio.wait_for(
                 self.client.chat(

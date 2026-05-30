@@ -106,6 +106,7 @@ async def test_openai_provider_chat_completion_uses_responses_api(monkeypatch):
 
     response = await provider.chat_completion(
         [AIMessage(role=MessageRole.USER, content="hello")],
+        max_output_tokens=16,
     )
 
     assert response.content == "Hello from responses"
@@ -114,6 +115,7 @@ async def test_openai_provider_chat_completion_uses_responses_api(monkeypatch):
     assert len(instances) == 1
     assert instances[0].responses.create_calls[0]["input"][0]["content"] == "hello"
     assert instances[0].responses.create_calls[0]["reasoning"] == {"effort": "high"}
+    assert "max_output_tokens" not in instances[0].responses.create_calls[0]
 
 
 @pytest.mark.asyncio
@@ -168,6 +170,7 @@ async def test_openai_provider_chat_completions_uses_reasoning_effort(monkeypatc
             "api_key": "test-key",
             "base_url": "https://api.openai.com/v1",
             "model": "gpt-4.1",
+            "max_tokens": 4096,
             "enable_reasoning": True,
             "reasoning_effort": "low",
         }
@@ -181,3 +184,4 @@ async def test_openai_provider_chat_completions_uses_reasoning_effort(monkeypatc
     assert response.metadata["transport"] == "chat_completions"
     assert len(instances) == 1
     assert instances[0].chat.completions.create_calls[0]["reasoning_effort"] == "low"
+    assert "max_tokens" not in instances[0].chat.completions.create_calls[0]

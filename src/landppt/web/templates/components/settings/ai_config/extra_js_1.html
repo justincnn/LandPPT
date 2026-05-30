@@ -454,8 +454,6 @@
                         use_responses_api: useResponsesApi,
                         enable_reasoning: enableReasoning,
                         reasoning_effort: reasoningEffort,
-                        // 测试时使用足够大的生成长度，避免空响应
-                        max_tokens: 500
                     })
                 });
 
@@ -667,7 +665,6 @@
                             }
                         ],
                         generationConfig: {
-                            maxOutputTokens: 1000,
                             temperature: 0
                         }
                     })
@@ -818,7 +815,6 @@
                         prompt: 'Say "Hello, I am working!" in exactly 5 words.',
                         stream: false,
                         options: {
-                            num_predict: 20,
                             temperature: 0
                         }
                     })

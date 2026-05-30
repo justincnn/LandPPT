@@ -114,17 +114,15 @@ class AIProvider(ABC):
         Note:
         - In this project, `MAX_TOKENS/max_tokens` refers to the *chunking/splitting* limit.
           It must not be forwarded to model providers as an output length constraint.
-        - Use `max_output_tokens` to control model output length when needed.
+        - Output token caps are intentionally not forwarded to model providers.
         """
         merged = self.config.copy()
         merged.pop("max_tokens", None)
+        merged.pop("max_output_tokens", None)
 
-        # Drop ambiguous / legacy parameter to avoid accidentally coupling chunking to model output.
+        # Drop output length controls to avoid coupling chunking/user config to model requests.
         kwargs.pop("max_tokens", None)
-
-        max_output_tokens = kwargs.pop("max_output_tokens", None)
+        kwargs.pop("max_output_tokens", None)
         merged.update(kwargs)
-        if max_output_tokens is not None:
-            merged["max_output_tokens"] = max_output_tokens
 
         return merged
