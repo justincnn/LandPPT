@@ -59,21 +59,31 @@ class SlideMediaService:
                 project_id = confirmed_requirements.get('project_id')
             selected_template = None
             if project_id:
-                try:
-                    selected_template = await self.get_selected_global_template(project_id)
-                    if selected_template:
-                        logger.info(f"为第{page_number}页使用全局母版: {selected_template['template_name']}")
-                except Exception as e:
-                    logger.warning(f'获取全局母版失败，使用默认生成方式: {e}')
+                # 全局母版在一次生成运行内不会变化：缓存在 run 级别的 confirmed_requirements 中，
+                # 避免每页都 get_project()+get_template_by_id() 重复读库。
+                cache_key = '_cached_selected_global_template'
+                if isinstance(confirmed_requirements, dict) and cache_key in confirmed_requirements:
+                    selected_template = confirmed_requirements[cache_key]
+                else:
+                    try:
+                        selected_template = await self.get_selected_global_template(project_id)
+                        if selected_template:
+                            logger.info(f"使用全局母版: {selected_template['template_name']}")
+                    except Exception as e:
+                        logger.warning(f'获取全局母版失败，使用默认生成方式: {e}')
+                        selected_template = None
+                    if isinstance(confirmed_requirements, dict):
+                        confirmed_requirements[cache_key] = selected_template
             if selected_template:
                 return await self._generate_slide_with_template(slide_data, selected_template, page_number, total_pages, confirmed_requirements, all_slides=all_slides, project_id=project_id)
             template_html = selected_template.get('html_template', '') if selected_template else ''
-            await self._ensure_slide_images_context(slide_data, confirmed_requirements, page_number, total_pages, template_html)
             (
                 style_genes,
                 global_constitution,
                 current_page_brief,
             ) = await self._get_creative_design_inputs(project_id, template_html, slide_data, page_number, total_pages, confirmed_requirements=confirmed_requirements, all_slides=all_slides)
+            # 图片处理仅执行一次（创意指导不依赖图片上下文）。此前 _ensure_slide_images_context
+            # 与下面的调用重复执行图片需求分析，对最终无图的页会多付一次 LLM 调用。
             images_collection = await self._process_slide_image(slide_data, confirmed_requirements, page_number, total_pages, template_html)
             if images_collection and images_collection.total_count > 0:
                 slide_data['images_collection'] = images_collection

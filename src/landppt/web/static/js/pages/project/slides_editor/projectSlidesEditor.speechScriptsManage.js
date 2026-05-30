@@ -478,8 +478,76 @@
         }
 
         function startSpeechHumanizeProgressTracking(taskId, progressToast, options = {}) {
+            const successMessage = options.successMessage || 'Speech scripts humanized.';
+            const failurePrefix = options.failurePrefix || 'Speech humanize failed';
+            const onFinally = typeof options.onFinally === 'function' ? options.onFinally : null;
+
+            const runFinally = async () => {
+                if (!onFinally) {
+                    return;
+                }
+                try {
+                    await onFinally();
+                } catch (callbackError) {
+                    console.error('Speech humanize finalize callback error:', callbackError);
+                }
+            };
+
+            const startFallback = () => startSpeechHumanizeProgressTrackingPolling(taskId, progressToast, options);
+            if (typeof startSpeechProgressSse === 'function') {
+                const sseHandle = startSpeechProgressSse(
+                    taskId,
+                    (progress) => {
+                        const percentage = Number.isFinite(progress.progress_percentage) ? progress.progress_percentage : 0;
+                        updateProgressToast(progressToast, progress.message || 'Humanizing speech scripts...', percentage);
+
+                        if (progress.status === 'completed') {
+                            updateProgressToast(progressToast, progress.message || successMessage, 100);
+                            setTimeout(async () => {
+                                closeProgressToast(progressToast);
+
+                                let notificationMessage = progress.message || successMessage;
+                                let notificationType = progress.failed_slides ? 'warning' : 'success';
+                                try {
+                                    await refreshSpeechScriptsDialogData();
+                                } catch (refreshError) {
+                                    console.error('Refresh speech scripts after humanize error:', refreshError);
+                                    notificationMessage = `Humanize completed, but refreshing results failed: ${refreshError.message || refreshError}`;
+                                    notificationType = 'warning';
+                                } finally {
+                                    await runFinally();
+                                }
+
+                                showNotification(notificationMessage, notificationType);
+                            }, 600);
+                            return true;
+                        }
+
+                        if (progress.status === 'failed') {
+                            closeProgressToast(progressToast);
+                            runFinally();
+                            showNotification(`${failurePrefix}: ${progress.message || 'unknown error'}`, 'error');
+                            return true;
+                        }
+
+                        return false;
+                    },
+                    startFallback
+                );
+
+                if (sseHandle) {
+                    return sseHandle;
+                }
+            }
+
+            return startFallback();
+        }
+
+        function startSpeechHumanizeProgressTrackingPolling(taskId, progressToast, options = {}) {
             let checkCount = 0;
+            let transientFailures = 0;
             const maxChecks = 180;
+            const maxTransientFailures = 10;
             const successMessage = options.successMessage || '演讲稿已完成一键人话';
             const failurePrefix = options.failurePrefix || '一键人话失败';
             const onFinally = typeof options.onFinally === 'function' ? options.onFinally : null;
@@ -505,13 +573,17 @@
                     const result = await response.json().catch(() => ({}));
 
                     if (!response.ok || !result.success || !result.progress) {
-                        clearInterval(interval);
-                        closeProgressToast(progressToast);
-                        await runFinally();
-                        showNotification('进度跟踪失败，请刷新页面查看结果', 'warning');
+                        transientFailures += 1;
+                        if (transientFailures >= maxTransientFailures) {
+                            clearInterval(interval);
+                            closeProgressToast(progressToast);
+                            await runFinally();
+                            showNotification('进度跟踪失败，请刷新页面查看结果', 'warning');
+                        }
                         return;
                     }
 
+                    transientFailures = 0;
                     const progress = result.progress;
                     const percentage = Number.isFinite(progress.progress_percentage) ? progress.progress_percentage : 0;
                     updateProgressToast(progressToast, progress.message || '正在一键人话...', percentage);
@@ -547,9 +619,10 @@
                         showNotification(`${failurePrefix}: ${progress.message || '未知错误'}`, 'error');
                     }
                 } catch (error) {
+                    transientFailures += 1;
                     console.error('Speech humanize progress tracking error:', error);
 
-                    if (checkCount >= maxChecks) {
+                    if (checkCount >= maxChecks || transientFailures >= maxTransientFailures) {
                         clearInterval(interval);
                         closeProgressToast(progressToast);
                         await runFinally();

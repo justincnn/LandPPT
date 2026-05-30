@@ -6,6 +6,9 @@ import asyncio
 import json
 import logging
 import re
+import hashlib
+import threading
+from collections import OrderedDict
 from typing import List, Dict, Any, Optional, AsyncGenerator, Union, Tuple
 
 from .base import AIProvider, AIMessage, AIResponse, MessageRole, TextContent, ImageContent, MessageContentType
@@ -1269,8 +1272,26 @@ class AIProviderFactory:
         "landppt": OpenAIProvider,  # LandPPT Official uses OpenAI-compatible API
     }
 
+    _provider_cache: "OrderedDict[str, AIProvider]" = OrderedDict()
+    _provider_cache_lock = threading.RLock()
+    _max_cached_providers = 128
+
+    @staticmethod
+    def _config_fingerprint(config: Dict[str, Any]) -> str:
+        def _default(value: Any) -> str:
+            return repr(value)
+
+        payload = json.dumps(config, sort_keys=True, ensure_ascii=False, default=_default)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     @classmethod
-    def create_provider(cls, provider_name: str, config: Optional[Dict[str, Any]] = None) -> AIProvider:
+    def create_provider(
+        cls,
+        provider_name: str,
+        config: Optional[Dict[str, Any]] = None,
+        *,
+        use_cache: bool = True,
+    ) -> AIProvider:
         """Create an AI provider instance"""
         if config is None:
             config = ai_config.get_provider_config(provider_name)
@@ -1279,13 +1300,40 @@ class AIProviderFactory:
         if provider_name not in cls._providers:
             raise ValueError(f"Unknown provider: {provider_name}")
 
+        if use_cache:
+            cache_key = f"{provider_name}:{cls._config_fingerprint(config)}"
+            with cls._provider_cache_lock:
+                cached = cls._provider_cache.get(cache_key)
+                if cached is not None:
+                    cls._provider_cache.move_to_end(cache_key)
+                    return cached
+
         provider_class = cls._providers[provider_name]
-        return provider_class(config)
+        provider = provider_class(dict(config))
+
+        if use_cache:
+            with cls._provider_cache_lock:
+                cached = cls._provider_cache.get(cache_key)
+                if cached is not None:
+                    cls._provider_cache.move_to_end(cache_key)
+                    return cached
+                cls._provider_cache[cache_key] = provider
+                cls._provider_cache.move_to_end(cache_key)
+                while len(cls._provider_cache) > cls._max_cached_providers:
+                    cls._provider_cache.popitem(last=False)
+
+        return provider
     
     @classmethod
     def get_available_providers(cls) -> List[str]:
         """Get list of available providers"""
         return list(cls._providers.keys())
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear cached provider instances."""
+        with cls._provider_cache_lock:
+            cls._provider_cache.clear()
 
 class AIProviderManager:
     """Manager for AI provider instances with caching and reloading"""
@@ -1325,6 +1373,7 @@ class AIProviderManager:
         """Clear provider cache to force reload"""
         self._provider_cache.clear()
         self._config_cache.clear()
+        AIProviderFactory.clear_cache()
 
     def reload_provider(self, provider_name: str):
         """Reload a specific provider"""

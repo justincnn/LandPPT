@@ -1444,16 +1444,16 @@ class UserConfigRepository:
             stmt = select(UserConfig).where(UserConfig.user_id.is_(None))
             result = await self.session.execute(stmt)
             system_configs = result.scalars().all()
-            
+
+            # Batch-load the user's existing config keys once, instead of one
+            # existence query per system config (avoids N+1 round-trips).
+            existing_stmt = select(UserConfig.config_key).where(UserConfig.user_id == user_id)
+            existing_keys = set((await self.session.execute(existing_stmt)).scalars().all())
+
             count = 0
             for config in system_configs:
                 # Check if user already has this config
-                check_stmt = select(UserConfig).where(
-                    UserConfig.user_id == user_id,
-                    UserConfig.config_key == config.config_key
-                )
-                check_result = await self.session.execute(check_stmt)
-                if check_result.scalar_one_or_none() is None:
+                if config.config_key not in existing_keys:
                     new_config = UserConfig(
                         user_id=user_id,
                         config_key=config.config_key,

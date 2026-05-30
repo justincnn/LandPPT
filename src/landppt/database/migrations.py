@@ -132,6 +132,15 @@ class DatabaseMigration:
             "down": self._migration_012_down,
         })
 
+        # Migration 013: Index hot foreign keys queried per-slide / per-request
+        self.migrations.append({
+            "version": "013",
+            "name": "add_foreign_key_indexes",
+            "description": "Index project_id (slide_data, project_versions, ppt_templates) and user_sessions.user_id",
+            "up": self._migration_013_up,
+            "down": self._migration_013_down,
+        })
+
     @staticmethod
     def _dialect_name(session: AsyncSession) -> str:
         try:
@@ -1223,6 +1232,44 @@ class DatabaseMigration:
         except Exception as e:
             await session.rollback()
             logger.error(f"Migration 012 rollback failed: {e}")
+            raise
+
+    async def _migration_013_up(self, session: AsyncSession):
+        """Index foreign keys that are filtered on every slide / request."""
+        logger.info("Running migration 013: Adding foreign key indexes")
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_slide_data_project_id ON slide_data(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_project_versions_project_id ON project_versions(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_ppt_templates_project_id ON ppt_templates(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id)",
+        ]
+        try:
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.commit()
+            logger.info("Migration 013 completed successfully")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 013 failed: {e}")
+            raise
+
+    async def _migration_013_down(self, session: AsyncSession):
+        """Migration 013 rollback."""
+        logger.info("Rolling back migration 013: Removing foreign key indexes")
+        indexes = [
+            "DROP INDEX IF EXISTS idx_slide_data_project_id",
+            "DROP INDEX IF EXISTS idx_project_versions_project_id",
+            "DROP INDEX IF EXISTS idx_ppt_templates_project_id",
+            "DROP INDEX IF EXISTS idx_user_sessions_user_id",
+        ]
+        try:
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.commit()
+            logger.info("Migration 013 rollback completed")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 013 rollback failed: {e}")
             raise
 
     async def _create_migration_table(self, session: AsyncSession):

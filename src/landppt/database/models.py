@@ -133,7 +133,7 @@ class UserSession(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     session_id: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at: Mapped[float] = mapped_column(Float, default=time.time)
     expires_at: Mapped[float] = mapped_column(Float, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -244,7 +244,7 @@ class ProjectVersion(Base):
     __tablename__ = "project_versions"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"), index=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     timestamp: Mapped[float] = mapped_column(Float, default=time.time)
     data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
@@ -259,7 +259,7 @@ class SlideData(Base):
     __tablename__ = "slide_data"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"), index=True)
     slide_index: Mapped[int] = mapped_column(Integer, nullable=False)
     slide_id: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -281,7 +281,7 @@ class PPTTemplate(Base):
     __tablename__ = "ppt_templates"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.project_id"), index=True)
     template_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # title, content, chart, image, summary
     template_name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
