@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from ..ai.base import AIMessage, MessageRole
-from ..ai.providers import get_ai_provider, get_role_provider
+from ..ai.providers import get_ai_provider, get_role_provider, strip_think_content
 from ..core.config import ai_config
 from ..api.models import PPTProject
 from .prompts.system_prompts import SystemPrompts
@@ -668,8 +668,10 @@ class SpeechScriptService:
                 temperature=0.7
             )
         )
-        
-        return response.content.strip()
+
+        # Safety net: strip any leaked model reasoning/think blocks. Not all providers
+        # (e.g. Ollama/Google) filter these, and reasoning must never enter the script.
+        return strip_think_content(response.content or "")
 
     async def humanize_script(
         self,
@@ -692,7 +694,7 @@ class SpeechScriptService:
                 temperature=0.55
             )
         )
-        return (response.content or "").strip()
+        return strip_think_content(response.content or "")
     
     def _create_speech_script_prompt(
         self,
@@ -929,7 +931,7 @@ class SpeechScriptService:
             )
         )
 
-        return response.content.strip()
+        return strip_think_content(response.content or "")
 
     async def _generate_closing_remarks(
         self,
@@ -963,7 +965,7 @@ class SpeechScriptService:
             )
         )
 
-        return response.content.strip()
+        return strip_think_content(response.content or "")
 
     def _build_request_kwargs(self, **kwargs) -> Dict[str, Any]:
         """Merge base kwargs with role-specific model override if configured."""

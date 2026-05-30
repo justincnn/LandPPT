@@ -68,6 +68,39 @@ def _build_httpx_timeout(config: Dict[str, Any]):
     return httpx.Timeout(total, connect=connect, read=total, write=write, pool=pool)
 
 
+# Reasoning / "think" block markers emitted by some models (DeepSeek-R1, QwQ, etc.).
+# Covers <think>/<thinking>, full-width ＜think＞ and bracket 【think】 variants, with
+# optional attributes on the opening tag.
+_THINK_BLOCK_RE = re.compile(
+    r'[<＜【]\s*think(?:ing)?[^>＞】]*[>＞】][\s\S]*?[<＜【]\s*/\s*think(?:ing)?\s*[>＞】]',
+    re.IGNORECASE,
+)
+_THINK_OPEN_RE = re.compile(r'[<＜【]\s*think(?:ing)?[^>＞】]*[>＞】]', re.IGNORECASE)
+_THINK_LONE_CLOSE_RE = re.compile(
+    r'^[\s\S]*?[<＜【]\s*/\s*think(?:ing)?\s*[>＞】]', re.IGNORECASE
+)
+
+
+def strip_think_content(content: str) -> str:
+    """Remove model reasoning/think blocks so internal reasoning never reaches the user.
+
+    Handles well-formed <think>...</think> blocks (plus <thinking>, full-width ＜think＞
+    and bracket 【think】 variants), and the common case where a gateway strips the
+    opening tag but leaves the reasoning followed by a lone closing tag.
+    """
+    if not content:
+        return content
+
+    cleaned = _THINK_BLOCK_RE.sub('', content)
+
+    # Opening tag was stripped upstream but reasoning + lone "</think>" remain before the
+    # real answer: drop everything up to and including that closing tag.
+    if not _THINK_OPEN_RE.search(cleaned):
+        cleaned = _THINK_LONE_CLOSE_RE.sub('', cleaned, count=1)
+
+    return cleaned.strip()
+
+
 class OpenAIProvider(AIProvider):
     """OpenAI API provider"""
 
@@ -307,39 +340,12 @@ class OpenAIProvider(AIProvider):
                 yield processed_content
 
     def _filter_think_content(self, content: str) -> str:
+        """Filter out model reasoning/think blocks before exposing output.
+
+        Delegates to the shared ``strip_think_content`` helper. Supports
+        <think>/<thinking>, full-width ＜think＞ and bracket 【think】 variants.
         """
-        Filter out content within think tags in all forms
-        Supports: <think>, <think>, ＜think＞, 【think】 and their closing tags
-        This prevents internal reasoning from being exposed in the output
-        """
-        if not content:
-            return content
-
-        import re
-
-        # Pattern to match different forms of think tags (opening and closing)
-        # Matches: <think>...</think>, <think>...</think>, ＜think＞...＜/think＞, 【think】...【/think】
-        # Also handles self-closing and nested tags
-        patterns = [
-            r'<think[\s\S]*?></think>',           # <think>...</think>
-        ]
-
-        # Apply all patterns
-        filtered_content = content
-        for pattern in patterns:
-            filtered_content = re.sub(pattern, '', filtered_content, flags=re.IGNORECASE)
-
-        # # Clean up any extra whitespace that might be left behind
-        # # Remove multiple consecutive empty lines
-        # filtered_content = re.sub(r'\n\s*\n\s*\n\s*\n', '', filtered_content)
-
-        # # Remove empty lines at the beginning and end
-        # filtered_content = filtered_content.strip()
-
-        # # Clean up extra spaces within lines
-        # filtered_content = re.sub(r' +', ' ', filtered_content)
-
-        return filtered_content
+        return strip_think_content(content or "")
 
     async def _chat_completion_via_chat_completions(
         self,
