@@ -45,7 +45,9 @@ class SpeechScriptPrompts:
             "按 Humanizer-zh 工作流处理：识别AI痕迹→只改写有问题的部分→保留事实和结构→注入自然节奏→自检。"
             "五条核心：删除填充短语、打破公式结构、变化节奏、信任听众、删除金句。"
             "重点清理：过度拔高、宣传腔、模糊归因、机械连接词、二元对比模板、破折号滥用。"
-            "开头直接进入内容，不铺垫。只输出纯文本。"
+            "不要以“好”“好的”“那么”“接下来”“下面我来讲”等口头起手式开场。"
+            "快速检查清单：事实是否保留、表达是否像真人口播、是否删除空泛拔高。"
+            "开头直接进入内容，不铺垫。只输出改写后的纯文本。"
         )
 
     @staticmethod
@@ -112,6 +114,32 @@ class SpeechScriptPrompts:
         }
         return m.get(complexity, "适中复杂度")
 
+    @staticmethod
+    def _get_transition_guidance(include_transitions: bool, *, language: str = "zh") -> str:
+        """Explain how to keep adjacent slides coherent with or without explicit transitions."""
+        if (language or "zh").lower() == "en":
+            if include_transitions:
+                return (
+                    "Use concise explicit transitions only when they help the talk flow. "
+                    "Avoid mechanical page labels and filler openers."
+                )
+            return (
+                "Explicit transition sentences are disabled. Do not add standalone bridge lines like "
+                "\"on the previous slide\" or \"next we will\". Still preserve implicit continuity: "
+                "echo the prior slide's key term or result in the opening idea, then move directly into "
+                "this slide's point. Do not write this slide as an isolated mini-talk."
+            )
+        if include_transitions:
+            return (
+                "可以在必要时加入简洁的显性过渡，但只用于帮助听众理解叙述推进；"
+                "避免机械地说“上一页”“接下来”等页码式串场。"
+            )
+        return (
+            "过渡语句已关闭：不要添加“上一页讲了什么、接下来我们看什么”这类独立桥段。"
+            "仍需做隐性承接：开头可自然呼应上一页的关键词、结论或问题，然后立刻展开当前页；"
+            "不要把本页写成孤立段落。"
+        )
+
     # ----------------------------------------------------------------
     # 单页演讲稿
     # ----------------------------------------------------------------
@@ -146,8 +174,30 @@ class SpeechScriptPrompts:
 - 幻灯片位置：第{slide_index + 1}页，共{total_slides}页
 - 幻灯片内容：{text_content}
 """
-        if previous_slide_context:
-            context_info += f"\n上一页内容概要：{previous_slide_context}"
+        slide_sequence = (project_info.get('slide_sequence') or '').strip()
+        if slide_sequence:
+            context_info += f"\n页序概览：{slide_sequence}"
+
+        previous_slide_overview = (
+            project_info.get('previous_slide_context')
+            or previous_slide_context
+            or ''
+        ).strip()
+        if previous_slide_overview:
+            context_info += f"\n上一页内容概要：{previous_slide_overview}"
+
+        previous_script_context = (
+            project_info.get('previous_script_context')
+            or project_info.get('previous_script_excerpt')
+            or ''
+        ).strip()
+        if previous_script_context:
+            context_info += f"\n上一页演讲稿参考：{previous_script_context}"
+
+        next_slide_context = (project_info.get('next_slide_context') or '').strip()
+        if next_slide_context:
+            context_info += f"\n下一页内容概要：{next_slide_context}"
+
         if customization.get('custom_style_prompt'):
             context_info += f"\n自定义风格要求：{customization['custom_style_prompt']}"
 
@@ -158,6 +208,11 @@ class SpeechScriptPrompts:
         complexity_desc = SpeechScriptPrompts._get_complexity_description(
             customization.get('language_complexity', 'moderate'), language=language)
         tts_rules = SpeechScriptPrompts._tts_output_rules(language)
+        include_transitions = bool(customization.get('include_transitions', True))
+        transition_guidance = SpeechScriptPrompts._get_transition_guidance(
+            include_transitions,
+            language=language,
+        )
 
         if language == "en":
             return f"""You are a professional presentation speaker and scriptwriter. Write a natural narration script for the following PPT slide.
@@ -168,13 +223,15 @@ Requirements:
 - Tone: {tone_desc}
 - Audience: {audience_desc}
 - Complexity: {complexity_desc}
-- Include transitions: {'Yes' if customization.get('include_transitions', True) else 'No'}
+- Include transitions: {'Yes' if include_transitions else 'No'}
 - Speaking pace: {customization.get('speaking_pace', 'normal')}
+- Cohesion mode: {transition_guidance}
 
 Guidelines:
 - Stay faithful to the slide content, but do not simply repeat it.
 - Use natural spoken English for live narration.
 - Start directly with the slide's substance—no filler lead-ins like "Okay,", "So,", "Now,", "Next," unless context truly requires a transition.
+- Keep this slide on the same narrative line as adjacent slides; do not make it feel like a separate speech.
 - Keep reasonably concise (1–3 minutes).
 - {tts_rules}
 
@@ -188,13 +245,15 @@ Return ONLY the script content."""
 - 语调风格：{tone_desc}
 - 目标受众：{audience_desc}
 - 语言复杂度：{complexity_desc}
-- 包含过渡语句：{'是' if customization.get('include_transitions', True) else '否'}
+- 包含过渡语句：{'是' if include_transitions else '否'}
 - 演讲节奏：{customization.get('speaking_pace', 'normal')}
+- 连贯性策略：{transition_guidance}
 
 生成要求：
 - 内容与幻灯片紧密相关，但不简单重复
 - 自然口语化，适合现场演讲
-- 开头直接进入核心内容，不说"好""那么""接下来""下面我来讲"等口头起手式
+- 开头直接进入当前页核心内容，不要先说“好”“好的”“那么”“接下来”“下面我来讲”等口头起手式
+- 与前后页保持同一条叙述线，不要把本页写成孤立段落
 - 控制篇幅，确保演讲时长适中（1-3分钟）
 - 可适当添加例子、类比或互动元素
 - {tts_rules}
