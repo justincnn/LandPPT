@@ -134,3 +134,11 @@ async def test_database_service_filters_projects_by_effective_status_after_conve
 
     assert response.total == 1
     assert [project.project_id for project in response.projects] == ["derived-in-progress"]
+
+
+def test_todo_board_preserves_saved_outline_before_auto_starting_generation():
+    script = _read("src/landppt/web/templates/components/project/todo_board/extra_js_1.html")
+
+    assert "Saved outline exists, skipping auto-start outline generation." in script
+    assert "Saved outline exists, hydrating instead of starting outline generation." in script
+    assert "Saved outline exists, skipping workflow auto-start." in script

@@ -771,6 +771,12 @@
             return;
         }
 
+        if (hasInitialOutlineSlides()) {
+            hydrateOutlineSectionFromProjectState();
+            console.log('Saved outline exists, skipping auto-start outline generation.');
+            return;
+        }
+
         // Check if outline section is visible and outline generation should start
         const outlineSection = document.getElementById('outline-section');
         if (outlineSection && outlineSection.style.display !== 'none') {
@@ -1151,6 +1157,12 @@
         lastOutlineErrorMessage = '';
         lastOutlineErrorRetryHandler = 'regenerateOutlineNew';
         const forceRegenerate = options && options.forceRegenerate === true;
+
+        if (!forceRegenerate && hasInitialOutlineSlides()) {
+            console.log('Saved outline exists, hydrating instead of starting outline generation.');
+            hydrateOutlineSectionFromProjectState();
+            return;
+        }
 
         // 标记为已开始
         outlineGenerationStarted = true;
@@ -3157,6 +3169,12 @@
 
         const requirementsCompleted = requirementsStage?.querySelector('.stage-status-icon')?.textContent === '✓';
         const outlineStatus = outlineStage?.querySelector('.stage-status-icon')?.textContent;
+
+        if (hasInitialOutlineSlides()) {
+            hydrateOutlineSectionFromProjectState();
+            console.log('Saved outline exists, skipping workflow auto-start.');
+            return;
+        }
 
         // Auto-start outline generation if requirements just confirmed or if requirements completed and outline pending
         if ((fromRequirements || requirementsCompleted) && outlineStatus === '⏳') {

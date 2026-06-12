@@ -42,6 +42,38 @@ async def stream_outline_generation(
             raise HTTPException(status_code=404, detail="Project not found")
 
         user_ppt_service = get_ppt_service_for_user(user.id)
+        confirmed_requirements = project.confirmed_requirements or {}
+        force_file_outline_regeneration = bool(
+            confirmed_requirements.get("force_file_outline_regeneration")
+        )
+        existing_outline = project.outline if isinstance(project.outline, dict) else None
+        existing_slides = existing_outline.get("slides", []) if existing_outline else []
+
+        if existing_slides and not force_regenerate and not force_file_outline_regeneration:
+            async def generate_saved_outline():
+                import json
+                try:
+                    await user_ppt_service._update_outline_generation_stage(project_id, existing_outline)
+                except Exception as stage_error:
+                    logger.warning(
+                        "Failed to mark saved outline stage completed for project %s: %s",
+                        project_id,
+                        stage_error,
+                    )
+                yield f"data: {json.dumps({'status': {'step': 'cached', 'message': '已加载已有大纲', 'progress': 1.0}}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'outline': existing_outline}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'done': True, 'llm_call_count': 0})}\n\n"
+
+            return StreamingResponse(
+                generate_saved_outline(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+
         _, outline_settings = await user_ppt_service.get_role_provider_async("outline")
         outline_provider_name = outline_settings.get("provider")
 
@@ -67,11 +99,7 @@ async def stream_outline_generation(
 
         async def generate():
             billed = False
-            confirmed_requirements = project.confirmed_requirements or {}
             content_source = confirmed_requirements.get("content_source")
-            force_file_outline_regeneration = bool(
-                confirmed_requirements.get("force_file_outline_regeneration")
-            )
             force_fresh_generation = bool(force_regenerate or force_file_outline_regeneration)
             if force_fresh_generation:
                 logger.info(

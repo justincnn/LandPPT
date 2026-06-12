@@ -388,3 +388,41 @@ async def test_generate_outline_streaming_force_regenerate_skips_saved_outline(m
     assert stub.stage_updates
     assert project.outline["title"] == "fresh"
     assert any('"done": true' in chunk for chunk in events)
+
+
+@pytest.mark.asyncio
+async def test_generate_outline_streaming_replays_saved_outline_without_regeneration(monkeypatch):
+    project = SimpleNamespace(
+        topic="cached topic",
+        outline={
+            "title": "cached",
+            "slides": [{"page_number": 1, "title": "cached"}],
+            "metadata": {},
+        },
+        confirmed_requirements={"content_source": "manual"},
+        project_metadata={},
+        todo_board=None,
+        updated_at=0,
+    )
+    stub = _OutlineStreamingFreshGenerationStubService(project)
+    service = ProjectOutlineStreamingService(stub)
+
+    async def _unexpected_run_streaming_outline_research(*args, **kwargs):
+        raise AssertionError("saved outline should not trigger fresh generation")
+
+    monkeypatch.setattr(
+        service,
+        "_run_streaming_outline_research",
+        _unexpected_run_streaming_outline_research,
+        raising=False,
+    )
+
+    events = []
+    async for chunk in service.generate_outline_streaming("project-1"):
+        events.append(chunk)
+
+    assert stub.project_manager.status_updates == []
+    assert stub.stage_updates == [("project-1", project.outline)]
+    assert any('"step": "cached"' in chunk for chunk in events)
+    assert any('"outline"' in chunk and '"cached"' in chunk for chunk in events)
+    assert any('"llm_call_count": 0' in chunk for chunk in events)

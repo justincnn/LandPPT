@@ -300,6 +300,20 @@ class ProjectOutlineStreamingService:
             from ..file_outline_utils import extract_saved_file_outline, should_force_file_outline_regeneration
             force_file_outline_regeneration = should_force_file_outline_regeneration(project.confirmed_requirements or {})
             ignore_saved_outline = bool(force_regenerate or force_file_outline_regeneration)
+            existing_outline = project.outline if isinstance(project.outline, dict) else None
+            existing_slides = existing_outline.get('slides', []) if existing_outline else []
+            if existing_slides and not ignore_saved_outline:
+                import json
+                logger.info(
+                    'Project %s already has an outline with %s slides, streaming saved outline',
+                    project_id,
+                    len(existing_slides),
+                )
+                await self._update_outline_generation_stage(project_id, existing_outline)
+                yield f"data: {json.dumps({'status': {'step': 'cached', 'message': '已加载已有大纲', 'progress': 1.0}}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'outline': existing_outline}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'done': True, 'llm_call_count': 0})}\n\n"
+                return
             if ignore_saved_outline:
                 logger.info(
                     'Project %s requested fresh outline generation, skipping saved outline cache',
