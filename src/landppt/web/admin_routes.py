@@ -97,7 +97,7 @@ class CommunitySettingsRequest(BaseModel):
     daily_checkin_reward_fixed: int = 5
     daily_checkin_reward_min: int = 2
     daily_checkin_reward_max: int = 8
-    invite_code_required_for_registration: bool = True
+    invite_code_required_for_registration: bool = False
     sponsor_page_enabled: bool = False
     site_notice_enabled: bool = False
     site_notice_level: str = "info"

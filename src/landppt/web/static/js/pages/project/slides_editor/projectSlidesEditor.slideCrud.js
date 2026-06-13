@@ -51,7 +51,10 @@ function handleDrop(event, targetIndex) {
     }
 
     // 移动幻灯片
-    moveSlide(draggedSlideIndex, newIndex);
+    moveSlide(draggedSlideIndex, newIndex).catch((error) => {
+        console.error('Move slide failed:', error);
+        showNotification('移动幻灯片失败：' + (error?.message || error), 'error');
+    });
 }
 
 function handleDragEnd(event) {
@@ -65,7 +68,7 @@ function handleDragEnd(event) {
     draggedSlideIndex = -1;
 }
 
-function moveSlide(fromIndex, toIndex) {
+async function moveSlide(fromIndex, toIndex) {
     if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 ||
         fromIndex >= slidesData.length || toIndex > slidesData.length) {
         return;
@@ -99,10 +102,7 @@ function moveSlide(fromIndex, toIndex) {
     });
 
     // 同步更新大纲顺序（避免重新生成等操作按编辑器序号写入错误页）
-    updateOutlineForSlideOperation('move', fromIndex, { to_index: toIndex }).catch((e) => {
-        console.error('Outline move failed:', e);
-        showNotification('同步更新大纲顺序失败：' + (e?.message || e), 'warning');
-    });
+    await updateOutlineForSlideOperation('move', fromIndex, { to_index: toIndex });
 
     // 更新当前选中的索引
     if (currentSlideIndex === fromIndex) {
@@ -117,7 +117,7 @@ function moveSlide(fromIndex, toIndex) {
     refreshSidebar();
 
     // 保存到服务器
-    saveToServer();
+    await saveToServer();
 }
 
 // 右键菜单功能
@@ -220,7 +220,7 @@ async function pasteSlide() {
 
         // 刷新界面
         refreshSidebar();
-        saveToServer();
+        await saveToServer();
         showNotification('幻灯片已粘贴', 'success');
     } catch (error) {
         showNotification('粘贴幻灯片失败：' + error.message, 'error');
@@ -283,7 +283,7 @@ async function insertNewSlide() {
 
         // 刷新界面
         refreshSidebar();
-        saveToServer();
+        await saveToServer();
         showNotification('新幻灯片已插入', 'success');
     } catch (error) {
         showNotification('插入新幻灯片失败：' + error.message, 'error');
@@ -334,7 +334,7 @@ async function duplicateSlide() {
 
             // 刷新界面
             refreshSidebar();
-            saveToServer();
+            await saveToServer();
             showNotification('幻灯片已复制', 'success');
         } catch (error) {
             showNotification('复制幻灯片失败：' + error.message, 'error');
@@ -440,18 +440,14 @@ function refreshSidebar() {
             <div class="drag-indicator bottom"></div>
         `;
 
-        // 设置iframe内容并应用缩放
+        slidesContainer.appendChild(thumbnailDiv);
+
+        // 设置iframe内容并应用缩放。先挂载到DOM，确保缩放计算能拿到真实容器宽度。
         const iframe = thumbnailDiv.querySelector('iframe');
         if (iframe) {
-            // 安全设置iframe内容
             setSafeIframeContent(iframe, slide.html_content);
-
-            iframe.onload = function () {
-                requestAnimationFrame(() => applyThumbnailPreviewScale(this));
-            };
+            requestThumbnailPreviewScale(iframe);
         }
-
-        slidesContainer.appendChild(thumbnailDiv);
     });
 
     // 重新初始化事件监听器

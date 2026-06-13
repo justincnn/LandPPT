@@ -556,9 +556,9 @@ class AppConfig(BaseSettings):
     secret_key: str = Field(default="your-secret-key-here", env="SECRET_KEY")
     access_token_expire_minutes: int = Field(default=20160, env="ACCESS_TOKEN_EXPIRE_MINUTES")  # 2 weeks
     enable_api_docs: bool = Field(default=True, env="LANDPPT_ENABLE_API_DOCS")
-    bootstrap_admin_enabled: bool = Field(default=False, env="LANDPPT_BOOTSTRAP_ADMIN_ENABLED")
-    bootstrap_admin_username: Optional[str] = Field(default=None, env="LANDPPT_BOOTSTRAP_ADMIN_USERNAME")
-    bootstrap_admin_password: Optional[str] = Field(default=None, env="LANDPPT_BOOTSTRAP_ADMIN_PASSWORD")
+    bootstrap_admin_enabled: bool = Field(default=True, env="LANDPPT_BOOTSTRAP_ADMIN_ENABLED")
+    bootstrap_admin_username: Optional[str] = Field(default="admin", env="LANDPPT_BOOTSTRAP_ADMIN_USERNAME")
+    bootstrap_admin_password: Optional[str] = Field(default="admin123", env="LANDPPT_BOOTSTRAP_ADMIN_PASSWORD")
 
     # Machine-to-machine API authentication (for n8n / automation)
     # Single key mode: LANDPPT_API_KEY + LANDPPT_API_KEY_USER

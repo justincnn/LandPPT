@@ -15,6 +15,7 @@ import re
 from .models import (
     PPTScenario, PPTGenerationRequest, PPTGenerationResponse,
     PPTOutline, PPTProject, TodoBoard, ProjectListResponse,
+    ProjectRenameRequest,
     FileUploadResponse, SlideContent, FileOutlineGenerationRequest,
     FileOutlineGenerationResponse, TemplateSelectionRequest, TemplateSelectionResponse
 )
@@ -443,6 +444,66 @@ async def get_project(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting project: {str(e)}")
+
+@router.post("/projects/{project_id}/duplicate")
+async def duplicate_project(
+    project_id: str,
+    user: User = Depends(get_current_user_required)
+):
+    """Duplicate a project for the current user."""
+    try:
+        user_ppt_service = get_ppt_service_for_user(user.id)
+        project = await user_ppt_service.project_manager.duplicate_project(project_id, user_id=user.id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {
+            "status": "success",
+            "message": "Project duplicated successfully",
+            "project_id": project.project_id,
+            "project": project,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error duplicating project: {str(e)}")
+
+@router.patch("/projects/{project_id}/rename")
+async def rename_project(
+    project_id: str,
+    request: ProjectRenameRequest,
+    user: User = Depends(get_current_user_required)
+):
+    """Rename a project owned by the current user."""
+    title = request.title.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="Project title is required")
+
+    try:
+        user_ppt_service = get_ppt_service_for_user(user.id)
+        project = await user_ppt_service.project_manager.get_project(project_id, user_id=user.id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        success = await user_ppt_service.project_manager.update_project_data(
+            project_id,
+            {"title": title},
+            user_id=user.id,
+        )
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to rename project")
+
+        return {
+            "status": "success",
+            "message": "Project renamed successfully",
+            "project_id": project_id,
+            "title": title,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error renaming project: {str(e)}")
 
 @router.get("/projects/{project_id}/todo", response_model=TodoBoard)
 async def get_project_todo_board(

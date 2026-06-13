@@ -37,6 +37,59 @@ def _load_class_method(relative_path: str, class_name: str, method_name: str):
 
 
 @pytest.mark.asyncio
+async def test_rename_project_scopes_to_current_user(monkeypatch):
+    from landppt.api import landppt_api
+    from landppt.api.models import ProjectRenameRequest
+
+    calls = {}
+
+    class FakeProjectManager:
+        async def get_project(self, project_id, user_id=None):
+            calls["lookup"] = (project_id, user_id)
+            return SimpleNamespace(project_id=project_id)
+
+        async def update_project_data(self, project_id, update_data, user_id=None):
+            calls["update"] = (project_id, update_data, user_id)
+            return True
+
+    monkeypatch.setattr(
+        landppt_api,
+        "get_ppt_service_for_user",
+        lambda user_id: SimpleNamespace(project_manager=FakeProjectManager()),
+    )
+
+    response = await landppt_api.rename_project(
+        "proj-1",
+        ProjectRenameRequest(title="  New project title  "),
+        user=SimpleNamespace(id=11),
+    )
+
+    assert response["status"] == "success"
+    assert response["title"] == "New project title"
+    assert calls == {
+        "lookup": ("proj-1", 11),
+        "update": ("proj-1", {"title": "New project title"}, 11),
+    }
+
+
+@pytest.mark.asyncio
+async def test_rename_project_rejects_blank_title():
+    from fastapi import HTTPException
+    from landppt.api import landppt_api
+    from landppt.api.models import ProjectRenameRequest
+
+    with pytest.raises(HTTPException) as excinfo:
+        await landppt_api.rename_project(
+            "proj-1",
+            ProjectRenameRequest(title="   "),
+            user=SimpleNamespace(id=11),
+        )
+
+    assert excinfo.value.status_code == 422
+    assert excinfo.value.detail == "Project title is required"
+
+
+@pytest.mark.asyncio
 async def test_enhanced_ppt_service_keeps_project_workflow_proxy():
     execute_project_workflow = _load_class_method(
         "src/landppt/services/enhanced_ppt_service.py",
@@ -142,3 +195,83 @@ def test_todo_board_preserves_saved_outline_before_auto_starting_generation():
     assert "Saved outline exists, skipping auto-start outline generation." in script
     assert "Saved outline exists, hydrating instead of starting outline generation." in script
     assert "Saved outline exists, skipping workflow auto-start." in script
+
+
+def test_slide_record_from_payload_preserves_outline_metadata():
+    record = DatabaseService._slide_record_from_payload(
+        "project-1",
+        2,
+        {
+            "title": "Updated title",
+            "slide_type": "section",
+            "description": "Updated description",
+            "content_points": ["point-a", "point-b"],
+            "html_content": "<section>Updated</section>",
+            "is_user_edited": True,
+        },
+    )
+
+    assert record["title"] == "Updated title"
+    assert record["content_type"] == "section"
+    assert record["slide_metadata"]["description"] == "Updated description"
+    assert record["slide_metadata"]["content_points"] == ["point-a", "point-b"]
+    assert record["html_content"] == "<section>Updated</section>"
+    assert record["is_user_edited"] is True
+
+
+def test_editor_slide_save_sends_full_slide_payload():
+    script = _read(
+        "src/landppt/web/static/js/pages/project/slides_editor/projectSlidesEditor.slideGeneration.js"
+    )
+
+    assert "slide_data: slidePayload" in script
+    assert "content_points: slidePayload.content_points || []" in script
+    assert "metadata: slidePayload.metadata || {}" in script
+
+
+def test_outline_operations_send_structure_operation_payload():
+    script = _read("src/landppt/web/static/js/pages/project/slides_editor/projectSlidesEditor.aiChat.js")
+
+    assert "const operationPayload = {" in script
+    assert "operation: operationPayload" in script
+    assert "await saveSingleSlideToServer(" in script
+
+
+def test_project_detail_outline_supports_drag_delete_and_duplicate():
+    content = _read("src/landppt/web/templates/components/project/detail/content_1.html")
+    script = _read("src/landppt/web/templates/components/project/detail/extra_js_1.html")
+
+    assert 'draggable="true"' in content
+    assert "deleteOutlineSlide(" in content
+    assert "duplicateProject()" in content
+    assert "function initializeOutlineDragAndDrop()" in script
+    assert "async function persistProjectOutline(operation)" in script
+
+
+def test_project_detail_outline_uses_icon_only_toolbar():
+    content = _read("src/landppt/web/templates/components/project/detail/content_1.html")
+    css = _read("src/landppt/web/templates/components/project/detail/extra_css_1.html")
+    script = _read("src/landppt/web/templates/components/project/detail/extra_js_1.html")
+
+    assert "outline-panel__header" in content
+    assert "outline-tool-btn" in content
+    assert 'data-tooltip="编辑大纲"' in content
+    assert 'id="outlineViewToggleBtn"' in content
+    assert "outline-slide-card__actions" in content
+    assert ".outline-tool-btn[data-tooltip]::after" in css
+    assert "setOutlineToggleState(isDetailView)" in script
+    assert "toggleIcon.className = 'fas fa-th-large'" in script
+
+
+def test_editor_sidebar_thumbnail_refresh_recalculates_scale_without_overriding_load_handler():
+    core = _read("src/landppt/web/static/js/pages/project/slides_editor/projectSlidesEditor.core.js")
+    slide_crud = _read("src/landppt/web/static/js/pages/project/slides_editor/projectSlidesEditor.slideCrud.js")
+    css = _read("src/landppt/web/static/css/pages/project/slides_editor/projectSlidesEditor.css")
+
+    assert "function requestThumbnailPreviewScale(iframe)" in core
+    assert "iframe.addEventListener('load', handleIframeLoad, { once: true });" in core
+    assert "requestThumbnailPreviewScale(iframe);" in slide_crud
+    assert "iframe.onload = function" not in slide_crud
+    assert "aspect-ratio: 16 / 9;" in css
+    assert "height: 95px" not in css
+    assert "scale(0.1875)" in css

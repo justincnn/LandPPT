@@ -54,7 +54,7 @@ class CommunityService:
         "daily_checkin_reward_fixed": {"type": "number", "default": 5},
         "daily_checkin_reward_min": {"type": "number", "default": 2},
         "daily_checkin_reward_max": {"type": "number", "default": 8},
-        "invite_code_required_for_registration": {"type": "boolean", "default": True},
+        "invite_code_required_for_registration": {"type": "boolean", "default": False},
         "sponsor_page_enabled": {"type": "boolean", "default": False},
         "site_notice_enabled": {"type": "boolean", "default": False},
         "site_notice_level": {"type": "text", "default": "info"},

@@ -398,6 +398,10 @@ async function saveSlideOutline() {
     // 更新幻灯片标题
     if (slidesData[currentSlideIndex]) {
         slidesData[currentSlideIndex].title = title;
+        slidesData[currentSlideIndex].slide_type = type;
+        slidesData[currentSlideIndex].content_type = type;
+        slidesData[currentSlideIndex].description = description;
+        slidesData[currentSlideIndex].content_points = points;
     }
 
     try {
@@ -418,6 +422,13 @@ async function saveSlideOutline() {
 
         const data = await response.json();
         if (data.status === 'success') {
+            if (typeof saveSingleSlideToServer === 'function' && slidesData[currentSlideIndex]?.html_content) {
+                await saveSingleSlideToServer(
+                    currentSlideIndex,
+                    slidesData[currentSlideIndex].html_content,
+                    { slideData: slidesData[currentSlideIndex], isUserEdited: true }
+                );
+            }
             showNotification('大纲已保存！', 'success');
         } else {
             throw new Error(data.message || data.error || '保存失败');
@@ -540,13 +551,25 @@ async function updateOutlineForSlideOperation(operation, slideIndex, slideData =
         }
 
         // 保存更新后的大纲到数据库
+        const operationPayload = {
+            type: operation,
+            slide_index: slideIndex
+        };
+        if (operation === 'move' && slideData && Number.isInteger(slideData.to_index)) {
+            operationPayload.to_index = slideData.to_index;
+        }
+        if (operation === 'insert' && slideData) {
+            operationPayload.slide_data = slideData;
+        }
+
         const response = await fetch(`/projects/${window.landpptEditorConfig.projectId}/update-outline`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                outline_content: JSON.stringify(projectOutline, null, 2)
+                outline_content: JSON.stringify(projectOutline, null, 2),
+                operation: operationPayload
             })
         });
 

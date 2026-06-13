@@ -162,6 +162,9 @@ class ProjectListResponse(BaseModel):
     page: int
     page_size: int
 
+class ProjectRenameRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+
 # Enhanced Slide Models
 class SlideContent(BaseModel):
     type: Literal["title", "content", "image", "chart", "list", "thankyou", "agenda", "section", "transition", "conclusion"]

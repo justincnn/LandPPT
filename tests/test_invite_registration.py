@@ -372,6 +372,18 @@ def test_resolve_registration_invite_allows_blank_when_switch_disabled():
         db.close()
 
 
+def test_resolve_registration_invite_allows_blank_by_default():
+    from landppt.services.community_service import community_service
+
+    db = _create_db()
+    try:
+        invite = community_service.resolve_registration_invite(db, "", "mail")
+        assert invite is None
+        assert community_service.is_invite_code_required_for_registration(db) is False
+    finally:
+        db.close()
+
+
 def test_github_oauth_new_user_requires_and_consumes_invite_code():
     from landppt.auth.github_oauth_service import get_or_create_user_by_github
     from landppt.core.config import app_config
@@ -380,6 +392,7 @@ def test_github_oauth_new_user_requires_and_consumes_invite_code():
     db = _create_db()
     try:
         _create_user(db, "admin", "admin@example.com")
+        _set_community_setting(db, "invite_code_required_for_registration", "true")
         invite = _create_invite(db, code="GITHUB01", channel="github", credits_amount=15, max_uses=1)
 
         user, created, error = get_or_create_user_by_github(

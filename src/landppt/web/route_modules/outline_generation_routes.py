@@ -4,6 +4,7 @@ Outline generation routes extracted from the outline router.
 
 from __future__ import annotations
 
+import json
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -177,6 +178,8 @@ async def stream_outline_generation(
             },
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -794,13 +797,34 @@ async def update_project_outline(
     try:
         data = await request.json()
         outline_content = data.get('outline_content', '')
+        operation = data.get('operation')
+        try:
+            json.loads(outline_content)
+        except (TypeError, json.JSONDecodeError):
+            raise HTTPException(status_code=400, detail="Invalid outline JSON")
 
-        success = await ppt_service.update_project_outline(project_id, outline_content)
+        user_ppt_service = get_ppt_service_for_user(user.id)
+        project = await user_ppt_service.project_manager.get_project(project_id, user_id=user.id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        if operation:
+            operation_success = await user_ppt_service.project_manager.apply_slide_structure_operation(
+                project_id,
+                operation,
+                user_id=user.id,
+            )
+            if not operation_success:
+                raise HTTPException(status_code=400, detail="Failed to apply slide structure operation")
+
+        success = await user_ppt_service.update_project_outline(project_id, outline_content)
         if success:
             return {"status": "success", "message": "Outline updated"}
         else:
             raise HTTPException(status_code=500, detail="Failed to update outline")
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
