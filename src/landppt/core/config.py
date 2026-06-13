@@ -619,6 +619,7 @@ class AppConfig(BaseSettings):
     
     # User Registration Configuration
     enable_user_registration: bool = Field(default=True, env="ENABLE_USER_REGISTRATION")
+    invite_code_required_for_registration: bool = Field(default=False, env="INVITE_CODE_REQUIRED_FOR_REGISTRATION")
     verification_code_expire_minutes: int = Field(default=10, env="VERIFICATION_CODE_EXPIRE_MINUTES")
     registration_ip_rate_limit_per_hour: int = Field(default=100, env="REGISTRATION_IP_RATE_LIMIT_PER_HOUR")
 
@@ -670,6 +671,7 @@ class AppConfig(BaseSettings):
         "linuxdo_oauth_enabled",
         "smtp_use_ssl",
         "enable_user_registration",
+        "invite_code_required_for_registration",
         mode="before",
     )
     @classmethod

@@ -64,6 +64,21 @@ class CommunityService:
         "site_notice_end_at": {"type": "number", "default": 0},
     }
 
+    def _default_setting_value(self, key: str) -> Any:
+        meta = self.SETTINGS_SCHEMA.get(key)
+        if not meta:
+            raise KeyError(f"Unknown community setting: {key}")
+
+        if key == "invite_code_required_for_registration":
+            try:
+                from ..core.config import app_config
+
+                return bool(app_config.invite_code_required_for_registration)
+            except Exception as exc:
+                logger.warning("Failed to load invite registration default from env: %s", exc)
+
+        return meta["default"]
+
     def _convert_setting_value(self, value: Any, value_type: str) -> Any:
         if value is None:
             return None
@@ -90,7 +105,7 @@ class CommunityService:
     def _normalize_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
         for key, meta in self.SETTINGS_SCHEMA.items():
-            raw_value = settings.get(key, meta["default"])
+            raw_value = settings.get(key, self._default_setting_value(key))
             result[key] = self._convert_setting_value(raw_value, meta["type"])
 
         reward_mode = str(result["daily_checkin_reward_mode"] or "fixed").strip().lower()
@@ -185,7 +200,7 @@ class CommunityService:
         for key, meta in self.SETTINGS_SCHEMA.items():
             value = await repo.get_config(None, key)
             if value is None:
-                value = meta["default"]
+                value = self._default_setting_value(key)
             loaded[key] = value
         return self._normalize_settings(loaded)
 
@@ -218,7 +233,7 @@ class CommunityService:
             raise KeyError(f"Unknown community setting: {key}")
 
         if db is None:
-            return meta["default"]
+            return self._default_setting_value(key)
 
         record = (
             db.query(UserConfig)
@@ -231,14 +246,14 @@ class CommunityService:
             .first()
         )
         if not record:
-            return meta["default"]
+            return self._default_setting_value(key)
 
         value_type = str(record.config_type or meta["type"]).strip() or meta["type"]
         return self._convert_setting_value(record.config_value, value_type)
 
     def is_invite_code_required_for_registration(self, db: Session | None = None) -> bool:
         """Return whether first-time registration currently requires an invite code."""
-        default_value = bool(self.SETTINGS_SCHEMA["invite_code_required_for_registration"]["default"])
+        default_value = bool(self._default_setting_value("invite_code_required_for_registration"))
         if db is None:
             return default_value
 
