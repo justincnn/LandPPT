@@ -63985,6 +63985,32 @@
     return (ownerDocument && ownerDocument.defaultView) || window;
   }
 
+  function getEffectiveLineHeightPx(style, fontSizePx, fontContext = null) {
+    const safeFontSizePx = Number.isFinite(fontSizePx) && fontSizePx > 0 ? fontSizePx : 16;
+    const lhStr = String((style && style.lineHeight) || '').trim().toLowerCase();
+    let lineHeightPx = NaN;
+
+    if (lhStr && lhStr !== 'normal') {
+      const parsedLineHeight = parseFloat(lhStr);
+      if (Number.isFinite(parsedLineHeight) && parsedLineHeight > 0) {
+        if (/^[0-9.]+$/.test(lhStr)) {
+          lineHeightPx = parsedLineHeight * safeFontSizePx;
+        } else if (lhStr.endsWith('%')) {
+          lineHeightPx = (parsedLineHeight / 100) * safeFontSizePx;
+        } else {
+          lineHeightPx = parsedLineHeight;
+        }
+      }
+    }
+
+    if (!Number.isFinite(lineHeightPx) || lineHeightPx <= 0) {
+      lineHeightPx = safeFontSizePx * 1.22;
+    }
+
+    const minLineHeightMultiplier = contextContainsCjkText(fontContext) ? 1.18 : 1.12;
+    return Math.max(lineHeightPx, safeFontSizePx * minLineHeightMultiplier);
+  }
+
   function getTextStyle(style, scale, fontContext = null) {
     let colorObj = parseColor(style.color);
 
@@ -63996,26 +64022,9 @@
 
     const isEffectivelyHiddenText = !colorObj.hex && colorObj.opacity <= 0.001;
 
-    let lineSpacing = null;
-    const fontSizePx = parseFloat(style.fontSize);
-    const lhStr = style.lineHeight;
-
-    if (lhStr && lhStr !== 'normal') {
-      let lhPx = parseFloat(lhStr);
-
-      // Edge Case: If browser returns a raw multiplier (e.g. "1.5")
-      // we must multiply by font size to get the height in pixels.
-      // (Note: getComputedStyle usually returns 'px', but inline styles might differ)
-      if (/^[0-9.]+$/.test(lhStr)) {
-        lhPx = lhPx * fontSizePx;
-      }
-
-      if (!isNaN(lhPx) && lhPx > 0) {
-        // Convert Pixel Height to Point Height (1px = 0.75pt)
-        // And apply the global layout scale.
-        lineSpacing = lhPx * 0.75 * scale;
-      }
-    }
+    const parsedFontSizePx = parseFloat(style.fontSize);
+    const fontSizePx = Number.isFinite(parsedFontSizePx) && parsedFontSizePx > 0 ? parsedFontSizePx : 16;
+    const lineSpacing = getEffectiveLineHeightPx(style, fontSizePx, fontContext) * 0.75 * scale;
 
     // --- Spacing (Margins) ---
     // Convert CSS margins (px) to PPTX Paragraph Spacing (pt).
@@ -64134,6 +64143,51 @@
     return false;
   }
 
+  function isInlineFlowTextDecorationElement(el, style, hasContent, hasVisualBox) {
+    if (!el || !style || !hasContent || !hasVisualBox) return false;
+    const tagName = String(el.tagName || '').toUpperCase();
+    const inlineTextTags = new Set([
+      'A',
+      'ABBR',
+      'B',
+      'BDI',
+      'BDO',
+      'CITE',
+      'CODE',
+      'DFN',
+      'EM',
+      'I',
+      'KBD',
+      'MARK',
+      'S',
+      'SAMP',
+      'SMALL',
+      'SPAN',
+      'STRONG',
+      'SUB',
+      'SUP',
+      'TIME',
+      'U',
+      'VAR',
+    ]);
+    if (!inlineTextTags.has(tagName)) return false;
+
+    const display = String(style.display || '');
+    if (!display.includes('inline')) return false;
+    if (style.position === 'absolute' || style.position === 'fixed') return false;
+
+    const children = Array.from(el.children || []);
+    return children.every((child) => {
+      if (isFormulaElement(child) || isIconElement(child)) return false;
+      const childTag = String(child.tagName || '').toUpperCase();
+      if (['IMG', 'SVG', 'CANVAS', 'VIDEO', 'IFRAME', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(childTag)) {
+        return false;
+      }
+      const childStyle = getNodeWindow(child).getComputedStyle(child);
+      return String(childStyle.display || '').includes('inline');
+    });
+  }
+
   /**
    * Determines if a given DOM node is primarily a text container.
    * Updated to correctly reject Icon elements so they are rendered as images.
@@ -64209,6 +64263,10 @@
         hasBorder || hasRadius || hasPadding || hasBackgroundImage || (hasVisibleBg && !allowInlineTextHighlight);
 
       // 6. Visual tags/chips should be rendered as elements, not merged into one text run.
+      // Inline text decorations (code chips, mark, kbd, highlighted spans) must stay in the
+      // parent text flow; otherwise following wrapped text exports as a separate textbox and
+      // can overlap the chip in PowerPoint.
+      if (isInlineFlowTextDecorationElement(el, style, hasContent, hasVisualBox)) return true;
       if (hasVisualBox) return false;
 
       // 7. Check for empty shapes (visual objects without text, like dots)
@@ -66272,6 +66330,40 @@
     return base + LOCAL_Z_LAYER_STEP * safeSteps;
   }
 
+  function countExplicitTextLines(textParts) {
+    if (!Array.isArray(textParts) || textParts.length === 0) return 1;
+    let lineCount = 1;
+    textParts.forEach((part) => {
+      if (!part) return;
+      if (part.options && part.options.breakLine) {
+        lineCount += 1;
+        return;
+      }
+      const text = typeof part.text === 'string' ? part.text : '';
+      if (text.includes('\n')) {
+        lineCount += text.split('\n').length - 1;
+      }
+    });
+    return Math.max(1, lineCount);
+  }
+
+  function getSafeEditableTextHeightIn(currentHeightIn, node, style, scale, textParts = null) {
+    const safeHeightIn = Number.isFinite(currentHeightIn) && currentHeightIn > 0 ? currentHeightIn : 0;
+    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const fontSizePx = parseFloat(style && style.fontSize);
+    const lineHeightPx = getEffectiveLineHeightPx(style, fontSizePx, node);
+    const currentHeightPx = safeHeightIn / (PX_TO_INCH * safeScale);
+    const rectHeightPx =
+      node && typeof node.getBoundingClientRect === 'function'
+        ? node.getBoundingClientRect().height || 0
+        : 0;
+    const scrollHeightPx = node && Number.isFinite(node.scrollHeight) ? node.scrollHeight : 0;
+    const explicitLineHeightPx = countExplicitTextLines(textParts) * lineHeightPx;
+    const browserHeightPx = Math.max(currentHeightPx, rectHeightPx, scrollHeightPx, explicitLineHeightPx);
+    const paddedHeightPx = browserHeightPx + Math.max(2, lineHeightPx * 0.12);
+    return Math.max(safeHeightIn, paddedHeightPx * PX_TO_INCH * safeScale);
+  }
+
   function decodePseudoContentValue(contentRaw) {
     let s = String(contentRaw || '').trim();
     if (!s || s === 'none' || s === 'normal' || s === '""' || s === "''") return '';
@@ -66641,6 +66733,8 @@
       const range = document.createRange();
       range.selectNode(node);
       const rect = range.getBoundingClientRect();
+      const lineRectCount = Array.from(range.getClientRects ? range.getClientRects() : [])
+        .filter((lineRect) => lineRect && lineRect.width > 0.5 && lineRect.height > 0.5).length;
       range.detach();
 
       const style = getNodeWindow(parent).getComputedStyle(parent);
@@ -66648,6 +66742,9 @@
       const heightPx = rect.height;
       const unrotatedW = widthPx * PX_TO_INCH * config.scale;
       const unrotatedH = heightPx * PX_TO_INCH * config.scale;
+      const fontSizePx = parseFloat(style.fontSize);
+      const lineHeightIn = getEffectiveLineHeightPx(style, fontSizePx, parent) * PX_TO_INCH * config.scale;
+      const safeH = Math.max(unrotatedH, lineHeightIn * Math.max(1, lineRectCount) * 1.08);
 
       const x = config.offX + (rect.left - config.rootX) * PX_TO_INCH * config.scale;
       const y = config.offY + (rect.top - config.rootY) * PX_TO_INCH * config.scale;
@@ -66667,7 +66764,7 @@
                 options: textOptions,
               },
             ],
-            options: { x, y, w: unrotatedW, h: unrotatedH, margin: 0, autoFit: false },
+            options: { x, y, w: unrotatedW, h: safeH, margin: 0, autoFit: false, wrap: true, valign: 'top' },
           },
         ],
         stopRecursion: false,
@@ -66886,6 +66983,11 @@
           });
         }
 
+        const textBoxH =
+          bgColorObj.hex && bgColorObj.opacity > 0
+            ? h
+            : getSafeEditableTextHeightIn(h, node, style, config.scale, listItems);
+
         items.push({
           type: 'text',
           zIndex: nextRenderableZIndex(zIndex),
@@ -66895,7 +66997,7 @@
             x,
             y,
             w,
-            h,
+            h: textBoxH,
             align: 'left',
             valign: 'top',
             margin: 0,
@@ -67460,6 +67562,15 @@
         if (textPayload) {
           textPayload.text[0].options.fontSize =
             Math.floor(textPayload.text[0]?.options?.fontSize) || 12;
+          const canGrowTextBox =
+            !useSolidFill &&
+            !hasUniformBorder &&
+            !hasCompositeBorder &&
+            !hasShadow &&
+            !hasPartialBorderRadius;
+          const textBoxH = canGrowTextBox
+            ? getSafeEditableTextHeightIn(h, node, style, config.scale, textPayload.text)
+            : h;
           const textOptions = {
             shape: shapeType,
             ...shapeOpts,
@@ -67470,6 +67581,7 @@
             margin: 0,
             wrap: true,
             autoFit: false,
+            h: textBoxH,
           };
           items.push({
             type: 'text',
@@ -67687,7 +67799,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-04-25-layer-clip-v21';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-06-14-text-layout-v2';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;
