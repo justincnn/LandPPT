@@ -194,94 +194,85 @@ function showSlideOutline() {
     if (projectOutline && projectOutline.slides && projectOutline.slides[currentSlideIndex]) {
         const slideOutline = projectOutline.slides[currentSlideIndex];
         outlineContent = `
-            <h5 style="margin-bottom: 25px; color: #2c3e50; font-size: 1.3em;"><i class="fas fa-file-alt"></i> 第${currentSlideIndex + 1}页大纲编辑</h5>
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 15px 0;">
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">标题：</label>
-                    <input type="text" id="slideTitle" value="${(slideOutline.title || currentSlide.title || '').replace(/"/g, '&quot;')}"
-                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box;">
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">类型：</label>
-                    <select id="slideType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box;">
-                        <option value="title" ${(slideOutline.slide_type || slideOutline.type) === 'title' ? 'selected' : ''}>标题页</option>
-                        <option value="content" ${(slideOutline.slide_type || slideOutline.type) === 'content' ? 'selected' : ''}>内容页</option>
-                        <option value="conclusion" ${(slideOutline.slide_type || slideOutline.type) === 'conclusion' ? 'selected' : ''}>结论页</option>
-                    </select>
-                </div>
-                ${slideOutline.content_points ? `
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">要点：</label>
-                        <div id="bulletPointsContainer" style="background: white; border: 1px solid #ddd; border-radius: 6px; padding: 8px; min-height: 120px;">
-                            ${slideOutline.content_points.map((point, index) => `
-                                <div class="bullet-point-item" data-index="${index}" style="display: flex; align-items: flex-start; margin-bottom: 8px; padding: 8px; border-radius: 4px; transition: all 0.2s ease; position: relative;">
-                                    <span style="color: #666; margin-right: 8px; font-weight: bold; min-width: 20px;">•</span>
-                                    <div style="flex: 1; position: relative;">
-                                        <div class="bullet-point-text" contenteditable="true" style="outline: none; min-height: 20px; line-height: 1.4; word-wrap: break-word;">${point}</div>
-                                    </div>
-
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideTitle">标题：</label>
+                <input type="text" id="slideTitle" class="outline-field__input" value="${(slideOutline.title || currentSlide.title || '').replace(/"/g, '&quot;')}">
+            </div>
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideType">类型：</label>
+                <select id="slideType" class="outline-field__select">
+                    <option value="title" ${(slideOutline.slide_type || slideOutline.type) === 'title' ? 'selected' : ''}>标题页</option>
+                    <option value="content" ${(slideOutline.slide_type || slideOutline.type) === 'content' ? 'selected' : ''}>内容页</option>
+                    <option value="conclusion" ${(slideOutline.slide_type || slideOutline.type) === 'conclusion' ? 'selected' : ''}>结论页</option>
+                </select>
+            </div>
+            ${slideOutline.content_points ? `
+                <div class="outline-field">
+                    <label class="outline-field__label">要点：</label>
+                    <div id="bulletPointsContainer" class="outline-bullets">
+                        ${slideOutline.content_points.map((point, index) => `
+                            <div class="bullet-point-item" data-index="${index}">
+                                <span style="color: #666; margin-right: 8px; font-weight: bold; min-width: 20px;">•</span>
+                                <div style="flex: 1; position: relative;">
+                                    <div class="bullet-point-text" contenteditable="true" style="outline: none; min-height: 20px; line-height: 1.4; word-wrap: break-word;">${point}</div>
                                 </div>
-                            `).join('')}
-                        </div>
-                        <div style="margin-top: 8px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
-                            <button class="enhance-all-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点" style="background-color: #6c757d; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                                <span>增强要点</span>
-                            </button>
-                            <button type="button" onclick="addNewBulletPoint()" class="btn btn-sm modal-btn-primary bullet-add-btn" style="background-color: #6c757d; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                                <i class="fas fa-plus"></i><span>添加要点</span>
-                            </button>
-                        </div>
-                    </div>
-                ` : `
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">要点：</label>
-                        <div id="bulletPointsContainer" style="background: white; border: 1px solid #ddd; border-radius: 6px; padding: 8px; min-height: 120px;">
-                            <div class="empty-bullet-points" style="text-align: center; color: #999; padding: 40px 20px;">
-                                <i class="fas fa-list" style="font-size: 24px; margin-bottom: 10px; opacity: 0.5;"></i>
-                                <p style="margin: 0;">暂无要点，点击下方按钮添加</p>
                             </div>
-                        </div>
-                        <div class="bullet-actions">
-                            <button type="button" class="btn btn-sm modal-btn-neutral" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
-                                <span>增强要点</span>
-                            </button>
-                            <button type="button" class="btn btn-sm modal-btn-primary bullet-add-btn" onclick="addNewBulletPoint()">
-                                <i class="fas fa-plus"></i><span>添加要点</span>
-                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="outline-bullets__actions">
+                        <button class="enhance-all-btn outline-modal-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
+                            <i class="fas fa-magic"></i><span>增强要点</span>
+                        </button>
+                        <button type="button" class="outline-modal-btn bullet-add-btn" onclick="addNewBulletPoint()" title="添加要点">
+                            <i class="fas fa-plus"></i><span>添加要点</span>
+                        </button>
+                    </div>
+                </div>
+            ` : `
+                <div class="outline-field">
+                    <label class="outline-field__label">要点：</label>
+                    <div id="bulletPointsContainer" class="outline-bullets">
+                        <div class="outline-bullets__empty">
+                            <i class="fas fa-list"></i>
+                            <p>暂无要点，点击下方按钮添加</p>
                         </div>
                     </div>
-                `}
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">描述：</label>
-                    <textarea id="slideDescription" rows="4" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical;">${slideOutline.description || ''}</textarea>
+                    <div class="outline-bullets__actions">
+                        <button type="button" class="enhance-all-btn outline-modal-btn" onclick="enhanceAllBulletPoints()" title="AI增强所有要点">
+                            <i class="fas fa-magic"></i><span>增强要点</span>
+                        </button>
+                        <button type="button" class="outline-modal-btn bullet-add-btn" onclick="addNewBulletPoint()" title="添加要点">
+                            <i class="fas fa-plus"></i><span>添加要点</span>
+                        </button>
+                    </div>
                 </div>
+            `}
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideDescription">描述：</label>
+                <textarea id="slideDescription" class="outline-field__textarea" rows="4">${slideOutline.description || ''}</textarea>
             </div>
         `;
     } else {
         outlineContent = `
-            <h5 style="margin-bottom: 25px; color: #2c3e50; font-size: 1.3em;"><i class="fas fa-file-alt"></i> 第${currentSlideIndex + 1}页大纲编辑</h5>
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 15px 0;">
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">标题：</label>
-                    <input type="text" id="slideTitle" value="${(currentSlide.title || '').replace(/"/g, '&quot;')}"
-                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box;">
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">类型：</label>
-                    <select id="slideType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box;">
-                        <option value="title">标题页</option>
-                        <option value="content" selected>内容页</option>
-                        <option value="conclusion">结论页</option>
-                    </select>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">要点：</label>
-                    <textarea id="slidePoints" rows="6" placeholder="请输入要点，每行一个..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical;"></textarea>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; display: block; margin-bottom: 8px; color: #495057; font-size: 1.1em;">描述：</label>
-                    <textarea id="slideDescription" rows="4" placeholder="请输入幻灯片描述..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical;"></textarea>
-                </div>
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideTitle">标题：</label>
+                <input type="text" id="slideTitle" class="outline-field__input" value="${(currentSlide.title || '').replace(/"/g, '&quot;')}">
+            </div>
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideType">类型：</label>
+                <select id="slideType" class="outline-field__select">
+                    <option value="title">标题页</option>
+                    <option value="content" selected>内容页</option>
+                    <option value="conclusion">结论页</option>
+                </select>
+            </div>
+            <div class="outline-field">
+                <label class="outline-field__label" for="slidePoints">要点：</label>
+                <textarea id="slidePoints" class="outline-field__textarea" rows="6" placeholder="请输入要点，每行一个..."></textarea>
+            </div>
+            <div class="outline-field">
+                <label class="outline-field__label" for="slideDescription">描述：</label>
+                <textarea id="slideDescription" class="outline-field__textarea" rows="4" placeholder="请输入幻灯片描述..."></textarea>
             </div>
         `;
     }
@@ -289,56 +280,48 @@ function showSlideOutline() {
     // 创建大纲编辑模态框
     const modal = document.createElement('div');
     modal.id = 'slideOutlineModal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 10001;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
+    modal.className = 'outline-modal';
 
-    const outlineContainer = document.createElement('div');
-    outlineContainer.style.cssText = `
-        background: var(--bg-primary);
-        border-radius: 12px;
-        padding: 30px;
-        width: 90vw;
-        max-width: 1200px;
-        max-height: 85vh;
-        overflow-y: auto;
-        position: relative;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    const content = document.createElement('div');
+    content.className = 'outline-modal__content';
+
+    // 头部：标题 + 关闭按钮
+    const header = document.createElement('div');
+    header.className = 'outline-modal__header';
+    header.innerHTML = `
+        <h5 class="outline-modal__title"><i class="fas fa-file-alt"></i> 第${currentSlideIndex + 1}页大纲编辑</h5>
     `;
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.className = 'modal-close-button';
+    closeBtn.className = 'outline-modal__close';
+    closeBtn.setAttribute('aria-label', '关闭');
     closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    closeBtn.style.cssText += 'position:absolute;top:18px;right:18px;z-index:1;';
 
-    // 添加按钮区域
-    const buttonArea = `
-        <div style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef;">
-            <button onclick="aiOptimizeSingleSlideInSlidesEditor()" class="outline-modal-btn outline-modal-btn--solid">
-                <i class="fas fa-robot"></i>
-                <span>AI优化</span>
+    header.appendChild(closeBtn);
+
+    // 内容区
+    const body = document.createElement('div');
+    body.className = 'outline-modal__body';
+    body.innerHTML = outlineContent;
+
+    // 底部按钮区
+    const footer = document.createElement('div');
+    footer.className = 'outline-modal__footer';
+    footer.innerHTML = `
+        <button onclick="aiOptimizeSingleSlideInSlidesEditor()" class="outline-modal-btn outline-modal-btn--solid">
+            <i class="fas fa-robot"></i>
+            <span>AI优化</span>
+        </button>
+        <div class="outline-modal__footer-group">
+            <button onclick="saveSlideOutline()" class="outline-modal-btn outline-modal-btn--solid">
+                <i class="fas fa-save"></i>
+                <span>保存大纲</span>
             </button>
-            <div style="display: flex; gap: 15px;">
-                <button onclick="saveSlideOutline()" class="outline-modal-btn outline-modal-btn--solid">
-                    <i class="fas fa-save"></i>
-                    <span>保存大纲</span>
-                </button>
-                <button onclick="regenerateFromOutline()" class="outline-modal-btn">
-                    <i class="fas fa-sync"></i>
-                    <span>根据大纲重新生成</span>
-                </button>
-            </div>
+            <button onclick="regenerateFromOutline()" class="outline-modal-btn">
+                <i class="fas fa-sync"></i>
+                <span>根据大纲重新生成</span>
+            </button>
         </div>
     `;
 
@@ -352,9 +335,10 @@ function showSlideOutline() {
         }
     });
 
-    outlineContainer.innerHTML = outlineContent + buttonArea;
-    outlineContainer.appendChild(closeBtn);
-    modal.appendChild(outlineContainer);
+    content.appendChild(header);
+    content.appendChild(body);
+    content.appendChild(footer);
+    modal.appendChild(content);
     document.body.appendChild(modal);
 }
 
