@@ -27,13 +27,10 @@ If you're interested in my projects or have suitable collaboration opportunities
 ##  Table of Contents
 
 - [Project Overview](#-project-overview)
-- [Feature Highlights](#-feature-highlights)
-- [Key Features](#-key-features)
+- [Features](#features)
 - [Quick Start](#-quick-start)
 - [Usage Guide](#-usage-guide)
 - [Configuration](#-configuration)
-- [API Documentation](#-api-documentation)
-- [Tech Stack](#-tech-stack)
 - [FAQ](#-faq)
 - [License](#-license)
 
@@ -68,89 +65,51 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 ### Template Generation
 ![image](https://img.pub/p/892622b3f3cc0d6ad843.png)
 
-##  Feature Highlights
+## Features
 
-- **One-Click Generation**: From topic to complete PPT, fully automated AI processing
-- **Smart Image Matching**: AI automatically matches the most suitable images with multi-source support and reference image generation
-- **TODO Task Board**: Interactive workflow board for real-time generation progress, task logs, and richer visual feedback
-- **Deep Research**: Integrated multiple search engines for latest and comprehensive information
-- **Parallel Slide Generation**: Generate slide content concurrently to significantly improve throughput on stronger AI backends
-- **Speech Script Generation**: Intelligent generation of accompanying speech scripts with multiple export formats
-- **Narration & Video Export**: Generate per-slide narration audio via Edge-TTS, support slide-synced playback, and export narrated videos (1080p 30/60fps with embedded subtitles)
-- **Visual Reference**: AI editing assistant supports image upload and visual content analysis
-- **Multiple File Upload**: Support uploading multiple files simultaneously for efficient batch processing
-- **Custom Model Selection**: Customize model selection by function module for precise cost control
-- **Public Sharing & Fullscreen Playback**: Generate share links for public viewing, fullscreen playback, narration audio, and subtitles
-- **Dual PPTX Export Paths**: Standard PPTX export via Apryse plus image-based PPTX export for higher HTML/CSS fidelity
-- **Automation Ready**: Built-in OpenAI-compatible API plus project REST APIs for n8n, CI, scripts, and API-key auth
-- **Account System**: Local auth, GitHub OAuth, Linux Do OAuth, forgot password, email verification, and registration rate limiting
-- **Notes Export**: Support exporting speech scripts to PPT notes
-- **Image Export**: Support exporting PPT in image format
-- **Responsive Design**: Perfect adaptation to various devices and screen sizes
-- **Enterprise Security**: Support for local deployment with controllable data security
+**Highlights:**
 
-##  Key Features
+- **One-Click Generation**: Topic to full PPT, fully automated with parallel generation
+- **Smart Image Matching**: Gallery / web / AI generation fused; auto-matched
+- **Deep Research**: Tavily + SearXNG dual engine, real-time web info extraction
+- **Speech Scripts & Narration Video**: Speech scripts, Edge-TTS per-slide narration, exportable 1080p videos
+- **Multi-format Export**: PDF / HTML / PPTX / image / DOCX / Markdown
+- **Automation Ready**: OpenAI-compatible API + REST APIs with API-key auth
 
-###  Multi-AI Provider Support
-- **OpenAI GPT Series**: GPT-5.5 and other OpenAI models
-- **OpenAI-Compatible Platforms**: Supports DeepSeek, Moonshot, Qwen, and other OpenAI-compatible endpoints
-- **Anthropic Claude**: Claude series models
-- **Google Gemini**: Gemini series models with custom endpoint support
-- **Azure OpenAI**: Enterprise-grade AI services with custom deployments
-- **Ollama**: Locally deployed open-source models supporting Llama, Mistral, etc.
+**In Detail:**
 
-###  Powerful File Processing
-- **Multi-format Support**: PDF, Word, Markdown, TXT, Excel, PowerPoint and more formats
-- **Intelligent Parsing**: High-quality content extraction using MinerU and MarkItDown
-- **Deep Research**: Multi-source research with Tavily API and SearXNG integration
-- **Content Enhancement**: Automatic web content extraction and intelligent summarization
+### Multi-AI Provider Support
+- OpenAI GPT, Anthropic Claude, Google Gemini, Azure OpenAI
+- Compatible with DeepSeek, Moonshot, Qwen and other OpenAI-protocol endpoints
+- Ollama local models; per-role model selection for precise cost control
 
-###  Intelligent Image Processing System
-- **Multi-source Image Acquisition**: Local gallery, network search, and AI generation in one
-- **Network Image Search**: Support for premium galleries like Pixabay, Unsplash
-- **AI Image Generation**: Integration with DALL-E, SiliconFlow, Pollinations services
-- **Smart Image Selection**: AI automatically matches the most suitable image content
-- **Image Processing Optimization**: Automatic resizing, format conversion, quality optimization
+### File Processing & Deep Research
+- Multi-format: PDF / Word / Markdown / TXT / Excel / PowerPoint
+- High-quality parsing via MinerU + MarkItDown; retrieval via Tavily + SearXNG
+- Deep web content extraction & summarization, multilingual real-time info
 
-###  Enhanced Research Capabilities
-- **Multi-engine Search**: Dual engine support with Tavily and SearXNG
-- **Deep Content Extraction**: Intelligent web content parsing and structured processing
-- **Multi-language Support**: Support for Chinese, English and other languages
-- **Real-time Information**: Access to latest web information and data
+### Image Processing
+- Three sources: local gallery / web search (Pixabay, Unsplash) / AI generation (DALL-E, SiliconFlow, Pollinations, OpenAI, Gemini)
+- AI auto-matches the best images; auto resize, format conversion, quality optimization
 
-###  Rich Template System
-- **Global Master Templates**: Unified HTML template system with responsive design
-- **Diverse Layouts**: AI-generated creative page layouts and design styles
-- **Scenario-based Templates**: Professional templates for general, tourism, education scenarios
-- **Reference PPTX Extraction**: Upload a reference PPTX and extract layout/style cues into reusable templates
-- **Free Template Mode**: Project-level AI-adaptive template generation based on topic, outline, and reference assets
-- **Custom Templates**: Support for importing and creating personalized templates
-- **Reference Image Generation**: AI template generation supports reference images for intelligent design style matching
+### Template System
+- Global master template + diverse AI layouts; scenario templates (general / tourism / education)
+- Extract layout from uploaded reference PPTX; project-level AI-adaptive templates; custom templates
 
-###  Complete Project Management
-- **Four-stage Workflow**: Requirements confirmation  Outline generation  TODO progress tracking  PPT generation
-- **Task Board**: Integrated task management with real-time status, logs, and animated feedback
-- **Stage Restart & Resume**: Restart workflow execution from a selected stage after revising outline/content
-- **Public Share Management**: Generate, disable, and inspect project share links
-- **Visual Editing**: Intuitive outline editor with real-time preview
-- **Version Management**: Project history and version rollback functionality
-- **Batch Operations**: Support for batch generation and processing multiple projects
+### Project Management
+- Four-stage workflow: Requirements → Outline → TODO tracking → PPT generation
+- Stage restart & resume; visual outline editor with live preview; batch operations
+- One-click public sharing with fullscreen playback, narration audio and subtitles
 
-###  Modern Web Interface
-- **Intuitive Operation**: User-friendly responsive web interface
-- **AI Chat Editing**: Sidebar AI editing with real-time conversation support and visual references
-- **Speech Script Generation**: Support for single/multiple/all slide speech script generation, export to DOCX/Markdown formats
-- **Fullscreen Presentation Mode**: Supports narration audio, subtitles, auto-advance, and public shared playback
-- **Multi-format Export**: PDF/HTML/standard PPTX/image-based PPTX/speech DOCX/Markdown export support
-- **Real-time Preview**: 16:9 standard ratio real-time page preview
+### Web Interface
+- Responsive UI, sidebar AI chat editing with image upload and visual analysis
+- Speech-script generation (DOCX / Markdown / PPT notes), fullscreen playback, 16:9 live preview
 
-###  Platform & Operations
-- **Docker / Docker Compose**: Ships with both single-container usage and multi-service orchestration via `docker-compose.yml` and `docker-compose-dev.yaml`
-- **PostgreSQL + Valkey**: Production compose stack includes database plus cache/task coordination for multi-user deployments
-- **Background Task System**: Long-running PDF/PPTX/narration-video exports run asynchronously with polling support
-- **Automatic Database Migrations**: Pending migrations run on startup, and default templates are imported on first boot
-- **OpenAI-Compatible Endpoints**: Exposes `/v1/chat/completions`, `/v1/completions`, and `/v1/models`
-- **Optional Monetization Modules**: Credits system, SMTP/Resend email, registration throttling, and Cloudflare Turnstile
+### Platform & Operations
+- Docker / Compose single-container and multi-service; PostgreSQL + Valkey production stack
+- Async background tasks (PDF / PPTX / narration video) with multi-worker fault tolerance
+- Account system: local auth, GitHub / Linux Do OAuth, email verification, registration rate limiting
+- Optional credits, SMTP / Resend, Cloudflare Turnstile; local-deployment friendly
 
 ##  Quick Start
 
@@ -180,11 +139,8 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 # macOS/Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Sync the development/test environment with uv
+# Install dependencies
 uv sync --extra dev
-
-# If you only need the test runner, you can install the smaller test extra instead
-# uv sync --extra test
 
 # Configure environment variables
 cp .env.example .env
@@ -192,16 +148,6 @@ cp .env.example .env
 
 # Start the service (defaults to port 8000 with SQLite + memory cache; PostgreSQL / Valkey are optional)
 uv run python run.py
-
-# Run tests (example)
-uv run --extra dev pytest tests/test_creative_guidance_defaults.py
-
-# If upgrading: after startup, apply database migrations (includes narration audio/video)
-# Option A (no HTTP auth required):
-# python -c "import asyncio; from landppt.database.migrations import migration_manager; asyncio.run(migration_manager.migrate_up())"
-# Option B (HTTP endpoint requires auth session cookie):
-# 1) Get session_id: curl -X POST -d "username=YOUR_USER&password=YOUR_PASS" http://localhost:8000/api/auth/login
-# 2) Run migrations: curl -X POST -H "Cookie: session_id=YOUR_SESSION_ID" http://localhost:8000/api/database/migrations/run
 ```
 
 #### Method 2: Traditional pip Installation
@@ -292,7 +238,7 @@ After starting the service, visit:
 - **API Documentation**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 
-No administrator account is created automatically by default. To bootstrap one, explicitly set `LANDPPT_BOOTSTRAP_ADMIN_ENABLED=true`, `LANDPPT_BOOTSTRAP_ADMIN_USERNAME`, and `LANDPPT_BOOTSTRAP_ADMIN_PASSWORD`.
+An administrator account is bootstrapped by default (`admin` / `admin123`), controlled by the `LANDPPT_BOOTSTRAP_ADMIN_*` environment variables. For production, always change the default credentials via these variables or disable auto-bootstrap.
 
 ### 2. Configure AI Providers
 Configure your AI API keys in the settings page:
@@ -362,7 +308,7 @@ SEARXNG_HOST=http://localhost:8888             # SearXNG instance URL
 RESEARCH_PROVIDER=tavily                       # Research provider: tavily, searxng, both
 
 # Image Service Configuration
-ENABLE_IMAGE_SERVICE=true                      # Enable image service
+ENABLE_IMAGE_SERVICE=false                      # Enable image service (off by default, enable on demand)
 IMAGE_USER_STORAGE_QUOTA_MB=100                # Per-user image hosting quota (MB), set <= 0 to disable
 PIXABAY_API_KEY=your_pixabay_api_key_here     # Pixabay gallery
 UNSPLASH_ACCESS_KEY=your_unsplash_key_here    # Unsplash gallery
@@ -372,7 +318,7 @@ POLLINATIONS_API_KEY=your_pollinations_api_key_here # Pollinations AI (gen.polli
 # Automation auth
 LANDPPT_API_KEY=replace-with-strong-random-key
 LANDPPT_API_KEYS=admin:prod-key,robot:n8n-key
-LANDPPT_BOOTSTRAP_ADMIN_ENABLED=false
+LANDPPT_BOOTSTRAP_ADMIN_ENABLED=true            # Bootstraps the admin account by default; change the default password or disable it in production
 LANDPPT_ENABLE_API_DOCS=true
 LANDPPT_ALLOW_HEADER_SESSION_AUTH=false
 
@@ -409,120 +355,6 @@ Additional notes:
 - Default local startup uses SQLite + memory cache on `http://localhost:8000`; production deployments should still prefer `PostgreSQL + Valkey`.
 - Narration video export requires `ffmpeg`; ComfyUI voice cloning additionally requires `COMFYUI_BASE_URL` and a reference audio upload.
 
-##  API Documentation
-
-After starting the service, visit:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-### n8n Authentication (Recommended)
-
-For non-browser automation (n8n, CI jobs), you can use either:
-1. Global `.env` API keys
-2. User-managed API keys (recommended for multi-user setups)
-
-#### Option A: Global `.env` API key
-
-Configure machine API auth in `.env`:
-
-```bash
-LANDPPT_API_KEY=replace-with-strong-random-key
-LANDPPT_API_KEY_USER=admin
-
-# Or use multi-key bindings
-LANDPPT_API_KEYS=admin:prod-key,robot:workflow-key
-```
-
-Then call protected endpoints with:
-
-- `Authorization: Bearer <LANDPPT_API_KEY>`
-- or `X-API-Key: <LANDPPT_API_KEY>`
-
-Example:
-
-```bash
-curl -X GET "http://localhost:8000/api/projects" \
-  -H "Authorization: Bearer replace-with-strong-random-key"
-```
-
-#### Option B: User-managed API key (no login needed for subsequent calls)
-
-1) Log in once with your administrator account and get `session_id` (bootstrap one explicitly with `LANDPPT_BOOTSTRAP_ADMIN_*` or create one from the Web UI):
-```bash
-curl -X POST "http://localhost:8000/api/auth/login" \
-  -d "username=<your-admin-username>" \
-  -d "password=<your-admin-password>"
-```
-
-2) Create or rotate a user API key (custom key supported):
-```bash
-curl -X POST "http://localhost:8000/api/auth/api-keys" \
-  -H "X-Session-Id: <session_id>" \
-  -H "Content-Type: application/json" \
-  -d "{\"name\":\"n8n\",\"api_key\":\"your-own-strong-api-key-123456\"}"
-```
-
-3) Use the returned `api_key` to call protected APIs directly (no session login required):
-```bash
-curl -X GET "http://localhost:8000/api/projects" \
-  -H "Authorization: Bearer your-own-strong-api-key-123456"
-```
-
-Useful management endpoints:
-- `GET /api/auth/api-keys` list current user keys
-- `DELETE /api/auth/api-keys/{key_id}` delete one key
-
-Additional notes:
-- `LANDPPT_ALLOW_HEADER_SESSION_AUTH` is disabled by default; only when explicitly set to `true` can non-browser clients pass the session via `X-Session-Id`.
-- Global keys work well for service-to-service auth; user-managed keys are better for multi-tenant or personal automation.
-- `/docs`, `/redoc`, and `/openapi.json` are available when `LANDPPT_ENABLE_API_DOCS=true`, which is the default.
-
-### OpenAI-Compatible Endpoints
-
-- `POST /v1/chat/completions`
-- `POST /v1/completions`
-- `GET /v1/models`
-
-##  Tech Stack
-
-### Backend Technologies
-- **FastAPI**: Modern Python web framework with async support
-- **SQLAlchemy**: ORM database operations supporting multiple databases
-- **Pydantic**: Data validation and serialization with type safety
-- **Uvicorn**: High-performance ASGI server
-- **PostgreSQL / SQLite**: Covers both production deployment and local development
-- **Valkey**: Cache, task coordination, and multi-worker support
-
-### AI Integration
-- **OpenAI**: GPT-4o, GPT-4o-mini and other latest models
-- **Anthropic**: Claude-4.5 series models
-- **Google AI**: Gemini-2.5 series models
-- **LangChain**: AI application development framework and toolchain
-- **Ollama**: Local model deployment and management
-
-### File Processing
-- **MinerU**: High-quality PDF intelligent parsing and structured extraction
-- **MarkItDown**: Multi-format document conversion (Word, Excel, PowerPoint, etc.)
-- **BeautifulSoup4**: HTML/XML parsing and processing
-
-### Image Processing
-- **Pillow**: Image processing and format conversion
-- **OpenAI DALL-E**: AI image generation
-- **SiliconFlow**: Domestic AI image generation service
-- **Pollinations**: Open-source AI image generation platform
-
-### Research Capabilities
-- **Tavily**: Professional search engine API
-- **SearXNG**: Open-source meta search engine
-- **HTTPX**: Asynchronous HTTP client
-- **Playwright**: Web content extraction
-
-### Export Functionality
-- **Playwright**: High-quality HTML to PDF export
-- **Apryse SDK**: Professional PPTX generation and conversion
-- **python-pptx / dom-to-pptx**: Image-based PPTX export and speaker-notes injection
-- **Edge-TTS / ComfyUI / FFmpeg**: Narration audio, subtitles, and video export pipeline
-
 ##  Contributing
 
 We welcome all forms of contributions!
@@ -550,18 +382,14 @@ A: Configure the corresponding API keys in the `.env` file:
 - Unsplash: `UNSPLASH_ACCESS_KEY`
 - AI Generation: `SILICONFLOW_API_KEY` or `POLLINATIONS_API_KEY`
 
-### Q: When using a reverse proxy (such as Nginx, Apache, etc.), if `base_url` is not configured correctly, the following issues may occur:
-- Image links still display as `localhost:8000`
-- Images cannot be loaded correctly on the front end
-- Image preview and download functions do not function properly
+### Q: Image links break behind a reverse proxy (Nginx, Apache)?
+Without a correct `base_url`, you may see: image links still pointing to `localhost:8000`, images failing to load on the frontend, or broken image preview/download.
 
-A: Configure via the web interface
-
+**Solution (via the Web UI)**:
 1. Visit the system configuration page: `https://your-domain.com/ai-config`
 2. Switch to the "Application Configuration" tab
-3. Enter your proxy domain name in the "Base URL (BASE_URL)" field
-4. For example: `https://your-domain.com` or `http://your-domain.com:8080`
-5. Click "Save Application Configuration"
+3. Enter your proxy domain in the "Base URL (BASE_URL)" field, e.g. `https://your-domain.com` or `http://your-domain.com:8080`
+4. Click "Save Application Configuration"
 
 ### Q: How to use the research functionality?
 A: Configure `TAVILY_API_KEY` or deploy a SearXNG instance, then enable research functionality when creating PPTs to automatically get relevant information.
@@ -598,13 +426,12 @@ This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE
 - **Issue Reporting**: https://github.com/sligter/LandPPT/issues
 - **Discussions**: https://github.com/sligter/LandPPT/discussions
 
-![image](https://jsd.onmicrosoft.cn/gh/mydracula/image@master/20260515/9c2bb1e3f67945f3b147181d6351eaf0.png)
 ---
 
 <div align="center">
 
-**If this project helps you, please give us a  Star!**
+**If this project helps you, please give us a :star:!**
 
-Made with  by the LandPPT Team
+Made with :heart: by the LandPPT Team
 
 </div>
