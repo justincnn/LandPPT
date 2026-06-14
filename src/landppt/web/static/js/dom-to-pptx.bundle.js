@@ -64202,14 +64202,15 @@
 
     const isSafeInline = (el) => {
       if (isFormulaElement(el)) return false;
+      const tagName = String(el.tagName || '').toUpperCase();
       // 1. Reject Web Components / Custom Elements
-      if (el.tagName.includes('-')) return false;
+      if (tagName.includes('-')) return false;
       // 2. Reject Explicit Images/SVGs
-      if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
+      if (['IMG', 'SVG', 'CANVAS', 'VIDEO', 'IFRAME', 'OBJECT', 'EMBED'].includes(tagName)) return false;
 
       // 3. Reject Class-based Icons (FontAwesome, Material, Bootstrap, etc.)
       // If an <i> or <span> has icon classes, it is a visual object, not text.
-      if (el.tagName === 'I' || el.tagName === 'SPAN') {
+      if (tagName === 'I' || tagName === 'SPAN') {
         const cls = el.getAttribute('class') || '';
         if (
           cls.includes('fa-') ||
@@ -64224,13 +64225,13 @@
         }
       }
 
-      const style = window.getComputedStyle(el);
+      const style = getNodeWindow(el).getComputedStyle(el);
       const display = style.display;
       if (style.position === 'absolute' || style.position === 'fixed') return false;
 
       // 4. Standard Inline Tag Check
       const isInlineTag = ['SPAN', 'B', 'STRONG', 'EM', 'I', 'A', 'SMALL', 'MARK'].includes(
-        el.tagName
+        tagName
       );
       const isInlineDisplay = display.includes('inline');
 
@@ -64501,31 +64502,66 @@
    * Helper to inline computed styles into an SVG clone
    */
   function inlineSvgStyles(source, target) {
-    const computed = window.getComputedStyle(source);
+    const sourceWin = getNodeWindow(source);
+    const computed = sourceWin.getComputedStyle(source);
     const properties = [
       'fill',
+      'fill-opacity',
       'stroke',
       'stroke-width',
+      'stroke-opacity',
+      'stroke-dasharray',
+      'stroke-dashoffset',
       'stroke-linecap',
       'stroke-linejoin',
+      'stop-color',
+      'stop-opacity',
       'opacity',
       'font-family',
       'font-size',
       'font-weight',
+      'font-style',
+      'text-anchor',
+      'dominant-baseline',
+      'alignment-baseline',
     ];
 
-    if (computed.fill === 'none') target.setAttribute('fill', 'none');
-    else if (computed.fill) target.style.fill = computed.fill;
+    const setComputedProperty = (prop, value) => {
+      if (!value || value === 'auto') return;
+      target.style.setProperty(prop, value);
+    };
 
-    if (computed.stroke === 'none') target.setAttribute('stroke', 'none');
-    else if (computed.stroke) target.style.stroke = computed.stroke;
+    const inlineColorProperty = (prop) => {
+      const value = computed.getPropertyValue(prop);
+      if (!value) return;
+      if (value === 'none') target.setAttribute(prop, 'none');
+      else setComputedProperty(prop, value);
+    };
+
+    inlineColorProperty('fill');
+    inlineColorProperty('stroke');
+
+    ['fill', 'stroke'].forEach((prop) => {
+      const attrValue = target.getAttribute(prop);
+      if (attrValue && attrValue.includes('var(')) {
+        target.removeAttribute(prop);
+      }
+    });
 
     properties.forEach((prop) => {
       if (prop !== 'fill' && prop !== 'stroke') {
-        const val = computed[prop];
-        if (val && val !== 'auto') target.style[prop] = val;
+        const val = computed.getPropertyValue(prop);
+        setComputedProperty(prop, val);
       }
     });
+
+    const styleAttr = target.getAttribute('style') || '';
+    if (styleAttr.includes('var(')) {
+      target.setAttribute('style', styleAttr.replace(/var\((--[^),]+)(?:,[^)]+)?\)/g, (_, varName) => {
+        const resolved = computed.getPropertyValue(varName).trim();
+        return resolved || 'currentColor';
+      }));
+    }
 
     for (let i = 0; i < source.children.length; i++) {
       if (target.children[i]) inlineSvgStyles(source.children[i], target.children[i]);
@@ -66262,6 +66298,123 @@
     });
   }
 
+  function hasRenderableBackgroundImage(backgroundImageValue) {
+    const value = String(backgroundImageValue || '').trim();
+    return !!value && value.toLowerCase() !== 'none';
+  }
+
+  function getElementClassText(node) {
+    if (!node || node.nodeType !== 1) return '';
+    const className = node.className;
+    if (typeof className === 'string') return className;
+    if (className && typeof className.baseVal === 'string') return className.baseVal;
+    return '';
+  }
+
+  function isSlideSizedBackgroundLayerNode(node, config) {
+    if (!node || !config) return false;
+    if (node === config.root) return true;
+
+    const classText = getElementClassText(node);
+    if (/\b(?:slide-canvas|pptx-slide)\b/i.test(classText)) return true;
+
+    if (
+      typeof node.getBoundingClientRect !== 'function' ||
+      !config.root ||
+      typeof config.root.getBoundingClientRect !== 'function'
+    ) {
+      return false;
+    }
+
+    const nodeRect = node.getBoundingClientRect();
+    const rootRect = config.root.getBoundingClientRect();
+    const rootW = rootRect.width || 0;
+    const rootH = rootRect.height || 0;
+    if (rootW <= 1 || rootH <= 1) return false;
+
+    const widthMatches = nodeRect.width >= rootW * 0.9;
+    const heightMatches = nodeRect.height >= rootH * 0.9;
+    const leftAligned = Math.abs(nodeRect.left - rootRect.left) <= Math.max(4, rootW * 0.05);
+    const topAligned = Math.abs(nodeRect.top - rootRect.top) <= Math.max(4, rootH * 0.05);
+    return widthMatches && heightMatches && leftAligned && topAligned;
+  }
+
+  function shouldRasterizeBackgroundOnlyLayer(
+    node,
+    config,
+    backgroundImageValue,
+    isBgClipText,
+    hasAnyGradientBackground,
+    hasUrlBackgroundImage
+  ) {
+    if (!node || !config || isBgClipText) return false;
+    if (!isSlideSizedBackgroundLayerNode(node, config)) return false;
+    if (!hasRenderableBackgroundImage(backgroundImageValue)) return false;
+    return hasAnyGradientBackground || hasUrlBackgroundImage;
+  }
+
+  function copyComputedCssProperty(sourceStyle, targetStyle, propertyName) {
+    const value =
+      sourceStyle && typeof sourceStyle.getPropertyValue === 'function'
+        ? sourceStyle.getPropertyValue(propertyName)
+        : '';
+    if (value) {
+      targetStyle.setProperty(propertyName, value, 'important');
+    }
+  }
+
+  async function rasterizeElementBackgroundOnly(node, widthPx, heightPx, safeOpacity = 1) {
+    const sourceDoc = (node && node.ownerDocument) || document;
+    const sourceWin = sourceDoc.defaultView || window;
+    const body = sourceDoc.body || sourceDoc.documentElement;
+    if (!body) return null;
+
+    const style = sourceWin.getComputedStyle(node);
+    const width = Math.max(1, Math.ceil(widthPx));
+    const height = Math.max(1, Math.ceil(heightPx));
+    const clone = sourceDoc.createElement('div');
+    const opacity = Number.isFinite(safeOpacity) ? Math.max(0, Math.min(1, safeOpacity)) : 1;
+
+    clone.setAttribute('aria-hidden', 'true');
+    clone.style.setProperty('position', 'fixed', 'important');
+    clone.style.setProperty('left', '-100000px', 'important');
+    clone.style.setProperty('top', '-100000px', 'important');
+    clone.style.setProperty('width', `${width}px`, 'important');
+    clone.style.setProperty('height', `${height}px`, 'important');
+    clone.style.setProperty('margin', '0', 'important');
+    clone.style.setProperty('padding', '0', 'important');
+    clone.style.setProperty('box-sizing', 'border-box', 'important');
+    clone.style.setProperty('display', 'block', 'important');
+    clone.style.setProperty('overflow', 'hidden', 'important');
+    clone.style.setProperty('pointer-events', 'none', 'important');
+    clone.style.setProperty('opacity', String(opacity), 'important');
+
+    [
+      'background-color',
+      'background-image',
+      'background-position',
+      'background-position-x',
+      'background-position-y',
+      'background-size',
+      'background-repeat',
+      'background-origin',
+      'background-clip',
+      'background-attachment',
+      'background-blend-mode',
+      'border-top-left-radius',
+      'border-top-right-radius',
+      'border-bottom-right-radius',
+      'border-bottom-left-radius',
+    ].forEach((propertyName) => copyComputedCssProperty(style, clone.style, propertyName));
+
+    body.appendChild(clone);
+    try {
+      return await elementToCanvasImage(clone, width, height, { padding: 0, scale: 2 });
+    } finally {
+      if (clone.parentNode) clone.parentNode.removeChild(clone);
+    }
+  }
+
   /**
    * Helper to identify elements that should be rendered as icons (Images).
    * Detects Custom Elements AND generic tags (<i>, <span>) with icon classes/pseudo-elements.
@@ -67368,6 +67521,57 @@
       if (childW >= widthPx - 2 && childH >= heightPx - 2) isImageWrapper = true;
     }
 
+    const shouldRasterizeBackgroundLayer =
+      !isImageWrapper &&
+      shouldRasterizeBackgroundOnlyLayer(
+        node,
+        config,
+        backgroundImageValue,
+        isBgClipText,
+        hasAnyGradientBackground,
+        hasUrlBackgroundImage
+      );
+    let backgroundLayerJob = null;
+    if (shouldRasterizeBackgroundLayer) {
+      const baseAlpha = safeOpacity * bgColorObj.opacity;
+      if (bgColorObj.hex && baseAlpha > 0.001) {
+        items.push({
+          type: 'shape',
+          zIndex,
+          domOrder: domOrder - 0.03,
+          shapeType: pptx.ShapeType.rect,
+          options: {
+            x,
+            y,
+            w,
+            h,
+            rotate: rotation,
+            fill: { color: bgColorObj.hex, transparency: (1 - baseAlpha) * 100 },
+            line: { type: 'none' },
+          },
+        });
+      }
+
+      const backgroundItem = {
+        type: 'image',
+        zIndex,
+        domOrder: domOrder - 0.02,
+        options: { x, y, w, h, rotate: rotation, data: null },
+      };
+      items.push(backgroundItem);
+      backgroundLayerJob = async () => {
+        const rasterData = await rasterizeElementBackgroundOnly(
+          node,
+          widthPx,
+          heightPx,
+          safeOpacity
+        );
+        if (rasterData) backgroundItem.options.data = rasterData;
+        else backgroundItem.skip = true;
+      };
+    }
+    const useSolidFill = bgColorObj.hex && !isImageWrapper && !shouldRasterizeBackgroundLayer;
+
     let textPayload = null;
     const isText = isTextContainer(node);
 
@@ -67395,7 +67599,7 @@
       }
     }
 
-    if (hasGradient || (softEdge && bgColorObj.hex && !isImageWrapper)) {
+    if (!shouldRasterizeBackgroundLayer && (hasGradient || (softEdge && bgColorObj.hex && !isImageWrapper))) {
       let bgData = null;
       let padIn = 0;
       if (softEdge) {
@@ -67479,7 +67683,7 @@
         items.push(...borderItems);
       }
     } else if (
-      (bgColorObj.hex && !isImageWrapper) ||
+      useSolidFill ||
       hasUniformBorder ||
       hasCompositeBorder ||
       hasShadow ||
@@ -67487,7 +67691,6 @@
     ) {
       const finalAlpha = safeOpacity * bgColorObj.opacity;
       const transparency = (1 - finalAlpha) * 100;
-      const useSolidFill = bgColorObj.hex && !isImageWrapper;
       const splitUniformBorderOverlay = hasUniformBorder && hasLeafChildren && !textPayload;
 
       if (hasPartialBorderRadius && useSolidFill && !textPayload) {
@@ -67652,7 +67855,7 @@
       items.push(...pseudoDecorationItems);
     }
 
-    return { items, stopRecursion: !!textPayload };
+    return { items, job: backgroundLayerJob, stopRecursion: !!textPayload };
   }
 
   function isComplexHierarchy(root) {
@@ -67799,7 +68002,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-06-14-text-layout-v2';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-06-14-bg-layer-v4';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;

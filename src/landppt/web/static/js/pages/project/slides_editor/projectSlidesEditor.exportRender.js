@@ -415,8 +415,8 @@
             }
         }
 
-        const DOM_TO_PPTX_BUNDLE_VERSION = '20260614-text-layout-v2';
-        const DOM_TO_PPTX_EXPECTED_PATCH_VERSION = '2026-06-14-text-layout-v2';
+        const DOM_TO_PPTX_BUNDLE_VERSION = '20260614-bg-layer-v4';
+        const DOM_TO_PPTX_EXPECTED_PATCH_VERSION = '2026-06-14-bg-layer-v4';
         let domToPptxReloadPromise = null;
 
         function isDomToPptxPatchedInstance(instance) {

@@ -1,22 +1,20 @@
 import base64
 import io
-import re
 import zipfile
 from pathlib import Path
 
 import pytest
 
-FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_inline_complex_smoke.html"
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_layered_background_smoke.html"
 EXPECTED_PATCH_VERSION = "2026-06-14-bg-layer-v4"
 
 
-def _read_pptx_entry(result, entry_name):
+def _read_pptx(result):
     pptx_bytes = base64.b64decode(result["pptxBase64"])
-    with zipfile.ZipFile(io.BytesIO(pptx_bytes)) as archive:
-        return archive.read(entry_name).decode("utf-8")
+    return zipfile.ZipFile(io.BytesIO(pptx_bytes))
 
 
-def test_dom_to_pptx_inline_complex_smoke():
+def test_dom_to_pptx_preserves_layered_root_background():
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:  # pragma: no cover - depends on local dependency install
@@ -34,22 +32,21 @@ def test_dom_to_pptx_inline_complex_smoke():
 
         try:
             page.goto(FIXTURE_PATH.resolve().as_uri(), wait_until="load")
-            page.wait_for_function("window.domToPptx && window.runComplexInlinePptxSmokeTest")
-            result = page.evaluate("() => window.runComplexInlinePptxSmokeTest()")
+            page.wait_for_function("window.domToPptx && window.runLayeredBackgroundPptxSmokeTest")
+            result = page.evaluate("() => window.runLayeredBackgroundPptxSmokeTest()")
         finally:
             browser.close()
 
     assert not page_errors
-    assert result["slideCount"] == 2
+    assert result["slideCount"] == 1
     assert result["patchVersion"] == EXPECTED_PATCH_VERSION
     assert result["blobSize"] > 10_000
 
-    slide_xml = _read_pptx_entry(result, "ppt/slides/slide1.xml")
-    line_spacing_values = [
-        int(value)
-        for value in re.findall(r"<a:lnSpc><a:spcPts val=\"(\d+)\"/></a:lnSpc>", slide_xml)
-    ]
-    assert line_spacing_values
-    assert max(line_spacing_values) >= 1400
-    assert 'anchor="t"' in slide_xml
-    assert "<a:highlight>" in slide_xml
+    with _read_pptx(result) as archive:
+        slide_xml = archive.read("ppt/slides/slide1.xml").decode("utf-8")
+        media_entries = [name for name in archive.namelist() if name.startswith("ppt/media/")]
+        media_payloads = [archive.read(name) for name in media_entries]
+
+    assert "F2F2F2" in slide_xml
+    assert "<p:pic>" in slide_xml
+    assert any(payload.startswith(b"\x89PNG\r\n\x1a\n") for payload in media_payloads)
