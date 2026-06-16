@@ -377,6 +377,7 @@ async def _generate_outline_from_confirmed_sources(
     *,
     user_id: int,
     requirements_override: Optional[str] = None,
+    event_callback=None,
 ) -> Dict[str, Any]:
     from ...services.file_outline_utils import get_file_processing_mode, normalize_uploaded_files
     from ...services.file_processor import FileProcessor
@@ -428,6 +429,8 @@ async def _generate_outline_from_confirmed_sources(
             scenario=scenario,
             language=language,
             user_id=user_id,
+            network_mode=network_mode,
+            event_callback=event_callback,
         )
         if not outline:
             raise Exception("Failed to extract usable content from the provided URLs.")
@@ -702,18 +705,47 @@ async def _stream_outline_from_confirmed_sources_v2(
             outline = outline.copy()
             outline["file_info"] = prepared_request["file_info"]
         else:
+            research_event_queue: Optional[asyncio.Queue] = None
+            research_event_callback = None
+            if content_source == "url":
+                research_event_queue = asyncio.Queue()
+
+                async def _url_research_event_cb(event: Dict[str, Any]) -> None:
+                    await research_event_queue.put(event)
+
+                research_event_callback = _url_research_event_cb
+
             generation_task = asyncio.create_task(
                 _generate_outline_from_confirmed_sources(
                     project,
                     confirmed_requirements,
                     user_id=user_id,
+                    event_callback=research_event_callback,
                 )
             )
+            last_ping_at = time.time()
             while not generation_task.done():
-                done, _ = await asyncio.wait({generation_task}, timeout=5.0)
+                done, _ = await asyncio.wait(
+                    {generation_task},
+                    timeout=1.0 if research_event_queue is not None else 5.0,
+                )
+                if research_event_queue is not None:
+                    while not research_event_queue.empty():
+                        research_event = research_event_queue.get_nowait()
+                        for payload in user_ppt_service.iter_research_stream_payloads(research_event):
+                            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                 if done:
                     break
-                yield f"data: {json.dumps({'ping': True})}\n\n"
+                now = time.time()
+                if now - last_ping_at >= 5:
+                    yield f"data: {json.dumps({'ping': True})}\n\n"
+                    last_ping_at = now
+
+            if research_event_queue is not None:
+                while not research_event_queue.empty():
+                    research_event = research_event_queue.get_nowait()
+                    for payload in user_ppt_service.iter_research_stream_payloads(research_event):
+                        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
             outline = await generation_task
             llm_call_count = max(0, int((outline.get("metadata") or {}).get("llm_call_count") or 0))
@@ -986,12 +1018,15 @@ async def _process_url_sources_for_outline(
     scenario: str = "general",
     language: str = "zh",
     user_id: int = None,
+    network_mode: bool = False,
+    event_callback=None,
 ) -> Optional[Dict[str, Any]]:
     """Process URL sources (web pages + downloadable files) and generate file-style outline."""
     if not source_urls:
         return None
 
     saved_file_path: Optional[str] = None
+    merged_file_path: Optional[str] = None
     source_filename = f"url_sources_{int(time.time())}.md"
     downloaded_file_paths: List[str] = []
 
@@ -1146,9 +1181,39 @@ async def _process_url_sources_for_outline(
             source_filename,
         )
 
+        user_ppt_service = get_ppt_service_for_user(user_id) if user_id else ppt_service
+        outline_file_path = saved_file_path
+        outline_filename = source_filename
+        if network_mode and topic and topic.strip():
+            context = _build_source_outline_context(
+                scenario=scenario,
+                target_audience=target_audience,
+                requirements_text=requirements or "",
+                ppt_style=ppt_style,
+                custom_style_prompt=custom_style_prompt,
+                confirmed_requirements={
+                    "custom_audience": custom_audience or "",
+                    "description": description or "",
+                },
+                source_summary=f"URL count: {len(source_urls)}",
+                file_processing_mode=file_processing_mode,
+            )
+            context["source_urls"] = source_urls
+            merged_file_path = await user_ppt_service.conduct_research_and_merge_with_files(
+                topic=topic,
+                language=language,
+                file_paths=[saved_file_path],
+                context=context,
+                event_callback=event_callback,
+            )
+            if not merged_file_path:
+                raise RuntimeError("Deep research merge for URL sources did not return a file path.")
+            outline_file_path = merged_file_path
+            outline_filename = f"merged_with_search_{len(source_urls)}_url_sources.md"
+
         outline_request = FileOutlineGenerationRequest(
-            file_path=saved_file_path,
-            filename=source_filename,
+            file_path=outline_file_path,
+            filename=outline_filename,
             topic=topic if (topic or "").strip() else None,
             scenario=scenario,
             requirements=requirements,
@@ -1167,12 +1232,13 @@ async def _process_url_sources_for_outline(
             content_analysis_depth=content_analysis_depth,
         )
 
-        user_ppt_service = get_ppt_service_for_user(user_id) if user_id else ppt_service
         result = await user_ppt_service.generate_outline_from_file(outline_request)
         if not result.success or not result.outline:
             logger.error(f"Failed to generate outline from URL content: {getattr(result, 'error', 'unknown')}")
             if saved_file_path:
                 await run_blocking_io(_cleanup_project_file_sync, saved_file_path)
+            if merged_file_path:
+                await run_blocking_io(_cleanup_project_file_sync, merged_file_path)
             for downloaded_path in downloaded_file_paths:
                 try:
                     await run_blocking_io(_cleanup_project_file_sync, downloaded_path)
@@ -1201,9 +1267,10 @@ async def _process_url_sources_for_outline(
             metadata = {}
             outline_with_url_info["metadata"] = metadata
         metadata["llm_call_count"] = max(0, int(url_outline_llm_call_count))
+        metadata["research_merged"] = bool(merged_file_path)
         outline_with_url_info["file_info"] = {
-            "file_path": saved_file_path,
-            "filename": source_filename,
+            "file_path": outline_file_path,
+            "filename": outline_filename,
             "uploaded_files": uploaded_files,
             "source_type": "url",
             "source_urls": source_urls,
@@ -1212,6 +1279,12 @@ async def _process_url_sources_for_outline(
             "web_sources_count": len(web_source_urls),
             "web_extracted_count": len(extracted_contents),
             "extracted_count": len(extracted_contents) + len(processed_file_sources),
+            "source_file_path": saved_file_path,
+            "source_filename": source_filename,
+            "merged_file_path": merged_file_path or outline_file_path,
+            "merged_filename": outline_filename,
+            "file_paths": [saved_file_path],
+            "research_merged": bool(merged_file_path),
         }
         outline_with_url_info["url_info"] = {
             "source_urls": source_urls,
@@ -1232,6 +1305,9 @@ async def _process_url_sources_for_outline(
             "extracted_count": len(extracted_contents) + len(processed_file_sources),
             "failed_count": max(len(source_urls) - len(succeeded_urls), 0),
             "titles": [(item.title or item.url) for item in extracted_contents],
+            "source_file_path": saved_file_path,
+            "merged_file_path": merged_file_path,
+            "research_merged": bool(merged_file_path),
         }
         return outline_with_url_info
 
@@ -1240,6 +1316,11 @@ async def _process_url_sources_for_outline(
         if saved_file_path:
             try:
                 await run_blocking_io(_cleanup_project_file_sync, saved_file_path)
+            except Exception:
+                pass
+        if merged_file_path:
+            try:
+                await run_blocking_io(_cleanup_project_file_sync, merged_file_path)
             except Exception:
                 pass
         for downloaded_path in downloaded_file_paths:
