@@ -11,6 +11,10 @@
     const initialProjectSlides = {{ (project.slides_data if project and project.slides_data else []) | tojson }};
     const hasInitialSlidesHtml = {{ 'true' if project and project.slides_html else 'false' }};
     const hasConfirmedRequirements = {{ 'true' if project and project.confirmed_requirements else 'false' }};
+    {% set outline_stage = todo_board.stages | selectattr('id', 'equalto', 'outline_generation') | first %}
+    const initialOutlineStageStatus = {{ (outline_stage.status if outline_stage else '') | tojson }};
+    let outlineResumeAutoStartScheduled = false;
+    let outlineHasGeneratedInSession = false;
     const hasProjectLanguage = (
         projectMetadata &&
         typeof projectMetadata === 'object' &&
@@ -607,6 +611,10 @@
         );
     }
 
+    function hasAnyOutlineSlides() {
+        return hasInitialOutlineSlides() || outlineHasGeneratedInSession;
+    }
+
     function hasInitialPPTOutput() {
         return Boolean(
             (Array.isArray(initialProjectSlides) && initialProjectSlides.length > 0) ||
@@ -615,11 +623,36 @@
     }
 
     function shouldExposePPTStartButton(pptStageStatus = null) {
-        if (!hasInitialOutlineSlides() || hasInitialPPTOutput()) {
+        if (!hasAnyOutlineSlides() || hasInitialPPTOutput()) {
             return false;
         }
 
         return !pptStageStatus || ['pending', 'failed'].includes(pptStageStatus);
+    }
+
+    function shouldResumeOutlineGenerationOnLoad() {
+        if (!hasConfirmedRequirements || hasAnyOutlineSlides() || hasInitialPPTOutput()) {
+            return false;
+        }
+
+        return ['pending', 'running', ''].includes(initialOutlineStageStatus);
+    }
+
+    function scheduleOutlineResumeAutoStart(delayMs = 500) {
+        if (outlineResumeAutoStartScheduled || outlineGenerationStarted || hasAnyOutlineSlides()) {
+            return;
+        }
+
+        outlineResumeAutoStartScheduled = true;
+        window.setTimeout(() => {
+            outlineResumeAutoStartScheduled = false;
+            if (outlineGenerationStarted || hasAnyOutlineSlides()) {
+                return;
+            }
+
+            console.log('Resuming outline generation from saved todo state.');
+            startOutlineGenerationNew();
+        }, delayMs);
     }
 
     function hydrateOutlineSectionFromProjectState() {
@@ -771,9 +804,14 @@
             return;
         }
 
-        if (hasInitialOutlineSlides()) {
+        if (hasAnyOutlineSlides()) {
             hydrateOutlineSectionFromProjectState();
             console.log('Saved outline exists, skipping auto-start outline generation.');
+            return;
+        }
+
+        if (shouldResumeOutlineGenerationOnLoad()) {
+            scheduleOutlineResumeAutoStart();
             return;
         }
 
@@ -1158,7 +1196,7 @@
         lastOutlineErrorRetryHandler = 'regenerateOutlineNew';
         const forceRegenerate = options && options.forceRegenerate === true;
 
-        if (!forceRegenerate && hasInitialOutlineSlides()) {
+        if (!forceRegenerate && hasAnyOutlineSlides()) {
             console.log('Saved outline exists, hydrating instead of starting outline generation.');
             hydrateOutlineSectionFromProjectState();
             return;
@@ -3170,7 +3208,7 @@
         const requirementsCompleted = requirementsStage?.querySelector('.stage-status-icon')?.textContent === '✓';
         const outlineStatus = outlineStage?.querySelector('.stage-status-icon')?.textContent;
 
-        if (hasInitialOutlineSlides()) {
+        if (hasAnyOutlineSlides()) {
             hydrateOutlineSectionFromProjectState();
             console.log('Saved outline exists, skipping workflow auto-start.');
             return;
@@ -4131,6 +4169,7 @@
                 return;
             }
 
+            outlineHasGeneratedInSession = true;
             renderOutlineContentNew(parsedOutline, outlineContainer);
 
             if (loadingDiv) loadingDiv.style.display = 'none';

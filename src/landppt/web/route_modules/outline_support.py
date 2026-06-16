@@ -78,6 +78,72 @@ def _get_project_network_mode(project: PPTProject) -> bool:
     return False
 
 
+def _build_source_outline_context(
+    *,
+    scenario: str,
+    target_audience: str,
+    requirements_text: str,
+    ppt_style: str,
+    custom_style_prompt: Optional[str],
+    confirmed_requirements: Dict[str, Any],
+    source_summary: str,
+    file_processing_mode: str,
+) -> Dict[str, Any]:
+    return {
+        "scenario": scenario,
+        "target_audience": target_audience or "General audience",
+        "custom_audience": confirmed_requirements.get("custom_audience") or "",
+        "requirements": requirements_text or "",
+        "ppt_style": ppt_style,
+        "custom_style_prompt": custom_style_prompt or "",
+        "description": confirmed_requirements.get("description") or "",
+        "source_summary": source_summary,
+        "file_processing_mode": file_processing_mode,
+    }
+
+
+def _build_source_outline_user_brief_markdown(
+    *,
+    topic: str,
+    scenario: str,
+    target_audience: str,
+    requirements: Optional[str],
+    description: Optional[str],
+    custom_audience: Optional[str],
+    ppt_style: str,
+    custom_style_prompt: Optional[str],
+    source_summary: str,
+) -> str:
+    lines = ["\n## User Requirements\n"]
+    if topic and topic.strip():
+        lines.append(f"- Topic: {topic.strip()}")
+    if scenario:
+        lines.append(f"- Scenario: {scenario}")
+    if target_audience:
+        lines.append(f"- Target audience: {target_audience}")
+    if custom_audience:
+        lines.append(f"- Custom audience: {custom_audience}")
+    if ppt_style:
+        lines.append(f"- PPT style: {ppt_style}")
+    if custom_style_prompt:
+        lines.append(f"- Custom style: {custom_style_prompt}")
+    if source_summary:
+        lines.append(f"- Source summary: {source_summary}")
+
+    requirements_text = (requirements or "").strip()
+    if requirements_text:
+        lines.append("\n### Specific Requirements\n")
+        lines.append(requirements_text)
+
+    description_text = (description or "").strip()
+    if description_text and description_text not in requirements_text:
+        lines.append("\n### Additional Instructions\n")
+        lines.append(description_text)
+
+    lines.append("\n---\n")
+    return "\n".join(lines)
+
+
 async def _save_uploaded_files_for_confirmed_requirements(file_uploads: List[UploadFile]) -> Dict[str, Any]:
     from ...services.file_processor import FileProcessor
 
@@ -216,14 +282,16 @@ async def _prepare_uploaded_source_outline_request(
     filename_for_request = primary_filename or file_entries[0].get("filename") or "uploaded_file"
 
     if network_mode and topic:
-        context = {
-            "scenario": scenario,
-            "target_audience": target_audience or "普通观众",
-            "requirements": requirements_text or "",
-            "ppt_style": ppt_style,
-            "description": f"文件数量: {len(file_entries)}",
-            "file_processing_mode": file_processing_mode,
-        }
+        context = _build_source_outline_context(
+            scenario=scenario,
+            target_audience=target_audience,
+            requirements_text=requirements_text,
+            ppt_style=ppt_style,
+            custom_style_prompt=custom_style_prompt,
+            confirmed_requirements=confirmed_requirements,
+            source_summary=f"File count: {len(file_entries)}",
+            file_processing_mode=file_processing_mode,
+        )
         merged_file_path = await user_ppt_service.conduct_research_and_merge_with_files(
             topic=topic,
             language=language,
@@ -270,6 +338,8 @@ async def _prepare_uploaded_source_outline_request(
         scenario=scenario,
         requirements=requirements_text,
         target_audience=target_audience,
+        custom_audience=confirmed_requirements.get("custom_audience"),
+        description=confirmed_requirements.get("description"),
         language=language,
         page_count_mode=page_count_mode,
         min_pages=min_pages,
@@ -352,6 +422,9 @@ async def _generate_outline_from_confirmed_sources(
             file_processing_mode=file_processing_mode,
             content_analysis_depth=content_analysis_depth,
             requirements=requirements_text,
+            description=confirmed_requirements.get("description"),
+            custom_audience=confirmed_requirements.get("custom_audience"),
+            include_transition_pages=bool(confirmed_requirements.get("include_transition_pages", False)),
             scenario=scenario,
             language=language,
             user_id=user_id,
@@ -385,14 +458,16 @@ async def _generate_outline_from_confirmed_sources(
     filename_for_request = primary_filename or file_entries[0].get("filename") or "uploaded_file"
 
     if network_mode and topic:
-        context = {
-            "scenario": scenario,
-            "target_audience": target_audience or "普通观众",
-            "requirements": requirements_text or "",
-            "ppt_style": ppt_style,
-            "description": f"文件数量: {len(file_entries)}",
-            "file_processing_mode": file_processing_mode,
-        }
+        context = _build_source_outline_context(
+            scenario=scenario,
+            target_audience=target_audience,
+            requirements_text=requirements_text,
+            ppt_style=ppt_style,
+            custom_style_prompt=custom_style_prompt,
+            confirmed_requirements=confirmed_requirements,
+            source_summary=f"File count: {len(file_entries)}",
+            file_processing_mode=file_processing_mode,
+        )
         merged_file_path = await user_ppt_service.conduct_research_and_merge_with_files(
             topic=topic,
             language=language,
@@ -438,6 +513,8 @@ async def _generate_outline_from_confirmed_sources(
         scenario=scenario,
         requirements=requirements_text,
         target_audience=target_audience,
+        custom_audience=confirmed_requirements.get("custom_audience"),
+        description=confirmed_requirements.get("description"),
         language=language,
         page_count_mode=page_count_mode,
         min_pages=min_pages,
@@ -903,6 +980,9 @@ async def _process_url_sources_for_outline(
     file_processing_mode: str,
     content_analysis_depth: str,
     requirements: str = None,
+    description: str = None,
+    custom_audience: str = None,
+    include_transition_pages: bool = False,
     scenario: str = "general",
     language: str = "zh",
     user_id: int = None,
@@ -1017,6 +1097,19 @@ async def _process_url_sources_for_outline(
         markdown_parts.append("# URL Source Content\n")
         if topic and topic.strip():
             markdown_parts.append(f"\nTopic: {topic.strip()}\n")
+        markdown_parts.append(
+            _build_source_outline_user_brief_markdown(
+                topic=topic,
+                scenario=scenario,
+                target_audience=target_audience,
+                requirements=requirements,
+                description=description,
+                custom_audience=custom_audience,
+                ppt_style=ppt_style,
+                custom_style_prompt=custom_style_prompt,
+                source_summary=f"URL count: {len(source_urls)}",
+            )
+        )
 
         if processed_file_sources:
             markdown_parts.append("\n## Downloaded File Sources\n")
@@ -1060,6 +1153,8 @@ async def _process_url_sources_for_outline(
             scenario=scenario,
             requirements=requirements,
             target_audience=target_audience,
+            custom_audience=custom_audience,
+            description=description,
             language=language,
             page_count_mode=page_count_mode,
             min_pages=min_pages,
@@ -1067,7 +1162,7 @@ async def _process_url_sources_for_outline(
             fixed_pages=fixed_pages,
             ppt_style=ppt_style,
             custom_style_prompt=custom_style_prompt,
-            include_transition_pages=False,
+            include_transition_pages=include_transition_pages,
             file_processing_mode=file_processing_mode,
             content_analysis_depth=content_analysis_depth,
         )
@@ -1168,6 +1263,8 @@ async def _process_uploaded_files_for_outline(
     file_processing_mode: str,
     content_analysis_depth: str,
     requirements: str = None,
+    description: str = None,
+    custom_audience: str = None,
     enable_web_search: bool = False,  # 新增参数
     scenario: str = "general",  # 新增参数
     language: str = "zh",  # 新增参数
@@ -1231,9 +1328,11 @@ async def _process_uploaded_files_for_outline(
                 context = {
                     'scenario': scenario,
                     'target_audience': target_audience or '普通大众',
+                    'custom_audience': custom_audience or '',
                     'requirements': requirements or '',
                     'ppt_style': ppt_style,
-                    'description': f'文件数量: {len(files)}',
+                    'description': description or '',
+                    'source_summary': f'文件数量: {len(files)}',
                     'file_processing_mode': file_processing_mode,
                 }
 
@@ -1273,6 +1372,8 @@ async def _process_uploaded_files_for_outline(
                 scenario=scenario,
                 requirements=requirements,
                 target_audience=target_audience,
+                custom_audience=custom_audience,
+                description=description,
                 language=language,
                 page_count_mode=page_count_mode,
                 min_pages=min_pages,

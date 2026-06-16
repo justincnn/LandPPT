@@ -900,6 +900,9 @@ async def upload_file_and_generate_outline(
     focus_content: Optional[str] = Form(None),
     tech_highlights: Optional[str] = Form(None),
     target_audience: Optional[str] = Form(None),
+    custom_audience: Optional[str] = Form(None),
+    requirements: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
     network_mode: bool = Form(False),  # 是否启用联网搜索（与项目创建保持一致）
     language: str = Form("zh")  # 语言参数
 ):
@@ -947,9 +950,11 @@ async def upload_file_and_generate_outline(
                 context = {
                     'scenario': scenario,
                     'target_audience': target_audience or '普通大众',
-                    'requirements': '',
+                    'custom_audience': custom_audience or '',
+                    'requirements': requirements or '',
                     'ppt_style': ppt_style,
-                    'description': f'文件数量: {len(files)}',
+                    'description': description or '',
+                    'source_summary': f'文件数量: {len(files)}',
                     'file_processing_mode': file_processing_mode,
                 }
 
@@ -991,7 +996,10 @@ async def upload_file_and_generate_outline(
                 filename=final_filename,
                 topic=topic,
                 scenario=scenario,
-                requirements="",  # API调用暂时没有requirements参数
+                requirements=requirements,
+                target_audience=target_audience,
+                custom_audience=custom_audience,
+                description=description,
                 page_count_mode=page_count_mode,
                 min_pages=min_pages,
                 max_pages=max_pages,
@@ -1000,7 +1008,6 @@ async def upload_file_and_generate_outline(
                 custom_style_prompt=custom_style_prompt,
                 file_processing_mode=file_processing_mode,
                 content_analysis_depth=content_analysis_depth,
-                target_audience=target_audience,
                 language=language
             )
 

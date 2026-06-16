@@ -197,6 +197,41 @@ def test_todo_board_preserves_saved_outline_before_auto_starting_generation():
     assert "Saved outline exists, skipping workflow auto-start." in script
 
 
+def test_todo_board_resumes_interrupted_outline_generation_on_reload():
+    script = _read("src/landppt/web/templates/components/project/todo_board/extra_js_1.html")
+
+    assert "initialOutlineStageStatus" in script
+    assert "shouldResumeOutlineGenerationOnLoad" in script
+    assert "['pending', 'running', ''].includes(initialOutlineStageStatus)" in script
+    assert "Resuming outline generation from saved todo state." in script
+
+
+def test_todo_board_template_injects_outline_stage_status():
+    from jinja2 import Environment, FileSystemLoader
+
+    env = Environment(loader=FileSystemLoader(ROOT / "src/landppt/web/templates"))
+    rendered = env.get_template("components/project/todo_board/extra_js_1.html").render(
+        todo_board={
+            "task_id": "project-1",
+            "stages": [
+                {"id": "requirements_confirmation", "status": "completed"},
+                {"id": "outline_generation", "status": "running"},
+                {"id": "ppt_creation", "status": "pending"},
+            ],
+        },
+        project={
+            "project_metadata": {},
+            "outline": None,
+            "slides_data": [],
+            "slides_html": "",
+            "confirmed_requirements": {"topic": "Demo"},
+        },
+    )
+
+    assert 'const initialOutlineStageStatus = "running";' in rendered
+    assert "const hasConfirmedRequirements = true;" in rendered
+
+
 def test_slide_record_from_payload_preserves_outline_metadata():
     record = DatabaseService._slide_record_from_payload(
         "project-1",

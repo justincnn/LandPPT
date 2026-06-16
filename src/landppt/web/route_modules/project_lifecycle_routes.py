@@ -177,6 +177,7 @@ async def start_project_workflow(
             language=language,
             network_mode=network_mode,
             target_audience=confirmed_requirements.get("target_audience", "普通大众"),
+            custom_audience=confirmed_requirements.get("custom_audience"),
             ppt_style=confirmed_requirements.get("ppt_style", "general"),
             custom_style_prompt=confirmed_requirements.get("custom_style_prompt"),
             description=confirmed_requirements.get("description"),

@@ -92,6 +92,7 @@ class PPTGenerationRequest(BaseModel):
     user_id: Optional[int] = Field(None, description="User ID for project ownership")
     # 目标受众和风格相关参数
     target_audience: Optional[str] = Field(None, description="Target audience for the PPT")
+    custom_audience: Optional[str] = Field(None, description="Custom audience details")
     ppt_style: str = Field("general", description="PPT style: 'general', 'conference', 'custom'")
     custom_style_prompt: Optional[str] = Field(None, description="Custom style prompt")
     include_transition_pages: bool = Field(False, description="Whether to add transition slides between major sections")
@@ -201,6 +202,8 @@ class FileOutlineGenerationRequest(BaseModel):
     scenario: str = Field("general", description="PPT scenario type")
     requirements: Optional[str] = Field(None, description="Specific requirements from user")
     target_audience: Optional[str] = Field(None, description="Target audience for the PPT")
+    custom_audience: Optional[str] = Field(None, description="Custom audience details")
+    description: Optional[str] = Field(None, description="Additional description or requirements")
     language: str = Field("zh", description="Language for the PPT content: 'zh' for Chinese, 'en' for English")
     page_count_mode: str = Field("ai_decide", description="Page count mode: 'ai_decide', 'custom_range', 'fixed'")
     min_pages: Optional[int] = Field(8, description="Minimum pages for custom_range mode")
