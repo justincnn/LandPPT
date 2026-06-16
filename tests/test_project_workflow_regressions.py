@@ -192,9 +192,9 @@ async def test_database_service_filters_projects_by_effective_status_after_conve
 def test_todo_board_preserves_saved_outline_before_auto_starting_generation():
     script = _read("src/landppt/web/templates/components/project/todo_board/extra_js_1.html")
 
-    assert "Saved outline exists, skipping auto-start outline generation." in script
-    assert "Saved outline exists, hydrating instead of starting outline generation." in script
-    assert "Saved outline exists, skipping workflow auto-start." in script
+    assert "function hasAnyOutlineSlides()" in script
+    assert "hydrateOutlineSectionFromProjectState();" in script
+    assert "if (hasAnyOutlineSlides())" in script
 
 
 def test_todo_board_resumes_interrupted_outline_generation_on_reload():
@@ -202,8 +202,33 @@ def test_todo_board_resumes_interrupted_outline_generation_on_reload():
 
     assert "initialOutlineStageStatus" in script
     assert "shouldResumeOutlineGenerationOnLoad" in script
+    assert "scheduleOutlineResumeAutoStart" in script
     assert "['pending', 'running', ''].includes(initialOutlineStageStatus)" in script
-    assert "Resuming outline generation from saved todo state." in script
+    assert "startOutlineGenerationNew();" in script
+
+
+def test_todo_board_outline_generation_does_not_emit_debug_console_logs():
+    script = _read("src/landppt/web/templates/components/project/todo_board/extra_js_1.html")
+
+    assert "console.log(" not in script
+    assert "console.warn(" not in script
+
+
+def test_todo_board_recovers_from_outline_stream_disconnect():
+    script = _read("src/landppt/web/templates/components/project/todo_board/extra_js_1.html")
+
+    assert "function isOutlineStreamNetworkDisconnect(" in script
+    assert "waitForPersistedProjectOutlineAfterDisconnect" in script
+    assert "`/api/projects/${currentProjectId}`" in script
+    assert "outline stream ended before completion" in script
+    assert "applyCompletedOutlineToTodoBoard(recoveredOutline" in script
+
+
+def test_outline_stream_headers_are_http2_safe():
+    route_source = _read("src/landppt/web/route_modules/outline_generation_routes.py")
+
+    assert '"Connection": "keep-alive"' not in route_source
+    assert '"Cache-Control": "no-cache, no-transform"' in route_source
 
 
 def test_todo_board_template_injects_outline_stage_status():

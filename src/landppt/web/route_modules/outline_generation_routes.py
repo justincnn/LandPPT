@@ -69,8 +69,7 @@ async def stream_outline_generation(
                 generate_saved_outline(),
                 media_type="text/event-stream",
                 headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
+                    "Cache-Control": "no-cache, no-transform",
                     "X-Accel-Buffering": "no",
                 },
             )
@@ -92,8 +91,7 @@ async def stream_outline_generation(
                 generate(),
                 media_type="text/event-stream",
                 headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
+                    "Cache-Control": "no-cache, no-transform",
                     "X-Accel-Buffering": "no",
                 },
             )
@@ -171,8 +169,7 @@ async def stream_outline_generation(
             generate(),
             media_type="text/event-stream",
             headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
+                "Cache-Control": "no-cache, no-transform",
                 # For nginx/traefik buffering; safe to include even if unused.
                 "X-Accel-Buffering": "no",
             },
