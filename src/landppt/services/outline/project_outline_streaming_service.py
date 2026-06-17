@@ -398,6 +398,7 @@ class ProjectOutlineStreamingService:
                     except Exception as save_error:
                         logger.error(f'❌ Exception while saving research-enhanced outline: {str(save_error)}')
                     await self._update_outline_generation_stage(project_id, structured_outline)
+                    yield f"data: {json.dumps({'outline': structured_outline}, ensure_ascii=False)}\n\n"
                     yield f"data: {json.dumps({'done': True, 'llm_call_count': research_event.get('llm_call_count', 0)})}\n\n"
                     return
             page_count_settings = confirmed_requirements.get('page_count_settings', {})
