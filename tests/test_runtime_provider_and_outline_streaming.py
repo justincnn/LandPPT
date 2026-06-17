@@ -307,12 +307,16 @@ class _ProjectManagerStub:
         self.project = project
         self.projects = {}
         self.status_updates = []
+        self.stage_status_updates = []
 
     async def get_project(self, project_id):
         return self.project
 
     async def update_project_status(self, project_id, status):
         self.status_updates.append((project_id, status))
+
+    async def update_stage_status(self, project_id, stage_id, status, progress=None, result=None):
+        self.stage_status_updates.append((project_id, stage_id, status, progress, result))
 
 
 class _OutlineStreamingFreshGenerationStubService:
@@ -387,6 +391,7 @@ async def test_generate_outline_streaming_force_regenerate_skips_saved_outline(m
     assert stub.project_manager.status_updates == [("project-1", "in_progress")]
     assert stub.stage_updates
     assert project.outline["title"] == "fresh"
+    assert any('"outline"' in chunk and '"fresh"' in chunk for chunk in events)
     assert any('"done": true' in chunk for chunk in events)
 
 
