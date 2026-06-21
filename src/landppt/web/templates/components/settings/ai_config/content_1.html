@@ -1604,10 +1604,14 @@
 
                     <!-- 操作按钮 -->
                     <div
-                        style="text-align: center; margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
+                        style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
                         <button onclick="saveImageServiceConfig()" class="btn btn-success"
                             style="padding: 12px 30px; font-weight: 600; font-size: 1.05em;">
                             保存配置
+                        </button>
+                        <button type="button" onclick="testImageGeneration()" class="btn btn-secondary"
+                            style="padding: 12px 30px; font-weight: 600; font-size: 1.05em;">
+                            测试生成图片
                         </button>
                     </div>
                 </div>

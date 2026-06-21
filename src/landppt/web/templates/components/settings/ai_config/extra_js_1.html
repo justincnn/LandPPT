@@ -1640,6 +1640,43 @@
             textarea.value = DEFAULT_RESOLUTION_PRESETS;
         }
 
+        function getImageGenerationTestSize(provider) {
+            const textarea = document.querySelector('textarea[name="ai_image_resolution_presets"]');
+            const raw = textarea && textarea.value.trim() ? textarea.value.trim() : DEFAULT_RESOLUTION_PRESETS;
+            try {
+                const presets = JSON.parse(raw);
+                const sizes = presets && Array.isArray(presets[provider]) ? presets[provider] : null;
+                if (sizes && sizes.length > 0) {
+                    return String(sizes[0]);
+                }
+            } catch (error) {
+                console.warn('Invalid image resolution presets, using default size:', error);
+            }
+            return provider === 'dalle' ? '1792x1024' : '1024x1024';
+        }
+
+        function escapeImageTestText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function normalizeImageTestUrl(imagePath) {
+            if (!imagePath) return '';
+            if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                try {
+                    return new URL(imagePath).pathname;
+                } catch (_) {
+                    return imagePath;
+                }
+            }
+            return imagePath.startsWith('/') ? imagePath : `/images/${imagePath}`;
+        }
+
         // 设置默认提供者
         async function setDefaultProvider(provider) {
             try {
@@ -2194,6 +2231,54 @@
             }
         }
 
+        async function testImageGeneration() {
+            const providerSelect = document.querySelector('select[name="default_ai_image_provider"]');
+            const qualitySelect = document.querySelector('select[name="ai_image_quality"]');
+            const provider = providerSelect && providerSelect.value ? providerSelect.value : 'dalle';
+            const size = getImageGenerationTestSize(provider);
+            const quality = qualitySelect && qualitySelect.value ? qualitySelect.value : undefined;
+
+            const modal = document.getElementById('testModal');
+            const resultsEl = document.getElementById('testResults');
+            if (resultsEl) {
+                resultsEl.innerHTML = `
+                    <div style="text-align: center; padding: 24px;">
+                        <div style="font-size: 2.4em; margin-bottom: 12px;">⏳</div>
+                        <h4 style="color: #111111;">正在生成测试图片...</h4>
+                        <p style="color: #6c757d; margin-top: 8px;">${escapeImageTestText(provider)} / ${escapeImageTestText(size)}</p>
+                    </div>
+                `;
+            }
+            if (modal) {
+                modal.style.display = 'block';
+            }
+
+            const startedAt = Date.now();
+            try {
+                const response = await fetch('/api/image/test-generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider,
+                        size,
+                        quality,
+                        prompt: 'A clean modern presentation test image, abstract business technology background, high quality'
+                    })
+                });
+
+                let result = {};
+                try {
+                    result = await response.json();
+                } catch (_) {
+                    result = { error: `HTTP ${response.status}` };
+                }
+                result.elapsed_seconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+                showImageTestResult(result, response.ok && result.success === true);
+            } catch (error) {
+                showImageTestResult({ error: error.message || String(error) }, false);
+            }
+        }
+
         function showImageTestResult(result, success) {
             const statusIcon = success ? '✅' : '❌';
             const statusColor = success ? '#0f0f0f' : '#555555';
@@ -2209,32 +2294,54 @@
                 content += `
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
                 <p><strong>测试结果:</strong></p>
-                <ul style="margin-left: 20px;">
         `;
 
-                if (result.providers) {
-                    Object.entries(result.providers).forEach(([provider, status]) => {
-                        const icon = status.available ? '✅' : '❌';
-                        content += `<li>${icon} ${provider}: ${status.message}</li>`;
-                    });
+                if (result.image_path || result.image_id) {
+                    const imageUrl = normalizeImageTestUrl(result.image_path || '');
+                    content += `
+                <div style="text-align: center; margin: 16px 0 20px;">
+                    <img src="${escapeImageTestText(imageUrl)}" alt="测试生成图片"
+                        style="max-width: 100%; height: auto; max-height: 360px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.18);"
+                        onerror="this.onerror=null; this.src='/static/images/placeholder.svg'; this.alt='图片加载失败';">
+                </div>
+                <ul style="margin-left: 20px;">
+                    <li>提供者: ${escapeImageTestText(result.provider || '')}</li>
+                    <li>尺寸: ${escapeImageTestText(result.width || '')} × ${escapeImageTestText(result.height || '')}</li>
+                    <li>耗时: ${escapeImageTestText(result.elapsed_seconds ?? 0)} 秒</li>
+                    <li>图片ID: ${escapeImageTestText(result.image_id || '')}</li>
+                    <li>图片链接: <a href="${escapeImageTestText(imageUrl)}" target="_blank" rel="noopener">打开图片</a></li>
+                </ul>
+            `;
                 }
 
-                content += `
-                </ul>
-                <p style="margin-top: 15px;"><strong>缓存信息:</strong></p>
-                <ul style="margin-left: 20px;">
-                    <li>缓存目录: ${result.cache_info?.directory || 'temp/images_cache'}</li>
-                    <li>缓存大小: ${result.cache_info?.size || '0 MB'}</li>
-                    <li>文件数量: ${result.cache_info?.file_count || 0}</li>
-                </ul>
-            </div>
-        `;
+                if (result.providers) {
+                    content += '<ul style="margin-left: 20px;">';
+                    Object.entries(result.providers).forEach(([provider, status]) => {
+                        const icon = status.available ? '✅' : '❌';
+                        content += `<li>${icon} ${escapeImageTestText(provider)}: ${escapeImageTestText(status.message)}</li>`;
+                    });
+                    content += '</ul>';
+                }
+
+                if (result.cache_info) {
+                    content += `
+                    <p style="margin-top: 15px;"><strong>缓存信息:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>缓存目录: ${escapeImageTestText(result.cache_info.directory || 'temp/images_cache')}</li>
+                        <li>缓存大小: ${escapeImageTestText(result.cache_info.size || '0 MB')}</li>
+                        <li>文件数量: ${escapeImageTestText(result.cache_info.file_count || 0)}</li>
+                    </ul>
+                `;
+                }
+
+                content += '</div>';
             } else {
+                const errorMessage = result.detail || result.message || result.error || result.error_code || '未知错误';
                 content += `
             <div style="background: #f1f1f1; padding: 20px; border-radius: 8px; border-left: 4px solid #111111;">
                 <p><strong>错误信息:</strong></p>
                 <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.9em;">
-                    ${result.detail || result.error || '未知错误'}
+                    ${escapeImageTestText(errorMessage)}
                 </div>
             </div>
         `;

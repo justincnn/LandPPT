@@ -475,14 +475,14 @@ async def batch_regenerate_slides_async(
 
     async def slides_batch_regeneration_task():
         try:
-            task_manager.update_task_status(task_id, TaskStatus.RUNNING, progress=1.0)
+            await task_manager.update_task_status_async(task_id, TaskStatus.RUNNING, progress=1.0)
         except Exception:
             pass
 
-        def on_slide_progress(completed: int, total: int):
+        async def on_slide_progress(completed: int, total: int):
             pct = (completed / total) * 100 if total > 0 else 0
             try:
-                task_manager.update_task_status(task_id, TaskStatus.RUNNING, progress=round(pct, 1))
+                await task_manager.update_task_status_async(task_id, TaskStatus.RUNNING, progress=round(pct, 1))
             except Exception:
                 pass
 

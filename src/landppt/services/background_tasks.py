@@ -115,6 +115,15 @@ class BackgroundTaskManager:
         except Exception:
             return False
 
+    def _is_task_active(self, task: BackgroundTask) -> bool:
+        status = task.status.value if isinstance(task.status, TaskStatus) else str(task.status)
+        return status in {TaskStatus.PENDING.value, TaskStatus.RUNNING.value}
+
+    def _metadata_matches(self, task: BackgroundTask, metadata_filter: Optional[Dict[str, Any]] = None) -> bool:
+        if not metadata_filter:
+            return True
+        return all(task.metadata.get(key) == value for key, value in metadata_filter.items())
+
     async def _touch_task(self, task_id: str):
         """Heartbeat: update task.updated_at to keep distributed liveness."""
         task = self.tasks.get(task_id)
@@ -227,7 +236,7 @@ class BackgroundTaskManager:
                             await cache._client.hdel(index_key, task_id)
                             continue
 
-                        if task.status in [TaskStatus.PENDING, TaskStatus.RUNNING]:
+                        if self._is_task_active(task):
                             # Release stale task locks (e.g., worker crashed or scaled down).
                             if self._is_task_stale(task):
                                 task.status = TaskStatus.FAILED
@@ -538,24 +547,12 @@ class BackgroundTaskManager:
             找到的活跃任务，如果没有则返回 None
         """
         for task in self.tasks.values():
-            # 只检查活跃任务（pending 或 running）
-            if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
+            if not self._is_task_active(task):
                 continue
-            
-            # 检查任务类型匹配
             if task.task_type != task_type:
                 continue
-            
-            # 检查元数据过滤条件
-            if metadata_filter:
-                match = True
-                for key, value in metadata_filter.items():
-                    if task.metadata.get(key) != value:
-                        match = False
-                        break
-                if not match:
-                    continue
-            
+            if not self._metadata_matches(task, metadata_filter):
+                continue
             return task
         
         return None
@@ -572,29 +569,41 @@ class BackgroundTaskManager:
         Returns:
             找到的活跃任务，如果没有则返回 None
         """
-        # First check local cache
-        local_task = self.find_active_task(task_type, metadata_filter)
-        if local_task:
-            return local_task
+        # First check local cache, but refresh each candidate from Valkey before
+        # treating it as active. Local memory can lag behind the worker that
+        # completed the task and wrote the final status.
+        for local_task in list(self.tasks.values()):
+            if local_task.task_type != task_type:
+                continue
+            if not self._metadata_matches(local_task, metadata_filter):
+                continue
+            if not self._is_task_active(local_task):
+                continue
+
+            latest_task = await self.get_task_async(local_task.task_id)
+            if latest_task is None:
+                self.tasks.pop(local_task.task_id, None)
+                await self._remove_from_active_index(local_task.task_id)
+                continue
+
+            self.tasks[latest_task.task_id] = latest_task
+            if not self._is_task_active(latest_task):
+                await self._remove_from_active_index(latest_task.task_id)
+                continue
+            if latest_task.task_type != task_type:
+                continue
+            if not self._metadata_matches(latest_task, metadata_filter):
+                continue
+            return latest_task
         
         # Then check Valkey for tasks from other workers
         try:
             cached_tasks = await self._get_active_tasks_from_cache(task_type)
             for task in cached_tasks:
-                # 检查任务类型匹配（应该已经匹配，但double-check）
                 if task.task_type != task_type:
                     continue
-                
-                # 检查元数据过滤条件
-                if metadata_filter:
-                    match = True
-                    for key, value in metadata_filter.items():
-                        if task.metadata.get(key) != value:
-                            match = False
-                            break
-                    if not match:
-                        continue
-                
+                if not self._metadata_matches(task, metadata_filter):
+                    continue
                 # Found matching active task in Valkey
                 logger.info(f"Found active task in Valkey from another worker: {task.task_id}")
                 return task
