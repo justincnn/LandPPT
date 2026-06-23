@@ -534,6 +534,14 @@ async function updateOutlineForSlideOperation(operation, slideIndex, slideData =
             }
         }
 
+        if (Array.isArray(projectOutline.slides)) {
+            projectOutline.slides.forEach((slide, index) => {
+                if (slide && typeof slide === 'object') {
+                    slide.page_number = index + 1;
+                }
+            });
+        }
+
         // 保存更新后的大纲到数据库
         const operationPayload = {
             type: operation,

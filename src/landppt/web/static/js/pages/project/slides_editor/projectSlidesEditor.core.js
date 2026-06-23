@@ -537,6 +537,7 @@ function cleanupIframeCharts(iframe) {
 // 拖拽和右键菜单相关变量
 let draggedSlideIndex = -1;
 let copiedSlideData = null;
+let copiedSlideOutlineData = null;
 let contextMenuSlideIndex = -1;
 
 // 检查是否有幻灯片数据
