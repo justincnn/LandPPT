@@ -409,7 +409,7 @@
                         updateProgressToast(progressToast, progress.message, 100);
                         setTimeout(() => {
                             closeProgressToast(progressToast);
-                            showNotification('婕旇绋跨敓鎴愬畬鎴愶紒', 'success');
+                            showNotification('演讲稿生成完成！', 'success');
                             console.log('Starting to poll for speech scripts...');
                             pollForSpeechScripts();
                         }, 500);
@@ -418,7 +418,7 @@
 
                     if (progress.status === 'failed') {
                         closeProgressToast(progressToast);
-                        showNotification(`鐢熸垚澶辫触: ${progress.message}`, 'error');
+                        showNotification(`生成失败: ${progress.message}`, 'error');
                         return true;
                     }
 
