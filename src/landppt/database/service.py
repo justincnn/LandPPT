@@ -957,11 +957,16 @@ class DatabaseService:
                     )
 
             for slide in sorted(source.slides, key=lambda item: item.slide_index):
+                # slide_id 列为 VARCHAR(100)。直接在原 id 后追加 "_copy_xxxxxxxx"
+                # 会在多次复制后不断变长并越界，导致 PostgreSQL
+                # StringDataRightTruncationError。改用基于编号的固定短 id，
+                # 长度恒定，不随复制次数增长。
+                new_slide_id = f"slide_{slide.slide_index}_{uuid.uuid4().hex[:8]}"
                 self.session.add(
                     DBSlideData(
                         project_id=new_project_id,
                         slide_index=slide.slide_index,
-                        slide_id=f"{slide.slide_id}_copy_{uuid.uuid4().hex[:8]}",
+                        slide_id=new_slide_id,
                         title=slide.title,
                         content_type=slide.content_type,
                         html_content=slide.html_content,

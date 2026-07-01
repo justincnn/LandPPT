@@ -1151,7 +1151,7 @@ async def export_redemption_codes(
 ):
     """Export redemption codes as CSV (filters match list endpoint)."""
     if not app_config.enable_credits_system:
-        raise HTTPException(status_code=400, detail="绉垎绯荤粺鏈惎鐢?")
+        raise HTTPException(status_code=400, detail="积分系统未启用")
 
     import csv
     import io
