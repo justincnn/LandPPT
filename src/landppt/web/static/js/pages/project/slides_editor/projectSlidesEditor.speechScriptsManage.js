@@ -1149,57 +1149,40 @@ function closeSpeechScriptsDialog() {
             }
         }
 
-        // 放映模式鼠标控制功能
+        // 放映模式控件自动隐藏（与导出HTML版放映一致：ui-hidden方案）
         let mouseMoveTimeout;
-        let isMouseIdle = false;
-        let slideshowControls, slideshowExitBtn, slideshowOverlay;
+        let slideshowOverlay;
 
         function handleSlideshowMouseMove() {
-            // 显示控制按钮
             showSlideshowControls();
 
             // 清除之前的定时器
             clearTimeout(mouseMoveTimeout);
 
-            // 设置新的定时器，3秒后隐藏控制按钮
+            // 设置新的定时器，2.5秒后隐藏控制按钮
             mouseMoveTimeout = setTimeout(() => {
                 hideSlideshowControls();
-            }, 3000);
+            }, 2500);
         }
 
         function showSlideshowControls() {
-            if (slideshowControls) slideshowControls.classList.add('visible');
-            if (slideshowExitBtn) slideshowExitBtn.classList.add('visible');
-            const slideshowInfo = document.getElementById('slideshowInfo');
-            if (slideshowInfo) slideshowInfo.classList.add('visible');
-            isMouseIdle = false;
-            // 显示鼠标光标
-            if (slideshowOverlay) slideshowOverlay.style.cursor = 'default';
+            if (slideshowOverlay) slideshowOverlay.classList.remove('ui-hidden');
         }
 
         function hideSlideshowControls() {
-            if (slideshowControls) slideshowControls.classList.remove('visible');
-            if (slideshowExitBtn) slideshowExitBtn.classList.remove('visible');
-            const slideshowInfo = document.getElementById('slideshowInfo');
-            if (slideshowInfo) slideshowInfo.classList.remove('visible');
-            isMouseIdle = true;
-            // 隐藏鼠标光标
-            if (slideshowOverlay) slideshowOverlay.style.cursor = 'none';
+            if (slideshowOverlay) slideshowOverlay.classList.add('ui-hidden');
         }
 
         function initializeSlideshowMouseControls() {
             slideshowOverlay = document.getElementById('slideshowOverlay');
-            slideshowControls = document.querySelector('.slideshow-controls');
-            slideshowExitBtn = document.querySelector('.slideshow-exit');
 
-            // 初始状态：隐藏控制按钮
-            hideSlideshowControls();
-
-            // 鼠标移动事件
+            // 鼠标移动/按键均可唤出控件（遮罩层保证iframe区域的移动也能捕获）
             slideshowOverlay.addEventListener('mousemove', handleSlideshowMouseMove);
+            slideshowOverlay.addEventListener('touchstart', handleSlideshowMouseMove, { passive: true });
+            document.addEventListener('keydown', handleSlideshowMouseMove);
 
-            // 鼠标离开事件
-            slideshowOverlay.addEventListener('mouseleave', hideSlideshowControls);
+            // 初始显示控件，然后按定时器自动隐藏
+            handleSlideshowMouseMove();
         }
 
         function removeSlideshowMouseControls() {
@@ -1209,15 +1192,12 @@ function closeSpeechScriptsDialog() {
             // 移除事件监听器
             if (slideshowOverlay) {
                 slideshowOverlay.removeEventListener('mousemove', handleSlideshowMouseMove);
-                slideshowOverlay.removeEventListener('mouseleave', hideSlideshowControls);
-
-                // 恢复鼠标光标
-                slideshowOverlay.style.cursor = 'default';
+                slideshowOverlay.removeEventListener('touchstart', handleSlideshowMouseMove);
+                slideshowOverlay.classList.remove('ui-hidden');
             }
+            document.removeEventListener('keydown', handleSlideshowMouseMove);
 
             // 清理引用
-            slideshowControls = null;
-            slideshowExitBtn = null;
             slideshowOverlay = null;
         }
 

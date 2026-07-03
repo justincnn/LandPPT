@@ -403,20 +403,19 @@
                 </div>
             </div>
 
-            <div class="slideshow-controls">
-                <button class="slideshow-btn" onclick="previousSlideshow()" title="上一页 (←)">
-                    <i class="fas fa-chevron-left"></i> 上一页
-                </button>
-                <button class="slideshow-btn" onclick="nextSlideshow()" title="下一页 (→)">
-                    下一页 <i class="fas fa-chevron-right"></i>
-                </button>
+            <!-- 透明遮罩：捕获iframe上方的鼠标事件并支持点击翻页 -->
+            <div class="slideshow-shield" id="slideshowShield" title="点击翻到下一页"></div>
+
+            <div class="slideshow-topbar">
+                <button class="slideshow-btn" onclick="toggleSlideshowFullscreen()" title="全屏 (F)">⛶ 全屏</button>
+                <button class="slideshow-btn" onclick="exitSlideshow()" title="退出放映 (Esc)">✕ 退出</button>
             </div>
 
-            <div class="slideshow-info" id="slideshowInfo">1 / 1</div>
-
-            <button class="slideshow-exit" onclick="exitSlideshow()" title="退出放映">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="slideshow-controls">
+                <button class="slideshow-btn" onclick="previousSlideshow()" title="上一页 (←)">‹ 上一页</button>
+                <span class="slideshow-info" id="slideshowInfo">1 / 1</span>
+                <button class="slideshow-btn" onclick="nextSlideshow()" title="下一页 (→)">下一页 ›</button>
+            </div>
         </div>
     </div>
 

@@ -465,20 +465,26 @@ def _generate_html_export_sync(project) -> bytes:
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
-        # Generate individual HTML files for each slide
+        total_slides = len(project.slides_data)
+
+        # Raw slide documents live in slides/ and are embedded by the viewers
+        raw_dir = temp_path / "slides"
+        raw_dir.mkdir()
+
         slide_files = []
         for i, slide in enumerate(project.slides_data):
             slide_filename = f"slide_{i+1}.html"
             slide_files.append(slide_filename)
 
-            # Create complete HTML document for each slide
-            slide_html = _generate_individual_slide_html_sync(slide, i+1, len(project.slides_data), project.topic)
+            raw_html = _wrap_raw_slide_html_sync(slide, project.topic)
+            with open(raw_dir / slide_filename, 'w', encoding='utf-8') as f:
+                f.write(raw_html)
 
-            slide_path = temp_path / slide_filename
-            with open(slide_path, 'w', encoding='utf-8') as f:
-                f.write(slide_html)
+            viewer_html = _generate_individual_slide_html_sync(slide, i+1, total_slides, project.topic)
+            with open(temp_path / slide_filename, 'w', encoding='utf-8') as f:
+                f.write(viewer_html)
 
-        # Generate index.html slideshow page
+        # Generate index.html projector page
         index_html = _generate_slideshow_index_sync(project, slide_files)
         index_path = temp_path / "index.html"
         with open(index_path, 'w', encoding='utf-8') as f:
@@ -492,173 +498,426 @@ def _generate_html_export_sync(project) -> bytes:
             # Add index.html
             zipf.write(index_path, "index.html")
 
-            # Add all slide files
+            # Add viewer and raw slide files
             for slide_file in slide_files:
-                slide_path = temp_path / slide_file
-                zipf.write(slide_path, slide_file)
+                zipf.write(temp_path / slide_file, slide_file)
+                zipf.write(raw_dir / slide_file, f"slides/{slide_file}")
 
         # Read ZIP file content
         with open(zip_path, 'rb') as f:
             return f.read()
 
 
-def _generate_individual_slide_html_sync(slide, slide_number: int, total_slides: int, topic: str) -> str:
-    """同步生成单个幻灯片HTML（在线程池中运行）"""
+def _wrap_raw_slide_html_sync(slide, topic: str) -> str:
+    """确保幻灯片内容是完整的HTML文档（1280x720画布）"""
+    import html as html_module
+
     slide_html = slide.get('html_content', '')
+    stripped = slide_html.strip().lower()
+    if stripped.startswith('<!doctype') or stripped.startswith('<html'):
+        return slide_html
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{html_module.escape(topic)}</title>
+    <style>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            width: 1280px;
+            height: 720px;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: white;
+        }}
+    </style>
+</head>
+<body>
+{slide_html}
+</body>
+</html>"""
+
+
+# 投影缩放脚本：将1280x720的幻灯片iframe等比缩放至视口并居中
+_PROJECTOR_SCALE_JS = """
+        var BASE_W = 1280, BASE_H = 720;
+        var slideFrame = document.getElementById('slideFrame');
+        function applyScale() {
+            var w = window.innerWidth, h = window.innerHeight;
+            var s = Math.min(w / BASE_W, h / BASE_H);
+            slideFrame.style.left = ((w - BASE_W * s) / 2) + 'px';
+            slideFrame.style.top = ((h - BASE_H * s) / 2) + 'px';
+            slideFrame.style.transform = 'scale(' + s + ')';
+        }
+        window.addEventListener('resize', applyScale);
+        document.addEventListener('fullscreenchange', applyScale);
+        applyScale();
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(function () {});
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+"""
+
+_PROJECTOR_STAGE_CSS = """
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+        .stage { position: fixed; inset: 0; }
+        .stage iframe {
+            position: absolute;
+            width: 1280px;
+            height: 720px;
+            border: none;
+            background: #fff;
+            transform-origin: top left;
+        }
+        /* 透明遮罩：捕获幻灯片区域的鼠标/键盘事件（iframe内的事件不会冒泡到父页面），
+           并支持点击翻页 */
+        .stage-shield { position: fixed; inset: 0; z-index: 50; }
+        body.ui-hidden .stage-shield { cursor: none; }
+        .ctrl-btn {
+            background: rgba(255,255,255,0.14);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.3); color: #fff; }
+        .controls {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.65);
+            border-radius: 30px;
+            padding: 10px 16px;
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
+        .top-bar {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
+        body.ui-hidden .controls,
+        body.ui-hidden .top-bar {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .counter { color: #fff; font-size: 14px; min-width: 64px; text-align: center; }
+"""
+
+_UI_AUTO_HIDE_JS = """
+        var uiHideTimer = null;
+        function revealUi() {
+            document.body.classList.remove('ui-hidden');
+            if (uiHideTimer) clearTimeout(uiHideTimer);
+            uiHideTimer = setTimeout(function () {
+                document.body.classList.add('ui-hidden');
+            }, 2500);
+        }
+        document.addEventListener('mousemove', revealUi);
+        document.addEventListener('keydown', revealUi);
+        document.addEventListener('touchstart', revealUi, { passive: true });
+        revealUi();
+"""
+
+# 滚轮翻页：向下滚动下一页，向上滚动上一页。
+# 节流避免一次惯性滚动连翻多页；页面需先定义 wheelPrev()/wheelNext()。
+# 在.overview（目录）内滚动时不拦截，保持列表原生滚动。
+_WHEEL_NAV_JS = """
+        var wheelLockUntil = 0;
+        document.addEventListener('wheel', function (e) {
+            if (e.target.closest && e.target.closest('.overview')) return;
+            e.preventDefault();
+            var now = Date.now();
+            if (now < wheelLockUntil || Math.abs(e.deltaY) < 4) return;
+            wheelLockUntil = now + 350;
+            if (e.deltaY > 0) { wheelNext(); } else { wheelPrev(); }
+        }, { passive: false });
+"""
+
+
+def _generate_individual_slide_html_sync(slide, slide_number: int, total_slides: int, topic: str) -> str:
+    """同步生成单个幻灯片查看页（在线程池中运行）——iframe等比缩放投影"""
+    import html as html_module
+
     slide_title = slide.get('title', f'第{slide_number}页')
 
-    # Check if it's already a complete HTML document
-    import re
-    if slide_html.strip().lower().startswith('<!doctype') or slide_html.strip().lower().startswith('<html'):
-        # It's a complete HTML document, enhance it with navigation
-        return _enhance_complete_html_with_navigation(slide_html, slide_number, total_slides, topic, slide_title)
-    else:
-        # It's just content, wrap it in a complete structure
-        slide_content = slide_html
+    prev_btn = (
+        f'<a class="ctrl-btn" href="slide_{slide_number-1}.html">‹ 上一页</a>'
+        if slide_number > 1 else ''
+    )
+    next_btn = (
+        f'<a class="ctrl-btn" href="slide_{slide_number+1}.html">下一页 ›</a>'
+        if slide_number < total_slides else ''
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{topic} - {slide_title}</title>
+    <title>{html_module.escape(topic)} - {html_module.escape(slide_title)}</title>
     <style>
-        body {{
-            margin: 0;
-            padding: 0;
-            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: #f5f5f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }}
-        .slide-container {{
-            width: 90vw;
-            height: 90vh;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-            position: relative;
-        }}
-        .slide-content {{
-            width: 100%;
-            height: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-        }}
-        .slide-number {{
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }}
+{_PROJECTOR_STAGE_CSS}
     </style>
 </head>
 <body>
-    <div class="slide-container">
-        <div class="slide-content">
-            {slide_content}
-        </div>
-        <div class="slide-number">{slide_number} / {total_slides}</div>
+    <div class="stage">
+        <iframe id="slideFrame" src="slides/slide_{slide_number}.html" title="幻灯片 {slide_number}"></iframe>
     </div>
+    <div class="stage-shield" id="stageShield" title="点击翻到下一页"></div>
+    <div class="top-bar">
+        <button class="ctrl-btn" onclick="toggleFullscreen()" title="全屏 (F)">⛶ 全屏</button>
+    </div>
+    <div class="controls">
+        <a class="ctrl-btn" href="index.html">🏠 目录</a>
+        {prev_btn}
+        <span class="counter">{slide_number} / {total_slides}</span>
+        {next_btn}
+    </div>
+    <script>
+{_PROJECTOR_SCALE_JS}
+{_UI_AUTO_HIDE_JS}
+        document.addEventListener('keydown', function (e) {{
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {{
+                if ({slide_number} > 1) window.location.href = 'slide_{slide_number-1}.html';
+            }} else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') {{
+                if ({slide_number} < {total_slides}) window.location.href = 'slide_{slide_number+1}.html';
+            }} else if (e.key === 'Escape') {{
+                window.location.href = 'index.html';
+            }} else if (e.key === 'f' || e.key === 'F') {{
+                toggleFullscreen();
+            }}
+        }});
+        document.getElementById('stageShield').addEventListener('click', function () {{
+            if ({slide_number} < {total_slides}) window.location.href = 'slide_{slide_number+1}.html';
+        }});
+        function wheelPrev() {{
+            if ({slide_number} > 1) window.location.href = 'slide_{slide_number-1}.html';
+        }}
+        function wheelNext() {{
+            if ({slide_number} < {total_slides}) window.location.href = 'slide_{slide_number+1}.html';
+        }}
+{_WHEEL_NAV_JS}
+    </script>
 </body>
 </html>"""
 
 
 def _generate_slideshow_index_sync(project, slide_files: list) -> str:
-    """同步生成幻灯片索引页面（在线程池中运行）"""
-    slides_list = ""
-    for i, slide_file in enumerate(slide_files):
-        slide = project.slides_data[i]
-        slide_title = slide.get('title', f'第{i+1}页')
-        slides_list += f"""
-        <div class="slide-item" onclick="openSlide('{slide_file}')">
-            <div class="slide-preview">
-                <div class="slide-number">{i+1}</div>
-                <div class="slide-title">{slide_title}</div>
-            </div>
-        </div>"""
+    """同步生成放映页面（在线程池中运行）——全屏投影 + 目录浏览"""
+    import html as html_module
+    import json
+
+    total_slides = len(slide_files)
+    slide_titles = [
+        project.slides_data[i].get('title', f'第{i+1}页')
+        for i in range(total_slides)
+    ]
+    titles_json = json.dumps(slide_titles, ensure_ascii=False)
+    topic_escaped = html_module.escape(project.topic)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{project.topic} - PPT放映</title>
+    <title>{topic_escaped} - PPT放映</title>
     <style>
-        body {{
-            margin: 0;
-            padding: 0;
-            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+{_PROJECTOR_STAGE_CSS}
+        .overview {{
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,20,0.96);
+            overflow-y: auto;
+            display: none;
+            z-index: 200;
+            padding: 40px;
         }}
-        .header {{
-            text-align: center;
-            padding: 40px 20px;
-            color: white;
-        }}
-        .header h1 {{
-            margin: 0;
-            font-size: 2.5em;
+        .overview.visible {{ display: block; }}
+        .overview h2 {{
+            color: #fff;
             font-weight: 300;
+            text-align: center;
+            margin-bottom: 30px;
         }}
-        .slides-grid {{
+        .overview-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
         }}
-        .slide-item {{
-            background: white;
+        .overview-item {{
+            background: #fff;
             border-radius: 10px;
-            padding: 20px;
+            padding: 18px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }}
-        .slide-item:hover {{
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        .overview-item:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
         }}
-        .slide-number {{
+        .overview-num {{
             background: #007bff;
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 15px auto;
             font-weight: bold;
+            flex-shrink: 0;
         }}
-        .slide-title {{
-            font-size: 1.1em;
+        .overview-title {{
             color: #333;
-            margin: 0;
-            text-align: center;
+            font-size: 15px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }}
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{project.topic}</h1>
-        <p>PPT演示文稿 - 共{len(slide_files)}页</p>
+    <div class="stage">
+        <iframe id="slideFrame" src="slides/slide_1.html" title="幻灯片"></iframe>
     </div>
-    <div class="slides-grid">
-        {slides_list}
+    <div class="stage-shield" id="stageShield" title="点击翻到下一页"></div>
+    <div class="top-bar">
+        <button class="ctrl-btn" onclick="toggleOverview()" title="目录 (G)">☰ 目录</button>
+        <button class="ctrl-btn" onclick="toggleFullscreen()" title="全屏 (F)">⛶ 全屏</button>
+    </div>
+    <div class="controls">
+        <button class="ctrl-btn" onclick="prevSlide()">‹ 上一页</button>
+        <span class="counter" id="counter">1 / {total_slides}</span>
+        <button class="ctrl-btn" onclick="nextSlide()">下一页 ›</button>
+    </div>
+    <div class="overview" id="overview">
+        <h2>{topic_escaped}（共{total_slides}页）</h2>
+        <div class="overview-grid" id="overviewGrid"></div>
     </div>
     <script>
-        function openSlide(slideFile) {{
-            window.open(slideFile, '_blank');
+        var TOTAL = {total_slides};
+        var TITLES = {titles_json};
+        var current = 0;
+{_PROJECTOR_SCALE_JS}
+{_UI_AUTO_HIDE_JS}
+        function showSlide(i) {{
+            if (i < 0 || i >= TOTAL) return;
+            current = i;
+            slideFrame.src = 'slides/slide_' + (i + 1) + '.html';
+            document.getElementById('counter').textContent = (i + 1) + ' / ' + TOTAL;
         }}
+        function prevSlide() {{ showSlide(current - 1); }}
+        function nextSlide() {{ showSlide(current + 1); }}
+
+        document.getElementById('stageShield').addEventListener('click', nextSlide);
+
+        function wheelPrev() {{ prevSlide(); }}
+        function wheelNext() {{ nextSlide(); }}
+{_WHEEL_NAV_JS}
+
+        var overview = document.getElementById('overview');
+        function toggleOverview() {{
+            overview.classList.toggle('visible');
+        }}
+
+        var grid = document.getElementById('overviewGrid');
+        TITLES.forEach(function (title, i) {{
+            var item = document.createElement('div');
+            item.className = 'overview-item';
+            var num = document.createElement('div');
+            num.className = 'overview-num';
+            num.textContent = i + 1;
+            var label = document.createElement('div');
+            label.className = 'overview-title';
+            label.textContent = title;
+            item.appendChild(num);
+            item.appendChild(label);
+            item.addEventListener('click', function () {{
+                overview.classList.remove('visible');
+                showSlide(i);
+            }});
+            grid.appendChild(item);
+        }});
+
+        document.addEventListener('keydown', function (e) {{
+            if (overview.classList.contains('visible') && e.key === 'Escape') {{
+                overview.classList.remove('visible');
+                return;
+            }}
+            switch (e.key) {{
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                case 'PageUp':
+                    e.preventDefault();
+                    prevSlide();
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                case 'PageDown':
+                case ' ':
+                case 'Enter':
+                    e.preventDefault();
+                    nextSlide();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    showSlide(0);
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    showSlide(TOTAL - 1);
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case 'g':
+                case 'G':
+                    e.preventDefault();
+                    toggleOverview();
+                    break;
+                default:
+                    if (e.key >= '1' && e.key <= '9') {{
+                        var n = parseInt(e.key, 10) - 1;
+                        if (n < TOTAL) showSlide(n);
+                    }}
+            }}
+        }});
     </script>
 </body>
 </html>"""
