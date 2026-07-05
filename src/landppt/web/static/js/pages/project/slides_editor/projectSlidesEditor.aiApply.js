@@ -457,6 +457,37 @@ function syncAppliedSlideHtml(slideIndex, htmlContent, slideData = {}) {
     }
 }
 
+function syncQuickElementAgentResult(slideIndex, htmlContent, elementId) {
+    syncAppliedSlideHtml(slideIndex, htmlContent, slidesData[slideIndex] || {});
+
+    const selectAppliedElement = () => {
+        const slideFrame = document.getElementById('slideFrame');
+        const iframeDoc = slideFrame && (slideFrame.contentDocument || slideFrame.contentWindow?.document);
+        if (!iframeDoc || !elementId) return null;
+
+        const selected = iframeDoc.querySelector(`[data-quick-ai-id="${elementId}"]`);
+        if (selected && typeof selectQuickEditElement === 'function') {
+            selectQuickEditElement(selected, { allowWhileAiSending: true });
+        }
+        return selected;
+    };
+
+    const selected = selectAppliedElement();
+    if (!selected && elementId) {
+        const retrySelection = () => selectAppliedElement();
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => {
+                if (!retrySelection()) {
+                    setTimeout(retrySelection, 350);
+                }
+            });
+        } else {
+            setTimeout(retrySelection, 350);
+        }
+    }
+    return selected;
+}
+
 async function applyAgentProposal(proposal) {
     if (!proposal || !proposal.htmlContent) {
         throw new Error('Agent 未返回可应用的方案');

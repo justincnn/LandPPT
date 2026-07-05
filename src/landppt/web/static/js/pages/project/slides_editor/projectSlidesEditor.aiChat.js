@@ -852,6 +852,57 @@ async function handleAgentStreamingResponse(response, waitingDiv) {
     }
 }
 
+async function collectAgentProposalFromStream(response, onEvent = null) {
+    if (!response || !response.body || typeof response.body.getReader !== 'function') {
+        throw new Error('Agent未返回可读取的流式响应');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let proposal = null;
+
+    const processLine = (line) => {
+        if (!line.trim().startsWith('data: ')) return;
+        const dataStr = line.slice(6).trim();
+        if (!dataStr) return;
+
+        const event = JSON.parse(dataStr);
+        if (!event || event.type === '_agent_done') return;
+
+        if (onEvent) onEvent(event);
+        if (event.type === 'error') {
+            throw new Error(event.error || event.message || 'Agent编辑失败');
+        }
+        if (event.type === 'draft_ready' && event.proposal && !proposal) {
+            proposal = event.proposal;
+        }
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            processLine(line);
+        }
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+        processLine(buffer);
+    }
+
+    if (!proposal) {
+        throw new Error('Agent未返回可应用的编辑草稿');
+    }
+    return proposal;
+}
+
 // options:
 // - messageOverride: string (optional)
 // - appendUserMessage: boolean (default true)
