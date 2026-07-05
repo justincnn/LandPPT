@@ -817,18 +817,21 @@ class SlideEditAgentService:
 
         scratchpad: List[Dict[str, Any]] = []
         for iteration in range(1, max_iterations + 1):
-            prompt = self._build_prompt(request, runner, scratchpad, max_iterations)
-            response = await user_ppt_service._chat_completion_for_role(
-                role,
-                messages=[
-                    self._ai_message(
-                        "system",
-                        "You are LandPPT's slide editing agent. Return one JSON action per turn.",
-                    ),
-                    self._ai_message("user", prompt),
-                ],
-            )
-            action = parse_agent_action(response.content or "")
+            try:
+                prompt = self._build_prompt(request, runner, scratchpad, max_iterations)
+                response = await user_ppt_service._chat_completion_for_role(
+                    role,
+                    messages=self._build_messages(request, prompt),
+                )
+                action = parse_agent_action(response.content or "")
+            except Exception as exc:
+                await self._emit_error(
+                    event_callback,
+                    exc,
+                    phase="model",
+                    iteration=iteration,
+                )
+                raise
 
             await self._emit(
                 event_callback,
@@ -861,7 +864,19 @@ class SlideEditAgentService:
                     "thought": action.thought,
                 },
             )
-            observation = await runner.execute_tool(action.action, action.action_input)
+            try:
+                observation = await runner.execute_tool(
+                    action.action, action.action_input
+                )
+            except Exception as exc:
+                await self._emit_error(
+                    event_callback,
+                    exc,
+                    phase="tool",
+                    iteration=iteration,
+                    tool=action.action,
+                )
+                raise
             await self._emit(
                 event_callback,
                 {
@@ -888,11 +903,31 @@ class SlideEditAgentService:
         await self._emit_validation_and_draft(event_callback, proposal)
         return proposal
 
-    def _ai_message(self, role: str, content: str):
+    def _ai_message(self, role: str, content: Any):
         from ...ai import AIMessage, MessageRole
 
         mapped_role = MessageRole.SYSTEM if role == "system" else MessageRole.USER
         return AIMessage(role=mapped_role, content=content)
+
+    def _build_messages(self, request: SlideEditAgentRequest, prompt: str) -> List[Any]:
+        messages = [
+            self._ai_message(
+                "system",
+                "You are LandPPT's slide editing agent. Return one JSON action per turn.",
+            )
+        ]
+        vision_urls = self._vision_image_urls(request)
+        if request.visionEnabled and vision_urls:
+            from ...ai.base import ImageContent, TextContent
+
+            user_content = [TextContent(text=prompt)]
+            user_content.extend(
+                ImageContent(image_url={"url": url}) for url in vision_urls
+            )
+            messages.append(self._ai_message("user", user_content))
+        else:
+            messages.append(self._ai_message("user", prompt))
+        return messages
 
     async def _emit_validation_and_draft(
         self, event_callback: Optional[EventEmitter], proposal: SlideEditProposal
@@ -919,6 +954,27 @@ class SlideEditAgentService:
             },
         )
 
+    async def _emit_error(
+        self,
+        event_callback: Optional[EventEmitter],
+        error: Exception,
+        *,
+        phase: str,
+        iteration: Optional[int] = None,
+        tool: Optional[str] = None,
+    ) -> None:
+        event: Dict[str, Any] = {
+            "type": "error",
+            "phase": phase,
+            "message": str(error) or error.__class__.__name__,
+            "errorType": error.__class__.__name__,
+        }
+        if iteration is not None:
+            event["iteration"] = iteration
+        if tool:
+            event["tool"] = tool
+        await self._emit(event_callback, event)
+
     def _build_prompt(
         self,
         request: SlideEditAgentRequest,
@@ -936,7 +992,8 @@ class SlideEditAgentService:
             "selected_element_html": request.selectedElementHtml,
             "user_request": request.userRequest,
             "current_html": runner.current_html,
-            "available_tools": self._tool_schemas(),
+            "vision": self._vision_context(request),
+            "available_tools": self._tool_schemas(runner),
             "scratchpad": scratchpad,
             "max_iterations": max_iterations,
         }
@@ -946,22 +1003,96 @@ class SlideEditAgentService:
             + json.dumps(context, ensure_ascii=False, indent=2)
         )
 
-    def _tool_schemas(self) -> List[Dict[str, Any]]:
-        return [
-            {"name": "get_project_context", "input": {}},
-            {"name": "get_slide", "input": {"slide_index": "integer"}},
-            {"name": "list_slides", "input": {}},
-            {"name": "inspect_slide_html", "input": {"slide_index": "integer"}},
-            {
+    def _vision_context(self, request: SlideEditAgentRequest) -> Dict[str, Any]:
+        attachments: List[Dict[str, Any]] = []
+        if request.slideScreenshot:
+            attachments.append(
+                {
+                    "source": "slide_screenshot",
+                    "attached": request.visionEnabled,
+                    "url": self._prompt_safe_image_url(request.slideScreenshot),
+                }
+            )
+        if request.elementScreenshot:
+            attachments.append(
+                {
+                    "source": "element_screenshot",
+                    "attached": request.visionEnabled,
+                    "url": self._prompt_safe_image_url(request.elementScreenshot),
+                }
+            )
+        for index, image in enumerate(request.images or [], start=1):
+            if not isinstance(image, dict):
+                continue
+            url = str(image.get("url") or "")
+            attachments.append(
+                {
+                    "source": f"reference_image_{index}",
+                    "name": image.get("name"),
+                    "size": image.get("size"),
+                    "attached": bool(request.visionEnabled and url),
+                    "url": self._prompt_safe_image_url(url),
+                }
+            )
+
+        return {
+            "enabled": request.visionEnabled,
+            "uses_vision_model": bool(
+                request.visionEnabled and self._vision_image_urls(request)
+            ),
+            "attached_image_count": (
+                len(self._vision_image_urls(request)) if request.visionEnabled else 0
+            ),
+            "attachments": attachments,
+            "instruction": (
+                "When vision attachments are present, inspect them for visual layout, "
+                "text, color, spacing, and selected-element context before choosing an action."
+            ),
+        }
+
+    def _vision_image_urls(self, request: SlideEditAgentRequest) -> List[str]:
+        urls = [
+            str(url)
+            for url in (request.slideScreenshot, request.elementScreenshot)
+            if url
+        ]
+        for image in request.images or []:
+            if not isinstance(image, dict):
+                continue
+            url = image.get("url")
+            if url:
+                urls.append(str(url))
+        return urls
+
+    def _prompt_safe_image_url(self, url: str) -> str:
+        if not url:
+            return ""
+        if url.startswith("data:image"):
+            return "[attached data URL omitted from text prompt]"
+        return url
+
+    def _tool_schemas(self, runner: SlideEditToolRunner) -> List[Dict[str, Any]]:
+        schema_by_name = {
+            "get_project_context": {"name": "get_project_context", "input": {}},
+            "get_slide": {"name": "get_slide", "input": {"slide_index": "integer"}},
+            "list_slides": {"name": "list_slides", "input": {}},
+            "inspect_slide_html": {
+                "name": "inspect_slide_html",
+                "input": {"slide_index": "integer"},
+            },
+            "select_elements": {
                 "name": "select_elements",
                 "input": {"selector": "string", "text": "string"},
             },
-            {"name": "replace_slide_html", "input": {"html": "string"}},
-            {
+            "replace_slide_html": {
+                "name": "replace_slide_html",
+                "input": {"html": "string"},
+            },
+            "replace_element_html": {
                 "name": "replace_element_html",
                 "input": {"element_id": "string", "html": "string"},
             },
-            {
+            "update_text": {
                 "name": "update_text",
                 "input": {
                     "selector": "string",
@@ -969,7 +1100,7 @@ class SlideEditAgentService:
                     "text": "string",
                 },
             },
-            {
+            "update_style": {
                 "name": "update_style",
                 "input": {
                     "selector": "string",
@@ -977,17 +1108,22 @@ class SlideEditAgentService:
                     "styles": "object",
                 },
             },
-            {
+            "insert_element": {
                 "name": "insert_element",
                 "input": {"parent_selector": "string", "html": "string"},
             },
-            {
+            "delete_element": {
                 "name": "delete_element",
                 "input": {"selector": "string", "element_id": "string"},
             },
-            {"name": "validate_slide_html", "input": {}},
-            {"name": "preview_patch", "input": {}},
-        ]
+            "validate_slide_html": {"name": "validate_slide_html", "input": {}},
+            "preview_patch": {"name": "preview_patch", "input": {}},
+        }
+        tool_names = runner.available_tool_names()
+        missing = [name for name in tool_names if name not in schema_by_name]
+        if missing:
+            raise ValueError(f"Missing slide edit tool schemas: {', '.join(missing)}")
+        return [schema_by_name[name] for name in tool_names]
 
     def _compact_observation(self, observation: Dict[str, Any]) -> Dict[str, Any]:
         compact = {

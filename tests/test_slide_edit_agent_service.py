@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from landppt.ai.base import ImageContent, TextContent
 from landppt.services.slide.slide_edit_agent_service import (
     SlideEditAgentContext,
     SlideEditAgentRequest,
@@ -363,6 +364,11 @@ class _FakePPTService:
         return SimpleNamespace(content=self.responses.pop(0))
 
 
+class _FailingPPTService:
+    async def _chat_completion_for_role(self, role, messages):
+        raise RuntimeError("model unavailable")
+
+
 @pytest.mark.asyncio
 async def test_slide_edit_agent_runs_tools_and_returns_proposal():
     service = SlideEditAgentService()
@@ -471,3 +477,118 @@ async def test_slide_edit_agent_finalizes_when_max_iterations_is_reached():
         == "Reached the maximum edit iterations and prepared the current draft."
     )
     assert proposal.validation.valid is True
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_emits_error_event_when_model_fails():
+    service = SlideEditAgentService()
+    events = []
+
+    async def capture(event):
+        events.append(event)
+
+    with pytest.raises(RuntimeError, match="model unavailable"):
+        await service.run_agent(_tool_request(), _FailingPPTService(), capture)
+
+    error_events = [event for event in events if event["type"] == "error"]
+    assert error_events == [
+        {
+            "type": "error",
+            "phase": "model",
+            "message": "model unavailable",
+            "errorType": "RuntimeError",
+            "iteration": 1,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_emits_error_event_when_tool_raises(monkeypatch):
+    service = SlideEditAgentService()
+    fake_ppt = _FakePPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Try to inspect.",
+                    "action": "inspect_slide_html",
+                    "action_input": {},
+                }
+            )
+        ]
+    )
+    events = []
+
+    async def capture(event):
+        events.append(event)
+
+    async def fail_tool(self, tool_name, tool_input):
+        raise ValueError("tool exploded")
+
+    monkeypatch.setattr(SlideEditToolRunner, "execute_tool", fail_tool)
+
+    with pytest.raises(ValueError, match="tool exploded"):
+        await service.run_agent(_tool_request(), fake_ppt, capture)
+
+    error_events = [event for event in events if event["type"] == "error"]
+    assert error_events == [
+        {
+            "type": "error",
+            "phase": "tool",
+            "message": "tool exploded",
+            "errorType": "ValueError",
+            "iteration": 1,
+            "tool": "inspect_slide_html",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_vision_mode_sends_multimodal_context():
+    service = SlideEditAgentService()
+    screenshot = "data:image/png;base64,slide-shot"
+    reference_url = "https://example.test/reference.png"
+    fake_ppt = _FakePPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Vision context is enough.",
+                    "action": "final",
+                    "action_input": {"summary": "Checked visual context."},
+                }
+            )
+        ]
+    )
+
+    proposal = await service.run_agent(
+        _tool_request(
+            visionEnabled=True,
+            slideScreenshot=screenshot,
+            images=[{"name": "Reference", "size": "120KB", "url": reference_url}],
+        ),
+        fake_ppt,
+    )
+
+    assert proposal.summary == "Checked visual context."
+    role, messages = fake_ppt.calls[0]
+    assert role == "vision_analysis"
+    user_content = messages[-1].content
+    assert isinstance(user_content, list)
+    assert isinstance(user_content[0], TextContent)
+    assert '"vision"' in user_content[0].text
+    assert "slide_screenshot" in user_content[0].text
+    assert "Reference" in user_content[0].text
+    assert screenshot not in user_content[0].text
+    image_parts = [part for part in user_content if isinstance(part, ImageContent)]
+    assert [part.image_url["url"] for part in image_parts] == [
+        screenshot,
+        reference_url,
+    ]
+
+
+def test_slide_edit_agent_tool_schemas_match_runner_tool_names():
+    service = SlideEditAgentService()
+    runner = SlideEditToolRunner(_tool_context())
+
+    schema_names = [schema["name"] for schema in service._tool_schemas(runner)]
+
+    assert schema_names == runner.available_tool_names()
