@@ -874,7 +874,7 @@ async function collectAgentProposalFromStream(response, onEvent = null) {
         if (event.type === 'error') {
             throw new Error(event.error || event.message || 'Agent编辑失败');
         }
-        if (event.type === 'draft_ready' && event.proposal && !proposal) {
+        if ((event.type === 'draft_ready' || event.type === 'final') && event.proposal && !proposal) {
             proposal = event.proposal;
         }
     };

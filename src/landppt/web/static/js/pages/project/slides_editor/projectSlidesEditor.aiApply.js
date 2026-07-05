@@ -457,35 +457,77 @@ function syncAppliedSlideHtml(slideIndex, htmlContent, slideData = {}) {
     }
 }
 
-function syncQuickElementAgentResult(slideIndex, htmlContent, elementId) {
-    syncAppliedSlideHtml(slideIndex, htmlContent, slidesData[slideIndex] || {});
+function syncQuickElementAgentResult(slideIndex, htmlContent, elementId, elementPath = null) {
+    const slideFrame = document.getElementById('slideFrame');
+    const canSelectElement = slideFrame && slideIndex === currentSlideIndex && elementId;
+    const isCurrentIframeContent = canSelectElement
+        && typeof prepareHtmlForPreview === 'function'
+        && slideFrame.getAttribute('data-current-content') === prepareHtmlForPreview(htmlContent);
+    const shouldWaitForIframeLoad = canSelectElement && !isCurrentIframeContent;
+    let selectedElement = null;
+    let iframeLoadHandler = null;
 
     const selectAppliedElement = () => {
-        const slideFrame = document.getElementById('slideFrame');
         const iframeDoc = slideFrame && (slideFrame.contentDocument || slideFrame.contentWindow?.document);
         if (!iframeDoc || !elementId) return null;
 
-        const selected = iframeDoc.querySelector(`[data-quick-ai-id="${elementId}"]`);
+        let selected = iframeDoc.querySelector(`[data-quick-ai-id="${elementId}"]`);
+        if (!selected && elementPath && typeof findQuickAiElementByDomPath === 'function') {
+            selected = findQuickAiElementByDomPath(iframeDoc, elementPath);
+            if (selected) {
+                selected.setAttribute('data-quick-ai-id', elementId);
+            }
+        }
+
         if (selected && typeof selectQuickEditElement === 'function') {
             selectQuickEditElement(selected, { allowWhileAiSending: true });
         }
         return selected;
     };
 
-    const selected = selectAppliedElement();
-    if (!selected && elementId) {
-        const retrySelection = () => selectAppliedElement();
-        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(() => {
-                if (!retrySelection()) {
-                    setTimeout(retrySelection, 350);
-                }
-            });
-        } else {
-            setTimeout(retrySelection, 350);
+    const runSelection = () => {
+        selectedElement = selectAppliedElement();
+        if (selectedElement && iframeLoadHandler) {
+            slideFrame.removeEventListener('load', iframeLoadHandler);
+            iframeLoadHandler = null;
         }
+        return selectedElement;
+    };
+
+    if (shouldWaitForIframeLoad) {
+        iframeLoadHandler = () => {
+            iframeLoadHandler = null;
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(runSelection);
+            } else {
+                setTimeout(runSelection, 0);
+            }
+        };
+        slideFrame.addEventListener('load', iframeLoadHandler, { once: true });
     }
-    return selected;
+
+    syncAppliedSlideHtml(slideIndex, htmlContent, slidesData[slideIndex] || {});
+
+    if (!canSelectElement) return null;
+
+    const retrySelection = () => {
+        if (!selectedElement) {
+            runSelection();
+        }
+    };
+    if (isCurrentIframeContent) {
+        retrySelection();
+    } else {
+        setTimeout(retrySelection, 800);
+        setTimeout(() => {
+            retrySelection();
+            if (iframeLoadHandler) {
+                slideFrame.removeEventListener('load', iframeLoadHandler);
+                iframeLoadHandler = null;
+            }
+        }, 1500);
+    }
+    return selectedElement;
 }
 
 async function applyAgentProposal(proposal) {

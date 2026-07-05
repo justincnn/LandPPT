@@ -807,25 +807,6 @@ function findQuickAiElementByDomPath(doc, path) {
     return node;
 }
 
-function attachQuickAiIdToProposalHtml(htmlContent, elementId, elementPath) {
-    if (!htmlContent || !elementId || !elementPath) return htmlContent;
-
-    try {
-        const parsed = new DOMParser().parseFromString(String(htmlContent), 'text/html');
-        const existing = Array.from(parsed.querySelectorAll('[data-quick-ai-id]'))
-            .some(el => el.getAttribute('data-quick-ai-id') === elementId);
-        if (existing) return htmlContent;
-
-        const target = findQuickAiElementByDomPath(parsed, elementPath);
-        if (!target) return htmlContent;
-
-        target.setAttribute('data-quick-ai-id', elementId);
-        return parsed.documentElement?.outerHTML || htmlContent;
-    } catch (e) {
-        return htmlContent;
-    }
-}
-
 function parseQuickAiElementHtmlToIframeNode(elementHtml, iframeDoc, elementId) {
     if (!iframeDoc || !elementHtml) return null;
 
@@ -960,7 +941,7 @@ async function quickAiEditApply() {
 
         const proposal = await collectAgentProposalFromStream(response, (event) => {
             if (event.type === 'tool_call') {
-                setQuickAiStatus(`Agent调用工具：${event.tool || ''}`);
+                setQuickAiStatus(`Agent 调用工具：${event.tool || ''}`);
             } else if (event.type === 'validation_result') {
                 setQuickAiStatus(event.valid ? '校验通过，准备应用…' : '校验失败');
             }
@@ -970,19 +951,22 @@ async function quickAiEditApply() {
             throw new Error((proposal.validation.errors || []).join('；') || 'Agent草稿校验失败');
         }
 
-        proposal.htmlContent = attachQuickAiIdToProposalHtml(proposal.htmlContent, elementId, elementPath);
-
-        if (expectedBaseHash) {
-            proposal.baseHash = expectedBaseHash;
-        }
+        const applyProposal = expectedBaseHash
+            ? { ...proposal, baseHash: expectedBaseHash }
+            : { ...proposal };
 
         // 保存一次撤销点：在真正应用前
         saveStateForUndo();
-        await applyAgentProposal(proposal);
+        const applied = await applyAgentProposal(applyProposal);
 
         // 重新绑定快速编辑事件到新元素（允许对新增元素补绑定）
         initQuickEditElementSelection();
-        syncQuickElementAgentResult(currentSlideIndex, proposal.htmlContent, elementId);
+        syncQuickElementAgentResult(
+            currentSlideIndex,
+            applied.htmlContent || applyProposal.htmlContent,
+            elementId,
+            elementPath
+        );
         showToolbarStatus('Agent 已应用到选中元素', 'success');
         setQuickAiStatus('已应用，继续输入可再次编辑');
 
