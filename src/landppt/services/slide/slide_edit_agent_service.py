@@ -3,8 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import time
-import uuid
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
@@ -163,6 +161,20 @@ def strip_agent_ids(html: str) -> str:
     return str(soup).strip()
 
 
+def _attribute_value_text(value: Any) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _has_javascript_attribute_value(soup: BeautifulSoup) -> bool:
+    for node in soup.find_all(True):
+        for value in getattr(node, "attrs", {}).values():
+            if "javascript:" in _attribute_value_text(value).strip().lower():
+                return True
+    return False
+
+
 def sanitize_slide_html(html: str) -> str:
     soup = BeautifulSoup(html or "", "html.parser")
 
@@ -173,8 +185,7 @@ def sanitize_slide_html(html: str) -> str:
         for attr in list(getattr(node, "attrs", {}).keys()):
             attr_lower = (attr or "").lower()
             value = node.attrs.get(attr)
-            value_text = " ".join(value) if isinstance(value, list) else str(value or "")
-            value_lower = value_text.strip().lower()
+            value_lower = _attribute_value_text(value).strip().lower()
             if attr_lower.startswith("on"):
                 del node.attrs[attr]
                 continue
@@ -263,7 +274,7 @@ def validate_slide_html(html: str) -> SlideEditValidationResult:
     if any(attr.lower().startswith("on") for tag in original_soup.find_all(True) for attr in tag.attrs):
         errors.append("inline event handlers are not allowed")
 
-    if "javascript:" in original_lower:
+    if "javascript:" in original_lower or _has_javascript_attribute_value(original_soup):
         errors.append("javascript urls are not allowed")
 
     errors.extend(_find_html_structure_errors(original))

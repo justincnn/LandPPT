@@ -1,4 +1,3 @@
-import asyncio
 import json
 
 from landppt.services.slide.slide_edit_agent_service import (
@@ -71,6 +70,14 @@ def test_validate_slide_html_reports_unsafe_original_html():
     assert "script tags are not allowed" in result.errors
     assert "inline event handlers are not allowed" in result.errors
     assert "<script" not in result.sanitized_html.lower()
+
+
+def test_validate_slide_html_rejects_encoded_javascript_urls():
+    result = validate_slide_html('<div><a href="java&#115;cript:alert(1)">x</a></div>')
+
+    assert result.valid is False
+    assert "javascript urls are not allowed" in result.errors
+    assert "javascript:" not in result.sanitized_html.lower()
 
 
 def test_validate_slide_html_accepts_clean_slide_html():
