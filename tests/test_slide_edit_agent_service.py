@@ -181,6 +181,11 @@ async def test_tool_runner_replaces_element_and_preserves_quick_ai_id_in_draft()
     runner = SlideEditToolRunner(
         _tool_context(
             mode="element",
+            slideContent=(
+                '<div style="width:1280px;height:720px">'
+                '<h1 data-quick-ai-id="el1">Long Original Title</h1><p>Body</p>'
+                "</div>"
+            ),
             selectedElementHtml='<h1 data-quick-ai-id="el1">Long Original Title</h1>',
             selectedElementId="el1",
         )
@@ -194,6 +199,83 @@ async def test_tool_runner_replaces_element_and_preserves_quick_ai_id_in_draft()
     assert result["success"] is True
     assert 'data-quick-ai-id="el1"' in runner.current_html
     assert "Short Title" in runner.current_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_replace_element_missing_id_fails_without_mutating_draft():
+    runner = SlideEditToolRunner(
+        _tool_context(
+            mode="element",
+            selectedElementId="missing",
+        )
+    )
+    original_html = runner.current_html
+
+    result = await runner.execute_tool(
+        "replace_element_html",
+        {"element_id": "missing", "html": "<h1>Short Title</h1>"},
+    )
+
+    assert result["success"] is False
+    assert result["tool"] == "replace_element_html"
+    assert "not found" in result["error"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_replace_element_rejects_unsafe_fragment_without_mutating_draft():
+    runner = SlideEditToolRunner(
+        _tool_context(
+            mode="element",
+            slideContent=(
+                '<div style="width:1280px;height:720px">'
+                '<h1 data-quick-ai-id="el1">Long Original Title</h1><p>Body</p>'
+                "</div>"
+            ),
+            selectedElementId="el1",
+        )
+    )
+    original_html = runner.current_html
+
+    result = await runner.execute_tool(
+        "replace_element_html",
+        {"element_id": "el1", "html": '<h1 onclick="bad()">Bad</h1>'},
+    )
+
+    assert result["success"] is False
+    assert "inline event handlers are not allowed" in result["errors"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_insert_element_rejects_unsafe_fragment_without_mutating_draft():
+    runner = SlideEditToolRunner(_tool_context())
+    original_html = runner.current_html
+
+    result = await runner.execute_tool(
+        "insert_element",
+        {"parent_selector": "div", "html": "<h2><script>alert(1)</script>Bad</h2>"},
+    )
+
+    assert result["success"] is False
+    assert "script tags are not allowed" in result["errors"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_invalid_selector_returns_structured_error():
+    runner = SlideEditToolRunner(_tool_context())
+    original_html = runner.current_html
+
+    result = await runner.execute_tool(
+        "update_text",
+        {"selector": "[", "text": "Short Title"},
+    )
+
+    assert result["success"] is False
+    assert result["tool"] == "update_text"
+    assert "invalid selector" in result["error"]
+    assert runner.current_html == original_html
 
 
 def test_tool_runner_build_proposal_strips_agent_ids():

@@ -448,6 +448,35 @@ class SlideEditToolRunner:
     def _set_html_from_soup(self, soup: BeautifulSoup) -> None:
         self.current_html = str(soup).strip()
 
+    def _invalid_selector_error(
+        self, tool_name: str, selector: str, error: Exception
+    ) -> Dict[str, Any]:
+        return {
+            "success": False,
+            "tool": tool_name,
+            "error": f"invalid selector: {selector}",
+            "details": str(error),
+        }
+
+    def _validate_fragment_html(
+        self, tool_name: str, html: Any, empty_error: str
+    ) -> tuple[Optional[BeautifulSoup], Optional[Dict[str, Any]]]:
+        fragment_html = str(html or "").strip()
+        validation = validate_slide_html(fragment_html)
+        if not validation.sanitized_html:
+            return None, {"success": False, "tool": tool_name, "error": empty_error}
+        if not validation.valid:
+            return None, {
+                "success": False,
+                "tool": tool_name,
+                "error": "fragment html failed validation",
+                "errors": validation.errors,
+            }
+        fragment = BeautifulSoup(validation.sanitized_html, "html.parser")
+        if not fragment.find(True):
+            return None, {"success": False, "tool": tool_name, "error": empty_error}
+        return fragment, None
+
     def _tool_get_project_context(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
@@ -511,7 +540,10 @@ class SlideEditToolRunner:
         text = str(tool_input.get("text") or "").strip().lower()
         soup = self._soup()
         matches = []
-        candidates = soup.select(selector) if selector else soup.find_all(True)
+        try:
+            candidates = soup.select(selector) if selector else soup.find_all(True)
+        except Exception as exc:
+            return self._invalid_selector_error("select_elements", selector, exc)
         for idx, node in enumerate(candidates[:100], start=1):
             node_text = node.get_text(" ", strip=True)
             if text and text not in node_text.lower():
@@ -527,20 +559,30 @@ class SlideEditToolRunner:
             "summary": f"Selected {len(matches)} elements.",
         }
 
-    def _resolve_one(self, soup: BeautifulSoup, tool_input: Dict[str, Any]):
+    def _resolve_one(
+        self, soup: BeautifulSoup, tool_input: Dict[str, Any], tool_name: str
+    ) -> tuple[Any, Optional[Dict[str, Any]]]:
         selector = str(tool_input.get("selector") or "").strip()
         element_id = str(
             tool_input.get("element_id") or self.context.selected_element_id or ""
         ).strip()
         if element_id:
-            found = soup.select_one(f'[data-agent-id="{element_id}"]') or soup.select_one(
-                f'[data-quick-ai-id="{element_id}"]'
+            found = soup.find(attrs={"data-agent-id": element_id}) or soup.find(
+                attrs={"data-quick-ai-id": element_id}
             )
             if found:
-                return found
+                return found, None
+            return None, {
+                "success": False,
+                "tool": tool_name,
+                "error": f'target element id "{element_id}" not found',
+            }
         if selector:
-            return soup.select_one(selector)
-        return soup.find(True)
+            try:
+                return soup.select_one(selector), None
+            except Exception as exc:
+                return None, self._invalid_selector_error(tool_name, selector, exc)
+        return soup.find(True), None
 
     def _tool_replace_slide_html(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         html = str(tool_input.get("html") or tool_input.get("value") or "").strip()
@@ -561,21 +603,23 @@ class SlideEditToolRunner:
 
     def _tool_replace_element_html(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        target = self._resolve_one(soup, tool_input)
+        target, error = self._resolve_one(soup, tool_input, "replace_element_html")
+        if error:
+            return error
         if not target:
             return {
                 "success": False,
                 "tool": "replace_element_html",
                 "error": "target element not found",
             }
-        fragment = BeautifulSoup(str(tool_input.get("html") or ""), "html.parser")
+        fragment, error = self._validate_fragment_html(
+            "replace_element_html",
+            tool_input.get("html"),
+            "replacement element html is empty",
+        )
+        if error:
+            return error
         replacement = fragment.find(True)
-        if not replacement:
-            return {
-                "success": False,
-                "tool": "replace_element_html",
-                "error": "replacement element html is empty",
-            }
         element_id = str(
             tool_input.get("element_id") or self.context.selected_element_id or ""
         ).strip()
@@ -591,7 +635,9 @@ class SlideEditToolRunner:
 
     def _tool_update_text(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        target = self._resolve_one(soup, tool_input)
+        target, error = self._resolve_one(soup, tool_input, "update_text")
+        if error:
+            return error
         if not target:
             return {"success": False, "tool": "update_text", "error": "target element not found"}
         target.clear()
@@ -601,7 +647,9 @@ class SlideEditToolRunner:
 
     def _tool_update_style(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        target = self._resolve_one(soup, tool_input)
+        target, error = self._resolve_one(soup, tool_input, "update_style")
+        if error:
+            return error
         if not target:
             return {
                 "success": False,
@@ -630,8 +678,20 @@ class SlideEditToolRunner:
 
     def _tool_insert_element(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        parent = self._resolve_one(soup, {"selector": tool_input.get("parent_selector") or "body"})
-        fragment = BeautifulSoup(str(tool_input.get("html") or ""), "html.parser")
+        parent, error = self._resolve_one(
+            soup,
+            {"selector": tool_input.get("parent_selector") or "body"},
+            "insert_element",
+        )
+        if error:
+            return error
+        fragment, error = self._validate_fragment_html(
+            "insert_element",
+            tool_input.get("html"),
+            "parent or inserted element not found",
+        )
+        if error:
+            return error
         node = fragment.find(True)
         if not parent or not node:
             return {
@@ -645,7 +705,9 @@ class SlideEditToolRunner:
 
     def _tool_delete_element(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        target = self._resolve_one(soup, tool_input)
+        target, error = self._resolve_one(soup, tool_input, "delete_element")
+        if error:
+            return error
         if not target:
             return {"success": False, "tool": "delete_element", "error": "target element not found"}
         target.decompose()
