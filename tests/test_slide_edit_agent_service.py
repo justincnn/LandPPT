@@ -223,6 +223,32 @@ async def test_tool_runner_replace_element_missing_id_fails_without_mutating_dra
 
 
 @pytest.mark.asyncio
+async def test_tool_runner_update_text_missing_target_fails_without_mutating_draft():
+    runner = SlideEditToolRunner(_tool_context())
+    original_html = runner.current_html
+
+    result = await runner.execute_tool("update_text", {"text": "Short Title"})
+
+    assert result["success"] is False
+    assert result["tool"] == "update_text"
+    assert "requires" in result["error"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_delete_element_missing_target_fails_without_mutating_draft():
+    runner = SlideEditToolRunner(_tool_context())
+    original_html = runner.current_html
+
+    result = await runner.execute_tool("delete_element", {})
+
+    assert result["success"] is False
+    assert result["tool"] == "delete_element"
+    assert "requires" in result["error"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
 async def test_tool_runner_replace_element_rejects_unsafe_fragment_without_mutating_draft():
     runner = SlideEditToolRunner(
         _tool_context(

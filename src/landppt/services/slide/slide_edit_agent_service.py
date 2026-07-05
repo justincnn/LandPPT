@@ -582,7 +582,11 @@ class SlideEditToolRunner:
                 return soup.select_one(selector), None
             except Exception as exc:
                 return None, self._invalid_selector_error(tool_name, selector, exc)
-        return soup.find(True), None
+        return None, {
+            "success": False,
+            "tool": tool_name,
+            "error": "target element requires element_id, selected element id, or selector",
+        }
 
     def _tool_replace_slide_html(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         html = str(tool_input.get("html") or tool_input.get("value") or "").strip()
