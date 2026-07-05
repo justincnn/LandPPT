@@ -682,13 +682,29 @@ class SlideEditToolRunner:
 
     def _tool_insert_element(self, tool_input: Dict[str, Any]) -> Dict[str, Any]:
         soup = self._soup()
-        parent, error = self._resolve_one(
-            soup,
-            {"selector": tool_input.get("parent_selector") or "body"},
-            "insert_element",
-        )
-        if error:
-            return error
+        parent_selector = str(tool_input.get("parent_selector") or "").strip()
+        element_id = str(tool_input.get("element_id") or "").strip()
+        if not parent_selector and not element_id:
+            return {
+                "success": False,
+                "tool": "insert_element",
+                "error": "insert_element requires parent_selector or element_id",
+            }
+        if element_id:
+            parent = soup.find(attrs={"data-agent-id": element_id}) or soup.find(
+                attrs={"data-quick-ai-id": element_id}
+            )
+            if not parent:
+                return {
+                    "success": False,
+                    "tool": "insert_element",
+                    "error": f'target element id "{element_id}" not found',
+                }
+        else:
+            try:
+                parent = soup.select_one(parent_selector)
+            except Exception as exc:
+                return self._invalid_selector_error("insert_element", parent_selector, exc)
         fragment, error = self._validate_fragment_html(
             "insert_element",
             tool_input.get("html"),

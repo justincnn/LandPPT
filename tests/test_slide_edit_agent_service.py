@@ -289,6 +289,38 @@ async def test_tool_runner_insert_element_rejects_unsafe_fragment_without_mutati
 
 
 @pytest.mark.asyncio
+async def test_tool_runner_insert_element_missing_target_fails_without_mutating_full_html_body():
+    html = (
+        "<!doctype html><html><head><title>Slide</title></head>"
+        '<body><section id="slide"><p>Body</p></section></body></html>'
+    )
+    runner = SlideEditToolRunner(_tool_context(slideContent=html))
+    original_html = runner.current_html
+
+    result = await runner.execute_tool("insert_element", {"html": "<p>New</p>"})
+
+    assert result["success"] is False
+    assert result["tool"] == "insert_element"
+    assert "requires parent_selector or element_id" in result["error"]
+    assert runner.current_html == original_html
+    assert "New" not in runner.current_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_insert_element_succeeds_with_explicit_parent_selector():
+    runner = SlideEditToolRunner(_tool_context())
+
+    result = await runner.execute_tool(
+        "insert_element",
+        {"parent_selector": "div", "html": "<h2>New Section</h2>"},
+    )
+
+    assert result["success"] is True
+    assert result["tool"] == "insert_element"
+    assert "<h2>New Section</h2>" in runner.current_html
+
+
+@pytest.mark.asyncio
 async def test_tool_runner_invalid_selector_returns_structured_error():
     runner = SlideEditToolRunner(_tool_context())
     original_html = runner.current_html
