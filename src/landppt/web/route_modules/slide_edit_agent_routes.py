@@ -143,8 +143,6 @@ async def stream_slide_edit_agent(
                 if event.get("type") == "_agent_done":
                     break
 
-                yield _sse(event)
-
                 if _is_billable_agent_completion(event) and not charged:
                     await _charge_completed_agent_run(
                         user_id=user.id,
@@ -152,6 +150,8 @@ async def stream_slide_edit_agent(
                         provider_name=provider_name,
                     )
                     charged = True
+
+                yield _sse(event)
 
             await task
         except asyncio.CancelledError:
@@ -202,7 +202,17 @@ async def apply_slide_edit_agent_proposal(
             detail="Slide changed after proposal was created",
         )
 
-    cleaned_html = strip_agent_ids(request.htmlContent)
+    validation = validate_slide_html(request.htmlContent)
+    if not validation.valid:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "errors": validation.errors,
+                "warnings": validation.warnings,
+            },
+        )
+
+    cleaned_html = strip_agent_ids(validation.sanitized_html)
     validation = validate_slide_html(cleaned_html)
     if not validation.valid:
         raise HTTPException(

@@ -163,8 +163,37 @@ async def test_apply_agent_proposal_strips_agent_ids_before_save(monkeypatch):
     assert "New" in saved_html
 
 
+@pytest.mark.parametrize(
+    ("html_content", "expected_error"),
+    [
+        (
+            '<div style="width:1280px;height:720px">'
+            "<script>alert(1)</script><h1>New</h1></div>",
+            "script tags are not allowed",
+        ),
+        (
+            '<div style="width:1280px;height:720px">'
+            '<h1 onclick="bad()">New</h1></div>',
+            "inline event handlers are not allowed",
+        ),
+        (
+            '<div style="width:1280px;height:720px">'
+            '<a href="java&#115;cript:bad()">New</a></div>',
+            "javascript urls are not allowed",
+        ),
+        ("", "html content is required"),
+        (
+            '<div style="width:1280px;height:720px"><section><h1>New</section></div>',
+            "html is malformed",
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_apply_agent_proposal_rejects_invalid_html(monkeypatch):
+async def test_apply_agent_proposal_rejects_invalid_html_before_save(
+    monkeypatch,
+    html_content,
+    expected_error,
+):
     current_html = '<div style="width:1280px;height:720px"><h1>Current</h1></div>'
     project = SimpleNamespace(
         slides_data=[
@@ -186,10 +215,7 @@ async def test_apply_agent_proposal_rejects_invalid_html(monkeypatch):
         projectId="proj",
         slideIndex=1,
         expectedBaseHash=compute_slide_html_hash(current_html),
-        htmlContent=(
-            '<div style="width:1280px;height:720px">'
-            "<script>alert(1)</script><h1>New</h1></div>"
-        ),
+        htmlContent=html_content,
         slideData={"title": "One"},
     )
 
@@ -199,7 +225,7 @@ async def test_apply_agent_proposal_rejects_invalid_html(monkeypatch):
         )
 
     assert exc.value.status_code == 400
-    assert "script tags are not allowed" in exc.value.detail["errors"]
+    assert expected_error in exc.value.detail["errors"]
 
 
 @pytest.mark.asyncio
@@ -212,6 +238,7 @@ async def test_stream_slide_edit_agent_charges_once_after_draft(monkeypatch):
             await event_callback(
                 {"type": "draft_ready", "proposal": {"proposalId": "p1"}}
             )
+            await event_callback({"type": "final", "proposalId": "p1"})
             await event_callback({"type": "needs_confirmation", "proposalId": "p1"})
             return SimpleNamespace(proposal_id="p1")
 
@@ -246,6 +273,52 @@ async def test_stream_slide_edit_agent_charges_once_after_draft(monkeypatch):
     assert len(charges) == 1
     assert charges[0]["args"][:3] == (10, "ai_edit", 1)
     assert charges[0]["kwargs"]["reference_id"] == "proj"
+
+
+@pytest.mark.asyncio
+async def test_stream_slide_edit_agent_charges_before_billable_chunk(monkeypatch):
+    charges = []
+
+    class _FakeAgentService:
+        async def run_agent(self, request, user_ppt_service, event_callback):
+            await event_callback(
+                {"type": "draft_ready", "proposal": {"proposalId": "p1"}}
+            )
+            return SimpleNamespace(proposal_id="p1")
+
+    async def check_credits(*args, **kwargs):
+        return True, 1, 10
+
+    async def consume_credits(*args, **kwargs):
+        charges.append({"args": args, "kwargs": kwargs})
+        return True, "ok"
+
+    monkeypatch.setattr(
+        routes, "get_ppt_service_for_user", lambda user_id: _FakePPTService()
+    )
+    monkeypatch.setattr(routes, "check_credits_for_operation", check_credits)
+    monkeypatch.setattr(routes, "consume_credits_for_operation", consume_credits)
+    monkeypatch.setattr(routes, "SlideEditAgentService", _FakeAgentService)
+
+    response = await routes.stream_slide_edit_agent(
+        SlideEditAgentRequest(
+            projectId="proj",
+            slideIndex=1,
+            slideTitle="One",
+            slideContent="<div>Current</div>",
+            userRequest="Shorten the title",
+        ),
+        user=SimpleNamespace(id=10),
+    )
+
+    first_chunk = await anext(response.body_iterator)
+    if isinstance(first_chunk, bytes):
+        first_chunk = first_chunk.decode("utf-8")
+
+    assert '"type": "draft_ready"' in first_chunk
+    assert len(charges) == 1
+
+    await _collect_stream_body(response)
 
 
 @pytest.mark.asyncio
