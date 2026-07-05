@@ -34,6 +34,21 @@ def test_main_router_registers_extracted_route_modules():
     assert "router.include_router(template_router)" in routes_text
 
 
+def test_slide_edit_agent_routes_are_registered():
+    routes_text = _read("src/landppt/web/routes.py")
+    agent_text = _read("src/landppt/web/route_modules/slide_edit_agent_routes.py")
+
+    assert "from .route_modules.slide_edit_agent_routes import router as slide_edit_agent_router" in routes_text
+    assert "router.include_router(slide_edit_agent_router)" in routes_text
+
+    for marker in [
+        '@router.post("/api/ai/slide-edit-agent/stream")',
+        '@router.post("/api/ai/slide-edit-agent/apply")',
+        '@router.post("/api/ai/slide-edit-agent/cancel")',
+    ]:
+        assert marker in agent_text
+
+
 def test_legacy_route_handlers_were_removed_from_main_router_file():
     routes_text = _read("src/landppt/web/routes.py")
 
