@@ -778,3 +778,224 @@ class SlideEditToolRunner:
 
 
 EventEmitter = Callable[[Dict[str, Any]], Awaitable[None]]
+
+
+class SlideEditAgentService:
+    async def _emit(
+        self, event_callback: Optional[EventEmitter], event: Dict[str, Any]
+    ) -> None:
+        if event_callback:
+            await event_callback(event)
+
+    async def run_agent(
+        self,
+        request: SlideEditAgentRequest,
+        user_ppt_service: Any,
+        event_callback: Optional[EventEmitter] = None,
+    ) -> SlideEditProposal:
+        context = SlideEditAgentContext.from_request(request)
+        runner = SlideEditToolRunner(context)
+        max_iterations = coerce_agent_max_iterations(request.maxIterations)
+        role = (
+            "vision_analysis"
+            if request.visionEnabled
+            and (request.slideScreenshot or request.elementScreenshot or request.images)
+            else "editor"
+        )
+
+        await self._emit(
+            event_callback,
+            {
+                "type": "agent_start",
+                "projectId": request.projectId,
+                "slideIndex": request.slideIndex,
+                "mode": request.mode,
+                "maxIterations": max_iterations,
+                "tools": runner.available_tool_names(),
+            },
+        )
+
+        scratchpad: List[Dict[str, Any]] = []
+        for iteration in range(1, max_iterations + 1):
+            prompt = self._build_prompt(request, runner, scratchpad, max_iterations)
+            response = await user_ppt_service._chat_completion_for_role(
+                role,
+                messages=[
+                    self._ai_message(
+                        "system",
+                        "You are LandPPT's slide editing agent. Return one JSON action per turn.",
+                    ),
+                    self._ai_message("user", prompt),
+                ],
+            )
+            action = parse_agent_action(response.content or "")
+
+            await self._emit(
+                event_callback,
+                {
+                    "type": "agent_step",
+                    "iteration": iteration,
+                    "thought": action.thought,
+                    "action": action.action,
+                    "actionInput": action.action_input,
+                },
+            )
+
+            if action.action == "final":
+                summary = str(
+                    action.action_input.get("summary")
+                    or action.thought
+                    or "Prepared slide edit proposal."
+                )
+                proposal = runner.build_proposal(summary)
+                await self._emit_validation_and_draft(event_callback, proposal)
+                return proposal
+
+            await self._emit(
+                event_callback,
+                {
+                    "type": "tool_call",
+                    "iteration": iteration,
+                    "tool": action.action,
+                    "toolInput": action.action_input,
+                    "thought": action.thought,
+                },
+            )
+            observation = await runner.execute_tool(action.action, action.action_input)
+            await self._emit(
+                event_callback,
+                {
+                    "type": "tool_result",
+                    "iteration": iteration,
+                    "tool": action.action,
+                    "success": observation.get("success", False),
+                    "observation": observation,
+                },
+            )
+            scratchpad.append(
+                {
+                    "iteration": iteration,
+                    "thought": action.thought,
+                    "action": action.action,
+                    "action_input": action.action_input,
+                    "observation": self._compact_observation(observation),
+                }
+            )
+
+        proposal = runner.build_proposal(
+            "Reached the maximum edit iterations and prepared the current draft."
+        )
+        await self._emit_validation_and_draft(event_callback, proposal)
+        return proposal
+
+    def _ai_message(self, role: str, content: str):
+        from ...ai import AIMessage, MessageRole
+
+        mapped_role = MessageRole.SYSTEM if role == "system" else MessageRole.USER
+        return AIMessage(role=mapped_role, content=content)
+
+    async def _emit_validation_and_draft(
+        self, event_callback: Optional[EventEmitter], proposal: SlideEditProposal
+    ) -> None:
+        await self._emit(
+            event_callback,
+            {
+                "type": "validation_result",
+                "valid": proposal.validation.valid,
+                "errors": proposal.validation.errors,
+                "warnings": proposal.validation.warnings,
+            },
+        )
+        await self._emit(
+            event_callback,
+            {"type": "draft_ready", "proposal": proposal.to_public_dict()},
+        )
+        await self._emit(
+            event_callback,
+            {
+                "type": "needs_confirmation",
+                "proposalId": proposal.proposal_id,
+                "message": "Review the draft before applying it.",
+            },
+        )
+
+    def _build_prompt(
+        self,
+        request: SlideEditAgentRequest,
+        runner: SlideEditToolRunner,
+        scratchpad: List[Dict[str, Any]],
+        max_iterations: int,
+    ) -> str:
+        context = {
+            "project": request.projectInfo or {},
+            "slide_index": request.slideIndex,
+            "slide_title": request.slideTitle,
+            "slide_outline": request.slideOutline or {},
+            "mode": request.mode,
+            "selected_element_id": request.selectedElementId,
+            "selected_element_html": request.selectedElementHtml,
+            "user_request": request.userRequest,
+            "current_html": runner.current_html,
+            "available_tools": self._tool_schemas(),
+            "scratchpad": scratchpad,
+            "max_iterations": max_iterations,
+        }
+        return (
+            "Use a ReAct loop to edit this PPT slide. Choose exactly one action. "
+            "Use final when the draft is ready. Return strict JSON only.\n\n"
+            + json.dumps(context, ensure_ascii=False, indent=2)
+        )
+
+    def _tool_schemas(self) -> List[Dict[str, Any]]:
+        return [
+            {"name": "get_project_context", "input": {}},
+            {"name": "get_slide", "input": {"slide_index": "integer"}},
+            {"name": "list_slides", "input": {}},
+            {"name": "inspect_slide_html", "input": {"slide_index": "integer"}},
+            {
+                "name": "select_elements",
+                "input": {"selector": "string", "text": "string"},
+            },
+            {"name": "replace_slide_html", "input": {"html": "string"}},
+            {
+                "name": "replace_element_html",
+                "input": {"element_id": "string", "html": "string"},
+            },
+            {
+                "name": "update_text",
+                "input": {
+                    "selector": "string",
+                    "element_id": "string",
+                    "text": "string",
+                },
+            },
+            {
+                "name": "update_style",
+                "input": {
+                    "selector": "string",
+                    "element_id": "string",
+                    "styles": "object",
+                },
+            },
+            {
+                "name": "insert_element",
+                "input": {"parent_selector": "string", "html": "string"},
+            },
+            {
+                "name": "delete_element",
+                "input": {"selector": "string", "element_id": "string"},
+            },
+            {"name": "validate_slide_html", "input": {}},
+            {"name": "preview_patch", "input": {}},
+        ]
+
+    def _compact_observation(self, observation: Dict[str, Any]) -> Dict[str, Any]:
+        compact = {
+            "success": observation.get("success", False),
+            "summary": observation.get("summary") or observation.get("error") or "",
+        }
+        if observation.get("errors"):
+            compact["errors"] = observation["errors"]
+        if observation.get("warnings"):
+            compact["warnings"] = observation["warnings"]
+        return compact

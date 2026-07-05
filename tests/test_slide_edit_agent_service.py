@@ -1,10 +1,12 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from landppt.services.slide.slide_edit_agent_service import (
     SlideEditAgentContext,
     SlideEditAgentRequest,
+    SlideEditAgentService,
     SlideEditToolRunner,
     compute_slide_html_hash,
     coerce_agent_max_iterations,
@@ -348,4 +350,124 @@ def test_tool_runner_build_proposal_strips_agent_ids():
     assert proposal.proposal_id
     assert proposal.summary == "Edited title"
     assert "data-agent-id" not in proposal.html_content
+    assert proposal.validation.valid is True
+
+
+class _FakePPTService:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    async def _chat_completion_for_role(self, role, messages):
+        self.calls.append((role, messages))
+        return SimpleNamespace(content=self.responses.pop(0))
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_runs_tools_and_returns_proposal():
+    service = SlideEditAgentService()
+    fake_ppt = _FakePPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Inspect before editing.",
+                    "action": "inspect_slide_html",
+                    "action_input": {"slide_index": 1},
+                }
+            ),
+            json.dumps(
+                {
+                    "thought": "Update the title text.",
+                    "action": "update_text",
+                    "action_input": {"selector": "h1", "text": "Short Title"},
+                }
+            ),
+            json.dumps(
+                {
+                    "thought": "The title is shorter and ready.",
+                    "action": "final",
+                    "action_input": {"summary": "Shortened the title."},
+                }
+            ),
+        ]
+    )
+    events = []
+
+    async def capture(event):
+        events.append(event)
+
+    proposal = await service.run_agent(_tool_request(), fake_ppt, capture)
+
+    assert proposal.summary == "Shortened the title."
+    assert "Short Title" in proposal.html_content
+    assert proposal.validation.valid is True
+    assert [event["type"] for event in events if event["type"] == "tool_call"] == [
+        "tool_call",
+        "tool_call",
+    ]
+    assert {event["type"] for event in events} >= {
+        "agent_start",
+        "agent_step",
+        "tool_result",
+        "draft_ready",
+        "needs_confirmation",
+    }
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_reports_unsupported_tool_and_continues():
+    service = SlideEditAgentService()
+    fake_ppt = _FakePPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Try an unknown tool.",
+                    "action": "bad_tool",
+                    "action_input": {},
+                }
+            ),
+            json.dumps(
+                {
+                    "thought": "Finish without change.",
+                    "action": "final",
+                    "action_input": {"summary": "No safe change."},
+                }
+            ),
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(maxIterations=3), fake_ppt)
+
+    assert proposal.summary == "No safe change."
+    assert proposal.tool_transcript == []
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_finalizes_when_max_iterations_is_reached():
+    service = SlideEditAgentService()
+    fake_ppt = _FakePPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Inspect.",
+                    "action": "inspect_slide_html",
+                    "action_input": {},
+                }
+            ),
+            json.dumps(
+                {
+                    "thought": "Inspect again.",
+                    "action": "inspect_slide_html",
+                    "action_input": {},
+                }
+            ),
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(maxIterations=2), fake_ppt)
+
+    assert (
+        proposal.summary
+        == "Reached the maximum edit iterations and prepared the current draft."
+    )
     assert proposal.validation.valid is True
