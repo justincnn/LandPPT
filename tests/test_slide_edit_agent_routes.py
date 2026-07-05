@@ -20,11 +20,14 @@ class _FakeProjectManager:
 
 
 class _FakePPTService:
-    def __init__(self, project=None):
+    def __init__(self, project=None, providers=None):
         self.project_manager = _FakeProjectManager(project)
+        self.providers = providers or {}
+        self.roles = []
 
     async def get_role_provider_async(self, role):
-        return None, {"provider": "landppt"}
+        self.roles.append(role)
+        return None, {"provider": self.providers.get(role, "landppt")}
 
 
 async def _collect_stream_body(response):
@@ -117,6 +120,89 @@ async def test_apply_agent_proposal_saves_only_target_slide(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_apply_agent_proposal_strips_agent_ids_before_save(monkeypatch):
+    current_html = '<div style="width:1280px;height:720px"><h1>Current</h1></div>'
+    project = SimpleNamespace(
+        slides_data=[
+            {"title": "One", "html_content": current_html, "is_user_edited": False}
+        ]
+    )
+    saved = {}
+
+    class _FakeDBManager:
+        async def save_single_slide(self, project_id, slide_index, slide_data):
+            saved["slide_data"] = slide_data
+            return True
+
+    monkeypatch.setattr(
+        routes, "get_ppt_service_for_user", lambda user_id: _FakePPTService(project)
+    )
+    monkeypatch.setattr(routes, "DatabaseProjectManager", lambda: _FakeDBManager())
+
+    request = SlideEditAgentApplyRequest(
+        proposalId="p1",
+        projectId="proj",
+        slideIndex=1,
+        expectedBaseHash=compute_slide_html_hash(current_html),
+        htmlContent=(
+            '<div data-agent-id="a1" data-quick-ai-id="q1" '
+            'style="width:1280px;height:720px">'
+            '<h1 data-quick-ai-id="q2">New</h1></div>'
+        ),
+        slideData={"title": "One"},
+    )
+
+    result = await routes.apply_slide_edit_agent_proposal(
+        request, user=SimpleNamespace(id=10)
+    )
+
+    saved_html = saved["slide_data"]["html_content"]
+    assert result["htmlContent"] == saved_html
+    assert "data-agent-id" not in saved_html
+    assert "data-quick-ai-id" not in saved_html
+    assert "New" in saved_html
+
+
+@pytest.mark.asyncio
+async def test_apply_agent_proposal_rejects_invalid_html(monkeypatch):
+    current_html = '<div style="width:1280px;height:720px"><h1>Current</h1></div>'
+    project = SimpleNamespace(
+        slides_data=[
+            {"title": "One", "html_content": current_html, "is_user_edited": False}
+        ]
+    )
+
+    class _FakeDBManager:
+        async def save_single_slide(self, project_id, slide_index, slide_data):
+            raise AssertionError("invalid HTML should not be saved")
+
+    monkeypatch.setattr(
+        routes, "get_ppt_service_for_user", lambda user_id: _FakePPTService(project)
+    )
+    monkeypatch.setattr(routes, "DatabaseProjectManager", lambda: _FakeDBManager())
+
+    request = SlideEditAgentApplyRequest(
+        proposalId="p1",
+        projectId="proj",
+        slideIndex=1,
+        expectedBaseHash=compute_slide_html_hash(current_html),
+        htmlContent=(
+            '<div style="width:1280px;height:720px">'
+            "<script>alert(1)</script><h1>New</h1></div>"
+        ),
+        slideData={"title": "One"},
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await routes.apply_slide_edit_agent_proposal(
+            request, user=SimpleNamespace(id=10)
+        )
+
+    assert exc.value.status_code == 400
+    assert "script tags are not allowed" in exc.value.detail["errors"]
+
+
+@pytest.mark.asyncio
 async def test_stream_slide_edit_agent_charges_once_after_draft(monkeypatch):
     charges = []
 
@@ -160,6 +246,58 @@ async def test_stream_slide_edit_agent_charges_once_after_draft(monkeypatch):
     assert len(charges) == 1
     assert charges[0]["args"][:3] == (10, "ai_edit", 1)
     assert charges[0]["kwargs"]["reference_id"] == "proj"
+
+
+@pytest.mark.asyncio
+async def test_stream_slide_edit_agent_uses_editor_provider_without_vision_inputs(
+    monkeypatch,
+):
+    service = _FakePPTService(
+        providers={
+            "editor": "editor-provider",
+            "vision_analysis": "vision-provider",
+        }
+    )
+    check_provider_names = []
+    charge_provider_names = []
+
+    class _FakeAgentService:
+        async def run_agent(self, request, user_ppt_service, event_callback):
+            await event_callback(
+                {"type": "draft_ready", "proposal": {"proposalId": "p1"}}
+            )
+            return SimpleNamespace(proposal_id="p1")
+
+    async def check_credits(*args, **kwargs):
+        check_provider_names.append(kwargs.get("provider_name"))
+        return True, 1, 10
+
+    async def consume_credits(*args, **kwargs):
+        charge_provider_names.append(kwargs.get("provider_name"))
+        return True, "ok"
+
+    monkeypatch.setattr(routes, "get_ppt_service_for_user", lambda user_id: service)
+    monkeypatch.setattr(routes, "check_credits_for_operation", check_credits)
+    monkeypatch.setattr(routes, "consume_credits_for_operation", consume_credits)
+    monkeypatch.setattr(routes, "SlideEditAgentService", _FakeAgentService)
+
+    response = await routes.stream_slide_edit_agent(
+        SlideEditAgentRequest(
+            projectId="proj",
+            slideIndex=1,
+            slideContent="<div>Current</div>",
+            userRequest="Shorten the title",
+            visionEnabled=True,
+        ),
+        user=SimpleNamespace(id=10),
+    )
+
+    body = await _collect_stream_body(response)
+
+    assert '"type": "draft_ready"' in body
+    assert service.roles == ["editor"]
+    assert check_provider_names == ["editor-provider"]
+    assert charge_provider_names == ["editor-provider"]
 
 
 @pytest.mark.asyncio

@@ -21,6 +21,7 @@ from ...services.slide.slide_edit_agent_service import (
     SlideEditAgentRequest,
     SlideEditAgentService,
     compute_slide_html_hash,
+    strip_agent_ids,
     validate_slide_html,
 )
 from .support import (
@@ -46,6 +47,13 @@ def _sse(event: dict[str, Any]) -> str:
 
 def _is_billable_agent_completion(event: dict[str, Any]) -> bool:
     return event.get("type") in {"draft_ready", "final"}
+
+
+def _agent_provider_role(request: SlideEditAgentRequest) -> str:
+    has_vision_input = bool(
+        request.slideScreenshot or request.elementScreenshot or request.images
+    )
+    return "vision_analysis" if request.visionEnabled and has_vision_input else "editor"
 
 
 async def _charge_completed_agent_run(
@@ -75,7 +83,7 @@ async def stream_slide_edit_agent(
     user: User = Depends(get_current_user_required),
 ):
     user_ppt_service = get_ppt_service_for_user(user.id)
-    role = "vision_analysis" if request.visionEnabled else "editor"
+    role = _agent_provider_role(request)
     _, settings = await user_ppt_service.get_role_provider_async(role)
     provider_name = settings.get("provider")
 
@@ -194,7 +202,8 @@ async def apply_slide_edit_agent_proposal(
             detail="Slide changed after proposal was created",
         )
 
-    validation = validate_slide_html(request.htmlContent)
+    cleaned_html = strip_agent_ids(request.htmlContent)
+    validation = validate_slide_html(cleaned_html)
     if not validation.valid:
         raise HTTPException(
             status_code=400,
