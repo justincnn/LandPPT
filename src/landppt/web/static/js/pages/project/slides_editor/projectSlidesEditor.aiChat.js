@@ -581,6 +581,277 @@ async function updateOutlineForSlideOperation(operation, slideIndex, slideData =
 }
 
 // 发送AI消息 - 使用流式输出
+function getAgentEventLabel(event) {
+    const type = event && event.type;
+    const labels = {
+        agent_start: '开始分析',
+        agent_step: '选择下一步',
+        tool_call: '调用工具',
+        tool_result: '工具结果',
+        validation_result: '校验结果',
+        draft_ready: '草稿就绪',
+        needs_confirmation: '等待确认',
+        final: '草稿就绪',
+        error: '出错'
+    };
+    return labels[type] || type || 'Agent 事件';
+}
+
+function compactAgentText(value, maxLength = 420) {
+    const text = typeof value === 'string' ? value : String(value ?? '');
+    if (text.length <= maxLength) {
+        return text;
+    }
+    return `${text.slice(0, maxLength)}...`;
+}
+
+function stringifyAgentPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return '';
+    }
+    try {
+        return JSON.stringify(payload, (key, value) => {
+            if (typeof value === 'string') {
+                return compactAgentText(value, 220);
+            }
+            return value;
+        }, 2);
+    } catch (error) {
+        return compactAgentText(String(payload));
+    }
+}
+
+function getAgentEventDetail(event) {
+    if (!event) {
+        return '';
+    }
+
+    if (event.type === 'agent_start') {
+        const slideLabel = event.slideIndex ? `第${event.slideIndex}页` : '';
+        return [slideLabel, event.mode ? `模式：${event.mode}` : ''].filter(Boolean).join(' · ');
+    }
+
+    if (event.type === 'tool_call') {
+        const input = stringifyAgentPayload(event.toolInput || event.actionInput || {});
+        return [event.tool || event.action || '', input].filter(Boolean).join('\n');
+    }
+
+    if (event.type === 'tool_result') {
+        const observation = event.observation || {};
+        return observation.summary || observation.error || (event.success ? '完成' : '失败');
+    }
+
+    if (event.type === 'validation_result') {
+        if (event.valid) {
+            return 'HTML 校验通过';
+        }
+        const errors = Array.isArray(event.errors) ? event.errors.join('；') : '';
+        return errors ? `HTML 校验失败：${errors}` : 'HTML 校验失败';
+    }
+
+    if (event.type === 'agent_step') {
+        return [event.thought, event.action].filter(Boolean).join('\n');
+    }
+
+    if (event.type === 'draft_ready') {
+        return event.proposal?.summary || 'Agent 已生成可预览的编辑草稿';
+    }
+
+    if (event.type === 'needs_confirmation') {
+        return '';
+    }
+
+    if (event.type === 'error') {
+        return event.error || event.message || '未知错误';
+    }
+
+    return event.message || event.summary || '';
+}
+
+function addAgentTimelineEvent(messageDiv, event) {
+    if (!messageDiv || !event) return;
+
+    let timeline = messageDiv.querySelector('.ai-agent-timeline');
+    if (!timeline) {
+        timeline = document.createElement('div');
+        timeline.className = 'ai-agent-timeline';
+        timeline.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
+        const regenerateBtn = messageDiv.querySelector('.ai-answer-regenerate-btn');
+        messageDiv.insertBefore(timeline, regenerateBtn || null);
+    }
+
+    const item = document.createElement('div');
+    item.className = `ai-agent-event ai-agent-event-${event.type || 'unknown'}`;
+    item.style.cssText = 'border:1px solid #e5e7eb;border-radius:6px;padding:8px;background:#fff;font-size:13px;color:#374151;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight:600;margin-bottom:4px;color:#111827;';
+    title.textContent = getAgentEventLabel(event);
+
+    const detailText = compactAgentText(getAgentEventDetail(event), 700);
+    const detail = document.createElement('div');
+    detail.style.cssText = 'white-space:pre-wrap;line-height:1.4;color:#4b5563;';
+    detail.textContent = detailText;
+
+    item.appendChild(title);
+    if (detailText) {
+        item.appendChild(detail);
+    }
+    timeline.appendChild(item);
+
+    const messagesContainer = document.getElementById('aiChatMessages');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+function addAgentProposalControls(messageDiv, proposal) {
+    if (!messageDiv || !proposal || !proposal.htmlContent) return;
+    if (messageDiv.querySelector('.ai-agent-proposal-controls')) return;
+
+    const controls = document.createElement('div');
+    controls.className = 'ai-agent-proposal-controls';
+    controls.style.cssText = 'display:flex;gap:10px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;flex-wrap:wrap;';
+
+    const previewBtn = document.createElement('button');
+    previewBtn.type = 'button';
+    previewBtn.className = 'ai-preview-changes-btn';
+    previewBtn.innerHTML = '<i class="fas fa-eye"></i> 预览';
+    previewBtn.style.cssText = 'background:#007bff;color:white;border:none;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;';
+    previewBtn.addEventListener('click', () => showHTMLPreview(proposal.htmlContent));
+
+    const applyBtn = document.createElement('button');
+    applyBtn.type = 'button';
+    applyBtn.className = 'ai-apply-changes-btn';
+    applyBtn.innerHTML = '<i class="fas fa-check"></i> 应用';
+    applyBtn.style.cssText = 'background:#28a745;color:white;border:none;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;';
+    applyBtn.disabled = proposal.validation && proposal.validation.valid === false;
+    if (applyBtn.disabled) {
+        applyBtn.style.background = '#6c757d';
+        applyBtn.style.cursor = 'not-allowed';
+        applyBtn.title = 'HTML 校验未通过，不能应用';
+    }
+    applyBtn.addEventListener('click', async () => {
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 应用中...';
+        try {
+            await applyAgentProposal(proposal);
+            applyBtn.innerHTML = '<i class="fas fa-check-circle"></i> 已应用';
+            applyBtn.style.background = '#6c757d';
+            discardBtn.disabled = true;
+            discardBtn.style.cursor = 'not-allowed';
+        } catch (error) {
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 重试应用';
+            showNotification(`Agent 应用失败：${error.message || error}`, 'error');
+        }
+    });
+
+    const discardBtn = document.createElement('button');
+    discardBtn.type = 'button';
+    discardBtn.className = 'ai-preview-changes-btn';
+    discardBtn.innerHTML = '<i class="fas fa-times"></i> 放弃';
+    discardBtn.style.cssText = 'background:#6c757d;color:white;border:none;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;';
+    discardBtn.addEventListener('click', () => {
+        controls.remove();
+        showNotification('已放弃 Agent 草稿', 'info');
+    });
+
+    controls.appendChild(previewBtn);
+    controls.appendChild(applyBtn);
+    controls.appendChild(discardBtn);
+
+    const regenerateBtn = messageDiv.querySelector('.ai-answer-regenerate-btn');
+    messageDiv.insertBefore(controls, regenerateBtn || null);
+}
+
+async function handleAgentStreamingResponse(response, waitingDiv) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let aiMessageDiv = null;
+    let streamingMessageId = null;
+    let finalSummary = '';
+
+    const ensureMessage = () => {
+        if (aiMessageDiv) {
+            return aiMessageDiv;
+        }
+        removeWaitingAnimation();
+        streamingMessageId = 'ai-agent-message-' + Date.now();
+        aiMessageDiv = addAIMessage('Agent 正在编辑当前幻灯片', 'assistant', streamingMessageId);
+        aiMessageDiv.dataset.complete = 'false';
+        return aiMessageDiv;
+    };
+
+    const processLine = (line) => {
+        if (!line.trim().startsWith('data: ')) return;
+        const dataStr = line.slice(6).trim();
+        if (!dataStr) return;
+
+        let event;
+        try {
+            event = JSON.parse(dataStr);
+        } catch (error) {
+            return;
+        }
+        if (!event || event.type === '_agent_done') return;
+
+        const messageDiv = ensureMessage();
+        addAgentTimelineEvent(messageDiv, event);
+
+        if ((event.type === 'draft_ready' || event.type === 'final') && event.proposal) {
+            finalSummary = event.proposal.summary || 'Agent 已生成可预览的编辑草稿';
+            setAIAssistantMessageText(messageDiv, finalSummary);
+            addAgentProposalControls(messageDiv, event.proposal);
+        } else if (event.type === 'error') {
+            finalSummary = `抱歉，Agent 编辑失败：${event.error || event.message || '未知错误'}`;
+            setAIAssistantMessageText(messageDiv, finalSummary);
+        }
+    };
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                processLine(line);
+            }
+        }
+
+        if (buffer.trim()) {
+            processLine(buffer);
+        }
+
+        if (!aiMessageDiv) {
+            removeWaitingAnimation();
+            finalSummary = 'Agent 没有返回可显示的结果';
+            aiMessageDiv = addAIMessage(finalSummary, 'assistant');
+        }
+    } catch (error) {
+        removeWaitingAnimation();
+        finalSummary = '抱歉，处理 Agent 流式响应时出现错误。';
+        if (aiMessageDiv) {
+            setAIAssistantMessageText(aiMessageDiv, finalSummary);
+        } else {
+            aiMessageDiv = addAIMessage(finalSummary, 'assistant');
+        }
+    } finally {
+        if (aiMessageDiv) {
+            aiMessageDiv.dataset.complete = 'true';
+            if (streamingMessageId && finalSummary) {
+                updateAIChatHistoryMessage(streamingMessageId, finalSummary);
+            }
+            refreshAIAssistantMessageLayout(aiMessageDiv);
+        }
+    }
+}
+
 // options:
 // - messageOverride: string (optional)
 // - appendUserMessage: boolean (default true)
@@ -652,7 +923,9 @@ async function sendAIMessage(options = {}) {
         const referencedImages = getAllUploadedImages();
 
         const context = {
+            projectId: window.landpptEditorConfig.projectId,
             slideIndex: currentSlideIndex + 1,
+            mode: 'slide',
             slideTitle: currentSlide.title,
             slideContent: currentSlide.html_content,
             userRequest: message,
@@ -671,7 +944,7 @@ async function sendAIMessage(options = {}) {
 
 
         // 发送流式AI编辑请求
-        const response = await fetch('/api/ai/slide-edit/stream', {
+        const response = await fetch('/api/ai/slide-edit-agent/stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -684,7 +957,7 @@ async function sendAIMessage(options = {}) {
         }
 
         // 处理流式响应
-        await handleStreamingResponse(response, waitingDiv);
+        await handleAgentStreamingResponse(response, waitingDiv);
 
     } catch (error) {
         removeWaitingAnimation();
