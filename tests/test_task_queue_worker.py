@@ -29,8 +29,9 @@ def test_worker_handlers_are_registered():
     assert get_handler("pdf_generation").__name__ == "export_pdf"
     assert get_handler("pdf_to_pptx_conversion").__name__ == "export_pptx"
     assert get_handler("html_to_pptx_screenshot").__name__ == "export_html_screenshot_pptx"
+    assert get_handler("narration_audio_export").__name__ == "export_narration_audio"
+    assert get_handler("narration_video_export").__name__ == "export_narration_video"
 
 
 async def _noop():
     return None
-

@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import tempfile
+from pathlib import Path
 
 from pptx import Presentation
 from pptx.util import Inches
@@ -16,6 +17,7 @@ from ...services.pyppeteer_pdf_converter import get_pdf_converter
 from ...services.speech_script_repository import SpeechScriptRepository
 from ...services.storage import get_artifact_service
 from ...web.route_modules.export_support import _generate_pdf_with_pyppeteer, _prepare_html_for_file_based_export
+from ...web.route_modules.narration_routes import _build_narration_audio_export_zip
 from ...web.route_modules.support import ppt_service
 from ..registry import task_handler
 
@@ -206,3 +208,92 @@ async def export_html_screenshot_pptx(task) -> dict:
         if os.path.exists(temp_pptx_path):
             os.unlink(temp_pptx_path)
 
+
+@task_handler("narration_audio_export")
+async def export_narration_audio(task) -> dict:
+    metadata = task.metadata if isinstance(task.metadata, dict) else {}
+    project = await _project_for_task(task)
+    if not project:
+        return {"success": False, "error": "Project not found"}
+
+    from ...services.narration_service import NarrationService
+
+    language = str(metadata.get("language") or "zh").strip().lower() or "zh"
+    provider = str(metadata.get("provider") or "auto").strip().lower() or "auto"
+    await _set_progress(task.task_id, 5)
+    items = await NarrationService(user_id=int(metadata["user_id"])).generate_project_slide_audios(
+        project_id=str(metadata["project_id"]),
+        slide_indices=None,
+        provider=provider,
+        language=language,
+        voice=metadata.get("voice"),
+        rate=str(metadata.get("rate") or "+0%"),
+        reference_audio_path=metadata.get("reference_audio_path"),
+        reference_text=str(metadata.get("reference_text") or ""),
+        voice_prompt=str(metadata.get("voice_prompt") or ""),
+        force_regenerate=bool(metadata.get("force_regenerate")),
+        uploads_dir="uploads",
+    )
+    if not items:
+        return {"success": False, "error": "No narration audio available for export"}
+
+    await _set_progress(task.task_id, 78)
+    zip_path = _build_narration_audio_export_zip(
+        project_topic=project.topic,
+        slides_data=project.slides_data or [],
+        language=language,
+        items=items,
+    )
+    try:
+        await _set_progress(task.task_id, 96)
+        artifact_id = await _save_artifact(
+            task,
+            zip_path,
+            "narration_audio_export",
+            f"{project.topic}_narration_audio_{language}.zip",
+            "application/zip",
+        )
+        return {"success": True, "artifact_id": artifact_id, "language": language, "provider": provider, "count": len(items)}
+    finally:
+        if os.path.exists(zip_path):
+            os.unlink(zip_path)
+
+
+@task_handler("narration_video_export")
+async def export_narration_video(task) -> dict:
+    metadata = task.metadata if isinstance(task.metadata, dict) else {}
+    project = await _project_for_task(task)
+    if not project:
+        return {"success": False, "error": "Project not found"}
+
+    from ...services.video_export_service import NarrationVideoExportService
+
+    language = str(metadata.get("language") or "zh").strip().lower() or "zh"
+    fps = 60 if int(metadata.get("fps") or 30) == 60 else 30
+    await _set_progress(task.task_id, 5)
+    result = await NarrationVideoExportService().export_project_video(
+        project=project,
+        language=language,
+        fps=fps,
+        width=1920,
+        height=1080,
+        embed_subtitles=bool(metadata.get("embed_subtitles", True)),
+        subtitle_style=metadata.get("subtitle_style"),
+        render_mode=str(metadata.get("render_mode") or "live"),
+        uploads_dir="uploads",
+    )
+    if not isinstance(result, dict) or not result.get("success"):
+        return result if isinstance(result, dict) else {"success": False, "error": "Narration video export failed"}
+
+    video_path = result.get("video_path")
+    if not video_path or not Path(video_path).exists():
+        return {"success": False, "error": "Narration video file not found"}
+
+    artifact_id = await _save_artifact(
+        task,
+        str(video_path),
+        "narration_video_export",
+        f"{project.topic}_narration_{language}.mp4",
+        "video/mp4",
+    )
+    return {**result, "artifact_id": artifact_id, "video_path": None}

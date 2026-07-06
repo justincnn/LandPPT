@@ -1009,34 +1009,6 @@ async def batch_download_images(
             headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
         )
 
-        image_infos = []
-        for image_id in request.image_ids:
-            try:
-                image_info = await image_service.get_image(image_id)
-                if image_info and image_info.local_path:
-                    image_path = Path(image_info.local_path)
-                    if image_path.exists():
-                        image_infos.append({
-                            'path': str(image_path),
-                            'filename': image_info.filename
-                        })
-            except Exception as e:
-                logger.warning(f"Failed to get image {image_id}: {e}")
-                continue
-
-        # 在线程池中创建ZIP文件
-        zip_data = await run_blocking_io(_create_zip_sync, image_infos)
-
-        # 生成文件名
-        timestamp = int(time.time())
-        filename = f"images_{timestamp}.zip"
-
-        return StreamingResponse(
-            io.BytesIO(zip_data),
-            media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
-        )
-
     except Exception as e:
         logger.error(f"Batch download failed: {e}")
         raise HTTPException(status_code=500, detail=f"Batch download failed: {str(e)}")

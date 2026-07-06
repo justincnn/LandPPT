@@ -64,17 +64,20 @@ def _ensure_task_access(task, user: User) -> None:
         raise HTTPException(status_code=404, detail="Task not found")
 
 
-async def _stream_artifact_response(artifact, *, inline: bool = False):
+async def _stream_artifact_response(artifact, *, inline: bool = False, extra_headers: dict[str, str] | None = None):
     artifact_service = get_artifact_service()
     disposition = "inline" if inline else "attachment"
     safe_filename = urllib.parse.quote(artifact.filename or "download", safe="")
+    headers = {
+        "Content-Disposition": f"{disposition}; filename*=UTF-8''{safe_filename}",
+        "X-Artifact-Id": artifact.id,
+    }
+    if extra_headers:
+        headers.update(extra_headers)
     return StreamingResponse(
         artifact_service.open_stream(artifact),
         media_type=artifact.content_type or "application/octet-stream",
-        headers={
-            "Content-Disposition": f"{disposition}; filename*=UTF-8''{safe_filename}",
-            "X-Artifact-Id": artifact.id,
-        },
+        headers=headers,
     )
 
 
@@ -928,6 +931,10 @@ async def download_task_result(
     if artifact_id:
         artifact = await get_artifact_service().get_artifact(str(artifact_id))
         if artifact:
+            if task.task_type == "narration_audio_export":
+                return await _stream_artifact_response(artifact, extra_headers={"X-Export-Method": "Narration-Audio"})
+            if task.task_type == "narration_video_export":
+                return await _stream_artifact_response(artifact, extra_headers={"X-Export-Method": "Narration-Video"})
             return await _stream_artifact_response(artifact)
 
     pptx_path = result.get("pptx_path")
@@ -980,7 +987,7 @@ async def download_task_result(
                 content_type=media_type,
             )
             cleanup_temp_files()
-            return await _stream_artifact_response(artifact)
+            return await _stream_artifact_response(artifact, extra_headers={"X-Export-Method": "Narration-Audio"})
 
         if isinstance(result, dict) and result.get("error"):
             raise HTTPException(status_code=400, detail=str(result.get("error")))
@@ -1030,7 +1037,7 @@ async def download_task_result(
                 filename=filename,
                 content_type="video/mp4",
             )
-            return await _stream_artifact_response(artifact)
+            return await _stream_artifact_response(artifact, extra_headers={"X-Export-Method": "Narration-Video"})
 
         # Provide a more helpful message when the result isn't downloadable.
         if isinstance(result, dict) and result.get("error"):
