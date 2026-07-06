@@ -58,3 +58,6 @@ IDENTITY.md
 SOUL.md
 TOOLS.md
 USER.md
+
+# Claude Code local settings
+.claude/settings.local.json
