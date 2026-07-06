@@ -37,6 +37,10 @@ kubectl port-forward -n landppt svc/landppt 8000:8000
 | `storage.s3.endpointUrl` / `storage.s3.bucket` | MinIO/S3 endpoint 和 bucket | `http://minio.minio.svc.cluster.local:9000` / `landppt` |
 | `worker.enabled` / `worker.replicaCount` | 启用独立任务 Worker 和副本数 | `true` / `1` |
 | `persistence.enabled` | 是否挂载旧式业务 PVC；对象存储模式默认关闭 | `false` |
+| `web.autoscaling.enabled` / `worker.autoscaling.enabled` | Web / Worker HPA | `false` / `false` |
+| `web.pdb.enabled` / `worker.pdb.enabled` | Web / Worker PodDisruptionBudget | `false` / `false` |
+| `networkPolicy.enabled` | 生成基础 NetworkPolicy | `false` |
+| `observability.serviceMonitor.enabled` | 生成 Prometheus Operator ServiceMonitor | `false` |
 | `postgresql.enabled` | 部署内置 PostgreSQL | `true` |
 | `externalDatabase.url` | 外部数据库连接串（关闭内置时必填） | `""` |
 | `valkey.enabled` | 部署内置 Valkey 缓存 | `true` |
