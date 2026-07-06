@@ -150,6 +150,15 @@ class DatabaseMigration:
             "down": self._migration_014_down,
         })
 
+        # Migration 015: Persistent async task state
+        self.migrations.append({
+            "version": "015",
+            "name": "add_async_tasks_table",
+            "description": "Add async_tasks table for web/worker shared task state",
+            "up": self._migration_015_up,
+            "down": self._migration_015_down,
+        })
+
     @staticmethod
     def _dialect_name(session: AsyncSession) -> str:
         try:
@@ -1365,6 +1374,94 @@ class DatabaseMigration:
         except Exception as e:
             await session.rollback()
             logger.error(f"Migration 014 rollback failed: {e}")
+            raise
+
+    async def _migration_015_up(self, session: AsyncSession):
+        """Create async_tasks table for persistent task state."""
+        logger.info("Running migration 015: Creating async_tasks table")
+        dialect = self._dialect_name(session)
+        if dialect == "postgresql":
+            create_table_sql = """
+            CREATE TABLE IF NOT EXISTS async_tasks (
+                id VARCHAR(36) PRIMARY KEY,
+                task_type VARCHAR(100) NOT NULL,
+                status VARCHAR(30) NOT NULL,
+                user_id INTEGER NULL REFERENCES users(id),
+                project_id VARCHAR(36) NULL REFERENCES projects(project_id),
+                progress DOUBLE PRECISION NOT NULL DEFAULT 0,
+                input JSONB NOT NULL DEFAULT '{}'::jsonb,
+                result JSONB NULL,
+                error TEXT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                locked_by VARCHAR(100) NULL,
+                started_at DOUBLE PRECISION NULL,
+                finished_at DOUBLE PRECISION NULL,
+                created_at DOUBLE PRECISION NOT NULL,
+                updated_at DOUBLE PRECISION NOT NULL
+            )
+            """
+        else:
+            create_table_sql = """
+            CREATE TABLE IF NOT EXISTS async_tasks (
+                id VARCHAR(36) PRIMARY KEY,
+                task_type VARCHAR(100) NOT NULL,
+                status VARCHAR(30) NOT NULL,
+                user_id INTEGER NULL,
+                project_id VARCHAR(36) NULL,
+                progress FLOAT NOT NULL DEFAULT 0,
+                input JSON NOT NULL DEFAULT '{}',
+                result JSON NULL,
+                error TEXT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                locked_by VARCHAR(100) NULL,
+                started_at FLOAT NULL,
+                finished_at FLOAT NULL,
+                created_at FLOAT NOT NULL,
+                updated_at FLOAT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(project_id) REFERENCES projects(project_id)
+            )
+            """
+
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_async_tasks_task_type ON async_tasks(task_type)",
+            "CREATE INDEX IF NOT EXISTS idx_async_tasks_status ON async_tasks(status)",
+            "CREATE INDEX IF NOT EXISTS idx_async_tasks_user_id ON async_tasks(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_async_tasks_project_id ON async_tasks(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_async_tasks_updated_at ON async_tasks(updated_at)",
+        ]
+        try:
+            await session.execute(text(create_table_sql))
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.commit()
+            logger.info("Migration 015 completed successfully")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 015 failed: {e}")
+            raise
+
+    async def _migration_015_down(self, session: AsyncSession):
+        """Migration 015 rollback."""
+        logger.info("Rolling back migration 015: Removing async_tasks table")
+        indexes = [
+            "DROP INDEX IF EXISTS idx_async_tasks_task_type",
+            "DROP INDEX IF EXISTS idx_async_tasks_status",
+            "DROP INDEX IF EXISTS idx_async_tasks_user_id",
+            "DROP INDEX IF EXISTS idx_async_tasks_project_id",
+            "DROP INDEX IF EXISTS idx_async_tasks_updated_at",
+        ]
+        try:
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.execute(text("DROP TABLE IF EXISTS async_tasks"))
+            await session.commit()
+            logger.info("Migration 015 rollback completed")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 015 rollback failed: {e}")
             raise
 
     async def _create_migration_table(self, session: AsyncSession):

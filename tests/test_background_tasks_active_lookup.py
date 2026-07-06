@@ -84,3 +84,35 @@ async def test_find_active_task_async_returns_refreshed_active_task(monkeypatch)
 
     assert result is cached_task
     assert manager.tasks["task-1"] is cached_task
+
+
+@pytest.mark.asyncio
+async def test_get_task_async_falls_back_to_persistent_store(monkeypatch):
+    from landppt.services.background_tasks import BackgroundTaskManager, TaskStatus
+
+    manager = BackgroundTaskManager()
+    persisted_task = _task(
+        "task-1",
+        TaskStatus.COMPLETED,
+        updated_at=datetime.now(),
+    )
+
+    async def fake_get_task_from_cache(task_id):
+        assert task_id == "task-1"
+        return None
+
+    async def fake_get_task_from_db(task_id):
+        assert task_id == "task-1"
+        return persisted_task
+
+    async def fake_save_task_to_cache(task):
+        assert task is persisted_task
+
+    monkeypatch.setattr(manager, "_get_task_from_cache", fake_get_task_from_cache)
+    monkeypatch.setattr(manager, "_get_task_from_db", fake_get_task_from_db)
+    monkeypatch.setattr(manager, "_save_task_to_cache", fake_save_task_to_cache)
+
+    result = await manager.get_task_async("task-1")
+
+    assert result is persisted_task
+    assert manager.tasks["task-1"] is persisted_task

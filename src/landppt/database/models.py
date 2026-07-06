@@ -424,6 +424,32 @@ class Artifact(Base):
     project: Mapped[Optional["Project"]] = relationship("Project")
 
 
+class AsyncTask(Base):
+    """Persistent task state shared by web and worker processes."""
+
+    __tablename__ = "async_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, index=True)
+    task_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("projects.project_id"), nullable=True, index=True)
+    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    input_data: Mapped[Dict[str, Any]] = mapped_column("input", JSON, default=dict, nullable=False)
+    result: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    locked_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    started_at: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    finished_at: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_at: Mapped[float] = mapped_column(Float, default=time.time, nullable=False, index=True)
+    updated_at: Mapped[float] = mapped_column(Float, default=time.time, onupdate=time.time, nullable=False, index=True)
+
+    user: Mapped[Optional["User"]] = relationship("User")
+    project: Mapped[Optional["Project"]] = relationship("Project")
+
+
 class CreditTransaction(Base):
     """Credit transaction history for audit trail"""
     __tablename__ = "credit_transactions"
