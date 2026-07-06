@@ -25,6 +25,9 @@ CLAUDE.md
 .venv
 .claude
 
+# Local git worktrees
+.worktrees/
+
 # Temporary files and cache
 temp/
 *.tmp
