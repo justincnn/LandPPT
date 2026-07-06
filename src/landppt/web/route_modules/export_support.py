@@ -632,6 +632,26 @@ _PROJECTOR_STAGE_CSS = """
 
 _UI_AUTO_HIDE_JS = """
         var uiHideTimer = null;
+        function shouldRevealUiForKey(e) {
+            var key = e && e.key;
+            if (!key) return true;
+            var navigationKeys = {
+                ArrowLeft: true,
+                ArrowRight: true,
+                ArrowUp: true,
+                ArrowDown: true,
+                PageUp: true,
+                PageDown: true,
+                Home: true,
+                End: true,
+                ' ': true,
+                Spacebar: true,
+                Enter: true
+            };
+            if (navigationKeys[key]) return false;
+            if (key >= '1' && key <= '9') return false;
+            return true;
+        }
         function revealUi() {
             document.body.classList.remove('ui-hidden');
             if (uiHideTimer) clearTimeout(uiHideTimer);
@@ -640,7 +660,9 @@ _UI_AUTO_HIDE_JS = """
             }, 2500);
         }
         document.addEventListener('mousemove', revealUi);
-        document.addEventListener('keydown', revealUi);
+        document.addEventListener('keydown', function (e) {
+            if (shouldRevealUiForKey(e)) revealUi();
+        });
         document.addEventListener('touchstart', revealUi, { passive: true });
         revealUi();
 """
@@ -714,9 +736,15 @@ _WHEEL_NAV_JS = """
         document.addEventListener('wheel', handleProjectorWheel, { passive: false });
         window.addEventListener('message', function (e) {
             var data = e.data || {};
-            if (!data || data.type !== 'landppt-projector-wheel') return;
+            if (!data) return;
             if (!slideFrame || e.source !== slideFrame.contentWindow) return;
-            navigateProjectorWheel(Number(data.deltaY) || 0);
+            if (data.type === 'landppt-projector-wheel') {
+                navigateProjectorWheel(Number(data.deltaY) || 0);
+                return;
+            }
+            if (data.type === 'landppt-projector-key' && typeof handleProjectorKey === 'function') {
+                handleProjectorKey(String(data.key || ''));
+            }
         });
         if (slideFrame) {
             slideFrame.addEventListener('load', installSlideFrameWheelBridge);
@@ -770,22 +798,106 @@ _PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT = """<script>
 </script>"""
 
 
+_PROJECTOR_CHILD_KEY_BRIDGE_SCRIPT = """<script>
+(function () {
+    if (window.parent === window) return;
+
+    function shouldPreserveKeyTarget(target) {
+        if (!target || typeof target.closest !== 'function') return false;
+        if (target.isContentEditable) return true;
+        return Boolean(target.closest([
+            'a[href]',
+            'button',
+            'input',
+            'textarea',
+            'select',
+            'option',
+            'summary',
+            'canvas',
+            'iframe',
+            'audio[controls]',
+            'video[controls]',
+            '[contenteditable="true"]',
+            '[contenteditable=""]',
+            '[tabindex]:not([tabindex="-1"])',
+            '[role="application"]',
+            '[role="button"]',
+            '[role="checkbox"]',
+            '[role="combobox"]',
+            '[role="dialog"]',
+            '[role="grid"]',
+            '[role="link"]',
+            '[role="listbox"]',
+            '[role="menu"]',
+            '[role="menuitem"]',
+            '[role="radio"]',
+            '[role="slider"]',
+            '[role="spinbutton"]',
+            '[role="switch"]',
+            '[role="tab"]',
+            '[role="textbox"]',
+            '[role="tree"]',
+            '[role="treeitem"]'
+        ].join(',')));
+    }
+
+    function isProjectorKey(key) {
+        var keys = {
+            ArrowLeft: true,
+            ArrowRight: true,
+            ArrowUp: true,
+            ArrowDown: true,
+            PageUp: true,
+            PageDown: true,
+            Home: true,
+            End: true,
+            ' ': true,
+            Spacebar: true,
+            Enter: true,
+            Escape: true,
+            f: true,
+            F: true,
+            g: true,
+            G: true
+        };
+        return Boolean(keys[key] || (key >= '1' && key <= '9'));
+    }
+
+    window.addEventListener('keydown', function (e) {
+        if (e.defaultPrevented) return;
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        if (!isProjectorKey(e.key) || shouldPreserveKeyTarget(e.target)) return;
+        e.preventDefault();
+        window.parent.postMessage({ type: 'landppt-projector-key', key: e.key }, '*');
+    });
+})();
+</script>"""
+
+
 def _inject_projector_child_wheel_bridge(html_content: str) -> str:
     if not isinstance(html_content, str) or not html_content.strip():
         return html_content
-    if "landppt-projector-wheel" in html_content:
+
+    bridge_scripts = []
+    if "landppt-projector-wheel" not in html_content:
+        bridge_scripts.append(_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT)
+    if "landppt-projector-key" not in html_content:
+        bridge_scripts.append(_PROJECTOR_CHILD_KEY_BRIDGE_SCRIPT)
+    if not bridge_scripts:
         return html_content
+
+    bridge_script = "\n".join(bridge_scripts)
 
     if re.search(r"</body\s*>", html_content, flags=re.IGNORECASE):
         return re.sub(
             r"</body\s*>",
-            lambda match: f"{_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT}\n{match.group(0)}",
+            lambda match: f"{bridge_script}\n{match.group(0)}",
             html_content,
             count=1,
             flags=re.IGNORECASE,
         )
 
-    return f"{html_content}\n{_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT}"
+    return f"{html_content}\n{bridge_script}"
 
 
 def _generate_individual_slide_html_sync(slide, slide_number: int, total_slides: int, topic: str) -> str:
@@ -830,16 +942,24 @@ def _generate_individual_slide_html_sync(slide, slide_number: int, total_slides:
     <script>
 {_PROJECTOR_SCALE_JS}
 {_UI_AUTO_HIDE_JS}
-        document.addEventListener('keydown', function (e) {{
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {{
+        function handleProjectorKey(key) {{
+            if (key === 'ArrowLeft' || key === 'ArrowUp' || key === 'PageUp') {{
                 if ({slide_number} > 1) window.location.href = 'slide_{slide_number-1}.html';
-            }} else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') {{
+                return true;
+            }} else if (key === 'ArrowRight' || key === 'ArrowDown' || key === 'PageDown' || key === ' ' || key === 'Spacebar' || key === 'Enter') {{
                 if ({slide_number} < {total_slides}) window.location.href = 'slide_{slide_number+1}.html';
-            }} else if (e.key === 'Escape') {{
+                return true;
+            }} else if (key === 'Escape') {{
                 window.location.href = 'index.html';
-            }} else if (e.key === 'f' || e.key === 'F') {{
+                return true;
+            }} else if (key === 'f' || key === 'F') {{
                 toggleFullscreen();
+                return true;
             }}
+            return false;
+        }}
+        document.addEventListener('keydown', function (e) {{
+            if (handleProjectorKey(e.key)) e.preventDefault();
         }});
         document.getElementById('stageShield').addEventListener('click', function () {{
             if ({slide_number} < {total_slides}) window.location.href = 'slide_{slide_number+1}.html';
@@ -998,50 +1118,51 @@ def _generate_slideshow_index_sync(project, slide_files: list) -> str:
             grid.appendChild(item);
         }});
 
-        document.addEventListener('keydown', function (e) {{
-            if (overview.classList.contains('visible') && e.key === 'Escape') {{
+        function handleProjectorKey(key) {{
+            if (overview.classList.contains('visible') && key === 'Escape') {{
                 overview.classList.remove('visible');
-                return;
+                return true;
             }}
-            switch (e.key) {{
+            switch (key) {{
                 case 'ArrowLeft':
                 case 'ArrowUp':
                 case 'PageUp':
-                    e.preventDefault();
                     prevSlide();
-                    break;
+                    return true;
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case 'PageDown':
                 case ' ':
+                case 'Spacebar':
                 case 'Enter':
-                    e.preventDefault();
                     nextSlide();
-                    break;
+                    return true;
                 case 'Home':
-                    e.preventDefault();
                     showSlide(0);
-                    break;
+                    return true;
                 case 'End':
-                    e.preventDefault();
                     showSlide(TOTAL - 1);
-                    break;
+                    return true;
                 case 'f':
                 case 'F':
-                    e.preventDefault();
                     toggleFullscreen();
-                    break;
+                    return true;
                 case 'g':
                 case 'G':
-                    e.preventDefault();
                     toggleOverview();
-                    break;
+                    return true;
                 default:
-                    if (e.key >= '1' && e.key <= '9') {{
-                        var n = parseInt(e.key, 10) - 1;
+                    if (key >= '1' && key <= '9') {{
+                        var n = parseInt(key, 10) - 1;
                         if (n < TOTAL) showSlide(n);
+                        return true;
                     }}
             }}
+            return false;
+        }}
+
+        document.addEventListener('keydown', function (e) {{
+            if (handleProjectorKey(e.key)) e.preventDefault();
         }});
     </script>
 </body>
