@@ -47,6 +47,13 @@ async def _stream_artifact_response(artifact, *, attachment: bool = False):
     )
 
 
+async def _read_artifact_bytes(artifact) -> bytes:
+    chunks = []
+    async for chunk in get_artifact_service().open_stream(artifact):
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 class ImageGenerationRequest(BaseModel):
     prompt: str
     provider: Optional[str] = None
@@ -954,6 +961,54 @@ async def batch_download_images(
         image_service = get_image_service()
 
         # 获取所有图片信息
+        zip_buffer = io.BytesIO()
+        added_count = 0
+        used_names = set()
+        artifact_service = get_artifact_service()
+
+        def safe_zip_name(name: str, fallback: str) -> str:
+            candidate = os.path.basename(name or fallback) or fallback
+            stem, ext = os.path.splitext(candidate)
+            unique = candidate
+            index = 2
+            while unique in used_names:
+                unique = f"{stem}-{index}{ext}"
+                index += 1
+            used_names.add(unique)
+            return unique
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for image_id in request.image_ids:
+                try:
+                    artifact = await artifact_service.get_task_artifact(image_id, artifact_type="image_cache")
+                    if artifact:
+                        zip_file.writestr(safe_zip_name(artifact.filename, image_id), await _read_artifact_bytes(artifact))
+                        added_count += 1
+                        continue
+
+                    image_info = await image_service.get_image(image_id)
+                    if image_info and image_info.local_path:
+                        image_path = Path(image_info.local_path)
+                        if image_path.exists():
+                            zip_file.write(str(image_path), safe_zip_name(image_info.filename, image_path.name))
+                            added_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to get image {image_id}: {e}")
+                    continue
+
+        if added_count == 0:
+            raise HTTPException(status_code=404, detail="No downloadable images found")
+
+        zip_buffer.seek(0)
+        timestamp = int(time.time())
+        filename = f"images_{timestamp}.zip"
+
+        return StreamingResponse(
+            io.BytesIO(zip_buffer.read()),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+        )
+
         image_infos = []
         for image_id in request.image_ids:
             try:
