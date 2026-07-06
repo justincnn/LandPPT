@@ -128,11 +128,19 @@ def test_html_zip_export_keeps_interactive_slide_html_without_duplicate_viewers(
         assert 'src="slides/slide_1.html"' in index_html
         assert ".stage-shield" in index_html
         assert "pointer-events: none" in index_html
+        assert "function installSlideFrameWheelBridge()" in index_html
+        assert "frameDocument.addEventListener('wheel', handleProjectorWheel" in index_html
+        assert "slideFrame.addEventListener('load', installSlideFrameWheelBridge)" in index_html
+        assert "window.addEventListener('message'" in index_html
+        assert "landppt-projector-wheel" in index_html
+        assert "input, textarea, select" in index_html
 
         first_slide = archive.read("slides/slide_1.html").decode("utf-8")
         assert 'href="https://example.com/path"' in first_slide
         assert 'onclick="window.clicked = true"' in first_slide
         assert "<script>window.loaded = true;</script>" in first_slide
+        assert "window.parent.postMessage({ type: 'landppt-projector-wheel'" in first_slide
 
         second_slide = archive.read("slides/slide_2.html").decode("utf-8")
         assert 'onclick="window.second = true"' in second_slide
+        assert "window.parent.postMessage({ type: 'landppt-projector-wheel'" in second_slide

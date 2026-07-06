@@ -124,6 +124,64 @@ function scheduleSlideshowFrameScale() {
     requestAnimationFrame(applySlideshowFrameScale);
 }
 
+function canScrollSlideshowWheelTarget(target, deltaY) {
+    const doc = target && target.ownerDocument;
+    const win = doc && (doc.defaultView || window);
+    if (!doc || !win) return false;
+
+    let node = target;
+    while (node && node.nodeType === 1) {
+        const style = win.getComputedStyle(node);
+        const overflowY = `${style.overflowY || ''} ${style.overflow || ''}`;
+        const canScrollY = /(auto|scroll|overlay)/.test(overflowY)
+            && node.scrollHeight > node.clientHeight + 1;
+
+        if (canScrollY) {
+            const canScrollDown = deltaY > 0
+                && node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+            const canScrollUp = deltaY < 0 && node.scrollTop > 1;
+            if (canScrollDown || canScrollUp) {
+                return true;
+            }
+        }
+
+        if (node === doc.body || node === doc.documentElement) {
+            break;
+        }
+        node = node.parentElement;
+    }
+    return false;
+}
+
+function shouldPreserveSlideshowWheelTarget(target, deltaY) {
+    if (!target || typeof target.closest !== 'function') return false;
+    if (target.closest('input, textarea, select, option, [contenteditable="true"], [contenteditable=""], [role="textbox"]')) {
+        return true;
+    }
+    return canScrollSlideshowWheelTarget(target, deltaY);
+}
+
+function handleSlideshowFrameWheel(e) {
+    if (!isSlideshow) return;
+    if (shouldPreserveSlideshowWheelTarget(e.target, e.deltaY)) return;
+    handleSlideshowWheel(e);
+}
+
+function installSlideshowFrameWheelBridge(iframe) {
+    if (!iframe) return;
+    try {
+        const frameWindow = iframe.contentWindow;
+        const frameDoc = iframe.contentDocument || (frameWindow && frameWindow.document);
+        if (!frameWindow || !frameDoc || frameWindow.__landpptSlideshowWheelBridgeInstalled) {
+            return;
+        }
+        frameWindow.__landpptSlideshowWheelBridgeInstalled = true;
+        frameDoc.addEventListener('wheel', handleSlideshowFrameWheel, { passive: false });
+    } catch (error) {
+        // Cross-origin frames cannot be bridged; srcdoc slideshow frames are same-origin.
+    }
+}
+
 // 遮罩层点击翻页
 function handleSlideshowShieldClick() {
     nextSlideshow();
@@ -134,6 +192,7 @@ let slideshowWheelLockUntil = 0;
 
 function handleSlideshowWheel(e) {
     if (!isSlideshow) return;
+    if (shouldPreserveSlideshowWheelTarget(e.target, e.deltaY)) return;
     e.preventDefault();
     const now = Date.now();
     if (now < slideshowWheelLockUntil || Math.abs(e.deltaY) < 4) return;
@@ -326,6 +385,7 @@ function setSafeIframeContentNoFlash(iframe, html, callback) {
 
     // 检查内容是否相同，避免不必要的更新
     if (iframe.getAttribute('data-current-content') === html) {
+        installSlideshowFrameWheelBridge(iframe);
         if (callback) callback();
         return;
     }
@@ -338,6 +398,7 @@ function setSafeIframeContentNoFlash(iframe, html, callback) {
         // 监听加载完成
         const handleLoad = () => {
             iframe.removeEventListener('load', handleLoad);
+            installSlideshowFrameWheelBridge(iframe);
             if (callback) {
                 // 短暂延迟确保内容完全渲染
                 setTimeout(callback, 50);
@@ -349,6 +410,7 @@ function setSafeIframeContentNoFlash(iframe, html, callback) {
         // 备用超时机制
         setTimeout(() => {
             iframe.removeEventListener('load', handleLoad);
+            installSlideshowFrameWheelBridge(iframe);
             if (callback) callback();
         }, 500);
 

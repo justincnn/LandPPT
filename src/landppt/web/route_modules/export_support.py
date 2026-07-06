@@ -480,6 +480,7 @@ def _generate_html_export_sync(project, base_url: Optional[str] = None) -> bytes
             raw_html = _wrap_raw_slide_html_sync(slide, project.topic)
             if export_base_url:
                 raw_html = _prepare_html_for_file_based_export(raw_html, export_base_url)
+            raw_html = _inject_projector_child_wheel_bridge(raw_html)
             with open(raw_dir / slide_filename, 'w', encoding='utf-8') as f:
                 f.write(raw_html)
 
@@ -649,15 +650,142 @@ _UI_AUTO_HIDE_JS = """
 # 在.overview（目录）内滚动时不拦截，保持列表原生滚动。
 _WHEEL_NAV_JS = """
         var wheelLockUntil = 0;
-        document.addEventListener('wheel', function (e) {
+        function canScrollProjectorWheelTarget(target, deltaY) {
+            var doc = target && target.ownerDocument;
+            var win = doc && (doc.defaultView || window);
+            if (!doc || !win) return false;
+
+            var node = target;
+            while (node && node.nodeType === 1) {
+                var style = win.getComputedStyle(node);
+                var overflowY = (style.overflowY || '') + ' ' + (style.overflow || '');
+                var canScrollY = /(auto|scroll|overlay)/.test(overflowY)
+                    && node.scrollHeight > node.clientHeight + 1;
+
+                if (canScrollY) {
+                    var canScrollDown = deltaY > 0
+                        && node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+                    var canScrollUp = deltaY < 0 && node.scrollTop > 1;
+                    if (canScrollDown || canScrollUp) return true;
+                }
+
+                if (node === doc.body || node === doc.documentElement) break;
+                node = node.parentElement;
+            }
+            return false;
+        }
+
+        function shouldPreserveProjectorWheelTarget(target, deltaY) {
+            if (!target || typeof target.closest !== 'function') return false;
+            if (target.closest('input, textarea, select, option, [contenteditable="true"], [contenteditable=""], [role="textbox"]')) {
+                return true;
+            }
+            return canScrollProjectorWheelTarget(target, deltaY);
+        }
+
+        function handleProjectorWheel(e) {
             if (e.target.closest && e.target.closest('.overview')) return;
+            if (shouldPreserveProjectorWheelTarget(e.target, e.deltaY)) return;
             e.preventDefault();
+            navigateProjectorWheel(e.deltaY);
+        }
+
+        function navigateProjectorWheel(deltaY) {
             var now = Date.now();
-            if (now < wheelLockUntil || Math.abs(e.deltaY) < 4) return;
+            if (now < wheelLockUntil || Math.abs(deltaY) < 4) return;
             wheelLockUntil = now + 350;
-            if (e.deltaY > 0) { wheelNext(); } else { wheelPrev(); }
-        }, { passive: false });
+            if (deltaY > 0) { wheelNext(); } else { wheelPrev(); }
+        }
+
+        function installSlideFrameWheelBridge() {
+            var frame = document.getElementById('slideFrame');
+            if (!frame) return;
+            try {
+                var frameWindow = frame.contentWindow;
+                var frameDocument = frame.contentDocument || (frameWindow && frameWindow.document);
+                if (!frameWindow || !frameDocument || frameWindow.__landpptProjectorWheelBridgeInstalled) return;
+                frameWindow.__landpptProjectorWheelBridgeInstalled = true;
+                frameDocument.addEventListener('wheel', handleProjectorWheel, { passive: false });
+            } catch (error) {
+                // Ignore inaccessible frames; exported slide files are same-origin.
+            }
+        }
+
+        document.addEventListener('wheel', handleProjectorWheel, { passive: false });
+        window.addEventListener('message', function (e) {
+            var data = e.data || {};
+            if (!data || data.type !== 'landppt-projector-wheel') return;
+            if (!slideFrame || e.source !== slideFrame.contentWindow) return;
+            navigateProjectorWheel(Number(data.deltaY) || 0);
+        });
+        if (slideFrame) {
+            slideFrame.addEventListener('load', installSlideFrameWheelBridge);
+        }
+        installSlideFrameWheelBridge();
 """
+
+
+_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT = """<script>
+(function () {
+    if (window.parent === window) return;
+    function canScrollWheelTarget(target, deltaY) {
+        var doc = target && target.ownerDocument;
+        var win = doc && (doc.defaultView || window);
+        if (!doc || !win) return false;
+
+        var node = target;
+        while (node && node.nodeType === 1) {
+            var style = win.getComputedStyle(node);
+            var overflowY = (style.overflowY || '') + ' ' + (style.overflow || '');
+            var canScrollY = /(auto|scroll|overlay)/.test(overflowY)
+                && node.scrollHeight > node.clientHeight + 1;
+
+            if (canScrollY) {
+                var canScrollDown = deltaY > 0
+                    && node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+                var canScrollUp = deltaY < 0 && node.scrollTop > 1;
+                if (canScrollDown || canScrollUp) return true;
+            }
+
+            if (node === doc.body || node === doc.documentElement) break;
+            node = node.parentElement;
+        }
+        return false;
+    }
+
+    function shouldPreserveWheelTarget(target, deltaY) {
+        if (!target || typeof target.closest !== 'function') return false;
+        if (target.closest('input, textarea, select, option, [contenteditable="true"], [contenteditable=""], [role="textbox"]')) {
+            return true;
+        }
+        return canScrollWheelTarget(target, deltaY);
+    }
+
+    document.addEventListener('wheel', function (e) {
+        if (shouldPreserveWheelTarget(e.target, e.deltaY)) return;
+        e.preventDefault();
+        window.parent.postMessage({ type: 'landppt-projector-wheel', deltaY: e.deltaY }, '*');
+    }, { passive: false });
+})();
+</script>"""
+
+
+def _inject_projector_child_wheel_bridge(html_content: str) -> str:
+    if not isinstance(html_content, str) or not html_content.strip():
+        return html_content
+    if "landppt-projector-wheel" in html_content:
+        return html_content
+
+    if re.search(r"</body\s*>", html_content, flags=re.IGNORECASE):
+        return re.sub(
+            r"</body\s*>",
+            lambda match: f"{_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT}\n{match.group(0)}",
+            html_content,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    return f"{html_content}\n{_PROJECTOR_CHILD_WHEEL_BRIDGE_SCRIPT}"
 
 
 def _generate_individual_slide_html_sync(slide, slide_number: int, total_slides: int, topic: str) -> str:

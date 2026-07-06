@@ -15,6 +15,10 @@ from pydantic import BaseModel
 
 AgentEditMode = Literal["slide", "element"]
 
+_MAX_CONVERSATION_HISTORY_MESSAGES = 10
+_MAX_CONVERSATION_HISTORY_TOTAL_CHARS = 6000
+_MAX_CONVERSATION_HISTORY_MESSAGE_CHARS = 1200
+
 
 class SlideEditAgentRequest(BaseModel):
     projectId: str
@@ -1008,6 +1012,7 @@ class SlideEditAgentService:
             "selected_element_id": request.selectedElementId,
             "selected_element_html": request.selectedElementHtml,
             "user_request": request.userRequest,
+            "conversation_history": self._conversation_history_context(request),
             "current_html": runner.current_html,
             "vision": self._vision_context(request),
             "available_tools": self._tool_schemas(runner),
@@ -1016,9 +1021,58 @@ class SlideEditAgentService:
         }
         return (
             "Use a ReAct loop to edit this PPT slide. Choose exactly one action. "
-            "Use final when the draft is ready. Return strict JSON only.\n\n"
+            "Use conversation_history for continuity, but execute the latest "
+            "user_request. Use final when the draft is ready. Return strict JSON only.\n\n"
             + json.dumps(context, ensure_ascii=False, indent=2)
         )
+
+    def _conversation_history_context(
+        self, request: SlideEditAgentRequest
+    ) -> List[Dict[str, str]]:
+        cleaned: List[Dict[str, str]] = []
+        total_chars = 0
+
+        for item in reversed(request.chatHistory or []):
+            if len(cleaned) >= _MAX_CONVERSATION_HISTORY_MESSAGES:
+                break
+            if not isinstance(item, dict):
+                continue
+
+            role = str(item.get("role") or "").strip().lower()
+            if role not in {"user", "assistant"}:
+                continue
+
+            content = str(item.get("content") or "").strip()
+            if not content:
+                continue
+
+            remaining_chars = _MAX_CONVERSATION_HISTORY_TOTAL_CHARS - total_chars
+            if remaining_chars <= 0:
+                break
+
+            max_chars = min(
+                remaining_chars,
+                _MAX_CONVERSATION_HISTORY_MESSAGE_CHARS,
+            )
+            content = self._truncate_history_content(content, max_chars)
+            if not content:
+                continue
+
+            cleaned.append({"role": role, "content": content})
+            total_chars += len(content)
+
+        cleaned.reverse()
+        return cleaned
+
+    @staticmethod
+    def _truncate_history_content(content: str, max_chars: int) -> str:
+        if max_chars <= 0:
+            return ""
+        if len(content) <= max_chars:
+            return content
+        if max_chars <= 3:
+            return content[:max_chars]
+        return content[: max_chars - 3].rstrip() + "..."
 
     def _vision_context(self, request: SlideEditAgentRequest) -> Dict[str, Any]:
         attachments: List[Dict[str, Any]] = []
