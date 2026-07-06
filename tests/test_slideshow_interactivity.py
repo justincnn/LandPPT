@@ -19,3 +19,15 @@ def test_editor_slideshow_shield_does_not_block_slide_interactions():
         css,
         flags=re.DOTALL,
     )
+
+
+def test_editor_slideshow_bridges_iframe_wheel_navigation():
+    script = _read(
+        "src/landppt/web/static/js/pages/project/slides_editor/projectSlidesEditor.slideshow.js"
+    )
+
+    assert "function installSlideshowFrameWheelBridge(iframe)" in script
+    assert "frameDoc.addEventListener('wheel', handleSlideshowFrameWheel" in script
+    assert "installSlideshowFrameWheelBridge(iframe);" in script
+    assert "function shouldPreserveSlideshowWheelTarget(target, deltaY)" in script
+    assert "input, textarea, select" in script
