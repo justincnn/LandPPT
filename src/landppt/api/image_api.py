@@ -23,6 +23,7 @@ import aiohttp
 from ..services.image.image_service import get_image_service
 from ..services.image.config.image_config import get_image_config, ImageServiceConfig
 from ..services.db_config_service import get_db_config_service
+from ..services.storage import get_artifact_service
 from ..auth.middleware import get_current_user_required
 from ..auth.request_context import current_user_id, USER_SCOPE_ALL
 from ..database.models import User
@@ -31,6 +32,19 @@ from ..utils.thread_pool import run_blocking_io, to_thread
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def _get_image_cache_artifact(image_id: str):
+    return await get_artifact_service().get_task_artifact(image_id, artifact_type="image_cache")
+
+
+async def _stream_artifact_response(artifact, *, attachment: bool = False):
+    disposition = "attachment" if attachment else "inline"
+    return StreamingResponse(
+        get_artifact_service().open_stream(artifact),
+        media_type=artifact.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'{disposition}; filename="{artifact.filename}"'},
+    )
 
 
 class ImageGenerationRequest(BaseModel):
@@ -762,6 +776,10 @@ async def view_image(
         image_service = get_image_service()
         image_info = await image_service.get_image(image_id)
 
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact)
+
         if not image_info or not image_info.local_path:
             raise HTTPException(status_code=404, detail="Image not found")
 
@@ -801,6 +819,10 @@ async def get_image_thumbnail(
 
         # 如果没有缩略图，返回原图
         image_info = await image_service.get_image(image_id)
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact)
+
         if image_info and image_info.local_path and Path(image_info.local_path).exists():
             return FileResponse(
                 path=str(image_info.local_path),
@@ -825,6 +847,10 @@ async def download_image(
     try:
         image_service = get_image_service()
         image_info = await image_service.get_image(image_id)
+
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact, attachment=True)
 
         if not image_info or not image_info.local_path:
             raise HTTPException(status_code=404, detail="Image not found")
