@@ -5,10 +5,14 @@
 ## 快速开始
 
 ```bash
+kubectl create secret generic landppt-keys \
+  --namespace landppt \
+  --from-literal=SECRET_KEY=$(openssl rand -hex 32) \
+  --from-literal=OPENAI_API_KEY=sk-xxx
+
 helm install landppt ./helm/landppt \
   --namespace landppt --create-namespace \
-  --set app.secrets.SECRET_KEY=$(openssl rand -hex 32) \
-  --set app.secrets.OPENAI_API_KEY=sk-xxx \
+  --set app.existingSecret=landppt-keys \
   --set postgresql.auth.password=$(openssl rand -hex 16)
 ```
 
@@ -23,11 +27,12 @@ kubectl port-forward -n landppt svc/landppt 8000:8000
 
 | 参数 | 说明 | 默认值 |
 |---|---|---|
-| `image.repository` / `image.tag` | 镜像 | `bradleylzh/landppt:latest` |
+| `image.repository` / `image.tag` | 镜像 | `bradleylzh/landppt:0.3.1` |
 | `app.workers` | uvicorn worker 数 | `2` |
 | `app.env` | 非敏感环境变量（ConfigMap） | 见 values.yaml |
-| `app.secrets` | 敏感环境变量（Secret），如 API Key | `SECRET_KEY` |
+| `app.secrets` | 敏感环境变量（Secret），生产建议使用 `app.existingSecret` | `{}` |
 | `app.existingSecret` | 使用已有 Secret（key 即环境变量名） | `""` |
+| `migration.enabled` / `migration.hook` | 数据库迁移 Job / Helm Hook | `false` / `false` |
 | `postgresql.enabled` | 部署内置 PostgreSQL | `true` |
 | `externalDatabase.url` | 外部数据库连接串（关闭内置时必填） | `""` |
 | `valkey.enabled` | 部署内置 Valkey 缓存 | `true` |
@@ -56,6 +61,18 @@ kubectl create secret generic landppt-keys \
 
 helm install landppt ./helm/landppt --set app.existingSecret=landppt-keys
 ```
+
+未设置 `app.existingSecret` 时，必须通过 `app.secrets` 显式提供 `SECRET_KEY` 等敏感值；chart 不再提供生产不安全的默认密钥。
+
+## 数据库迁移 Job
+
+Chart 默认设置 `migration.enabled=false`，避免使用内置 PostgreSQL 时 pre-install Hook 早于数据库 StatefulSet 创建，也避免普通 Job 在 Helm upgrade 时遇到不可变字段。开启后 Job 执行命令为：
+
+```bash
+python -m landppt.cli migrate-and-bootstrap
+```
+
+Web Pod 默认设置 `LANDPPT_AUTO_MIGRATE_ON_STARTUP=false`，避免多副本启动时并发迁移。生产环境使用外部 PostgreSQL 时，可设置 `migration.enabled=true` 和 `migration.hook=true` 让 Helm 在 install/upgrade 前运行迁移；使用内置 PostgreSQL 时建议保持 `migration.hook=false`，待数据库就绪后由 CI/CD 或运维显式执行 Job。
 
 ## 启用 Ingress
 

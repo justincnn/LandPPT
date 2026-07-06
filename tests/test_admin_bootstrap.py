@@ -117,3 +117,26 @@ def test_init_default_admin_skips_when_users_exist(monkeypatch):
         assert [user.username for user in users] == ["existing"]
     finally:
         db.close()
+
+
+def test_init_db_can_skip_admin_bootstrap(monkeypatch):
+    import asyncio
+    import importlib
+    import sys
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    sys.modules.pop("landppt.database.database", None)
+    database_module = importlib.import_module("landppt.database.database")
+
+    calls = []
+
+    def fake_session_local():
+        calls.append("session_created")
+        raise AssertionError("SessionLocal should not be called when bootstrap_admin=False")
+
+    monkeypatch.setattr(database_module, "SessionLocal", fake_session_local)
+
+    asyncio.run(database_module.init_db(bootstrap_admin=False))
+    asyncio.run(database_module.close_db())
+
+    assert calls == []

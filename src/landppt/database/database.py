@@ -319,7 +319,7 @@ async def get_async_db():
         yield session
 
 
-async def init_db():
+async def init_db(*, bootstrap_admin: bool = True):
     """Initialize database tables"""
     # Import here to avoid circular imports
     from .models import Base
@@ -394,13 +394,14 @@ async def init_db():
     async with async_engine.begin() as conn:
         await conn.run_sync(add_missing_columns)
 
-    # Optionally bootstrap an initial admin user
-    from ..auth.auth_service import init_default_admin
-    db = SessionLocal()
-    try:
-        init_default_admin(db)
-    finally:
-        db.close()
+    if bootstrap_admin:
+        # Optionally bootstrap an initial admin user.
+        from ..auth.auth_service import init_default_admin
+        db = SessionLocal()
+        try:
+            init_default_admin(db)
+        finally:
+            db.close()
 
 
 async def close_db():

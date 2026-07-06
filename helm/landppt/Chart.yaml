@@ -3,7 +3,7 @@ name: landppt
 description: AI-powered PPT generation platform
 type: application
 version: 0.1.0
-appVersion: "latest"
+appVersion: "0.3.1"
 keywords:
   - landppt
   - ppt

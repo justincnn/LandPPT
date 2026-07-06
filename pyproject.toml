@@ -95,6 +95,7 @@ test = [
 
 [project.scripts]
 landppt = "landppt.main:main"
+landppt-cli = "landppt.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/sligter/LandPPT"
