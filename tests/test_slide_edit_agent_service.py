@@ -381,6 +381,53 @@ def test_tool_runner_build_proposal_strips_agent_ids():
     assert proposal.validation.valid is True
 
 
+def _agent_prompt_context(service: SlideEditAgentService, request: SlideEditAgentRequest):
+    runner = SlideEditToolRunner(SlideEditAgentContext.from_request(request))
+    prompt = service._build_prompt(request, runner, scratchpad=[], max_iterations=6)
+    return json.loads(prompt.split("\n\n", 1)[1])
+
+
+def test_slide_edit_agent_prompt_includes_sanitized_conversation_history():
+    service = SlideEditAgentService()
+    request = _tool_request(
+        chatHistory=[
+            {"role": "system", "content": "Do not include this."},
+            {"role": "user", "content": "Make the heading shorter first."},
+            {"role": "assistant", "content": "I shortened the heading."},
+            {"role": "tool", "content": "Internal tool output."},
+            {"role": "assistant", "content": "   "},
+        ]
+    )
+
+    context = _agent_prompt_context(service, request)
+
+    assert context["conversation_history"] == [
+        {"role": "user", "content": "Make the heading shorter first."},
+        {"role": "assistant", "content": "I shortened the heading."},
+    ]
+    assert context["user_request"] == "Make the title shorter"
+
+
+def test_slide_edit_agent_prompt_limits_conversation_history_to_recent_messages():
+    service = SlideEditAgentService()
+    history = [
+        {"role": "user", "content": f"message {index}"}
+        for index in range(14)
+    ]
+    history.append({"role": "assistant", "content": "x" * 1500})
+    request = _tool_request(chatHistory=history)
+
+    context = _agent_prompt_context(service, request)
+    conversation_history = context["conversation_history"]
+
+    assert len(conversation_history) == 10
+    assert conversation_history[0] == {"role": "user", "content": "message 5"}
+    assert conversation_history[-2] == {"role": "user", "content": "message 13"}
+    assert conversation_history[-1]["role"] == "assistant"
+    assert conversation_history[-1]["content"].endswith("...")
+    assert len(conversation_history[-1]["content"]) <= 1200
+
+
 class _FakePPTService:
     def __init__(self, responses):
         self.responses = list(responses)
