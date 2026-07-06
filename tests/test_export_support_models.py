@@ -1,8 +1,11 @@
 import importlib.util
+import io
 import logging
 import sys
 import types
+import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,3 +88,51 @@ def test_image_pptx_export_request_validates_after_model_rebuild():
     assert payload.slides[0]["index"] == 1
     assert payload.images is not None
     assert payload.images[0]["width"] == 1280
+
+
+def test_html_zip_export_keeps_interactive_slide_html_without_duplicate_viewers():
+    module = _load_export_support_module()
+    project = SimpleNamespace(
+        topic="Demo Deck",
+        slides_data=[
+            {
+                "title": "Interactive",
+                "html_content": """
+<!DOCTYPE html>
+<html>
+<head><title>Interactive</title></head>
+<body>
+    <a id="externalLink" href="https://example.com/path">Open</a>
+    <button id="runButton" onclick="window.clicked = true">Run</button>
+    <script>window.loaded = true;</script>
+</body>
+</html>
+""",
+            },
+            {
+                "title": "Second",
+                "html_content": "<main><button onclick=\"window.second = true\">Second</button></main>",
+            },
+        ],
+    )
+
+    zip_bytes = module._generate_html_export_sync(project, "http://localhost:8000")
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as archive:
+        names = archive.namelist()
+        assert names == ["index.html", "slides/slide_1.html", "slides/slide_2.html"]
+        assert "slide_1.html" not in names
+        assert names.count("slides/slide_1.html") == 1
+
+        index_html = archive.read("index.html").decode("utf-8")
+        assert 'src="slides/slide_1.html"' in index_html
+        assert ".stage-shield" in index_html
+        assert "pointer-events: none" in index_html
+
+        first_slide = archive.read("slides/slide_1.html").decode("utf-8")
+        assert 'href="https://example.com/path"' in first_slide
+        assert 'onclick="window.clicked = true"' in first_slide
+        assert "<script>window.loaded = true;</script>" in first_slide
+
+        second_slide = archive.read("slides/slide_2.html").decode("utf-8")
+        assert 'onclick="window.second = true"' in second_slide

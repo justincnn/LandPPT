@@ -1002,10 +1002,12 @@ body::before {
 
 /* 透明遮罩：捕获iframe上方的鼠标事件（iframe内的事件不会冒泡到父页面），
    并支持点击翻页 */
+/* The legacy shield must not intercept iframe clicks. */
 .slideshow-shield {
     position: absolute;
     inset: 0;
     z-index: 50;
+    pointer-events: none;
 }
 
 .slideshow-overlay.ui-hidden .slideshow-shield {

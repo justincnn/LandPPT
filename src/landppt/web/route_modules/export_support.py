@@ -460,7 +460,7 @@ class ImagePPTXExportRequest(BaseModel):
 ImagePPTXExportRequest.model_rebuild()
 
 
-def _generate_html_export_sync(project) -> bytes:
+def _generate_html_export_sync(project, base_url: Optional[str] = None) -> bytes:
     """同步生成HTML导出文件（在线程池中运行）"""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -471,18 +471,17 @@ def _generate_html_export_sync(project) -> bytes:
         raw_dir = temp_path / "slides"
         raw_dir.mkdir()
 
+        export_base_url = (base_url or "").strip()
         slide_files = []
         for i, slide in enumerate(project.slides_data):
             slide_filename = f"slide_{i+1}.html"
             slide_files.append(slide_filename)
 
             raw_html = _wrap_raw_slide_html_sync(slide, project.topic)
+            if export_base_url:
+                raw_html = _prepare_html_for_file_based_export(raw_html, export_base_url)
             with open(raw_dir / slide_filename, 'w', encoding='utf-8') as f:
                 f.write(raw_html)
-
-            viewer_html = _generate_individual_slide_html_sync(slide, i+1, total_slides, project.topic)
-            with open(temp_path / slide_filename, 'w', encoding='utf-8') as f:
-                f.write(viewer_html)
 
         # Generate index.html projector page
         index_html = _generate_slideshow_index_sync(project, slide_files)
@@ -498,9 +497,8 @@ def _generate_html_export_sync(project) -> bytes:
             # Add index.html
             zipf.write(index_path, "index.html")
 
-            # Add viewer and raw slide files
+            # Add raw slide files only. The index projector loads these directly.
             for slide_file in slide_files:
-                zipf.write(temp_path / slide_file, slide_file)
                 zipf.write(raw_dir / slide_file, f"slides/{slide_file}")
 
         # Read ZIP file content
@@ -582,9 +580,8 @@ _PROJECTOR_STAGE_CSS = """
             background: #fff;
             transform-origin: top left;
         }
-        /* 透明遮罩：捕获幻灯片区域的鼠标/键盘事件（iframe内的事件不会冒泡到父页面），
-           并支持点击翻页 */
-        .stage-shield { position: fixed; inset: 0; z-index: 50; }
+        /* Keep the legacy shield non-interactive so slide links and widgets receive clicks. */
+        .stage-shield { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
         body.ui-hidden .stage-shield { cursor: none; }
         .ctrl-btn {
             background: rgba(255,255,255,0.14);
