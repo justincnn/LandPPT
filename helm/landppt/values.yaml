@@ -1,0 +1,140 @@
+# Default values for landppt.
+
+replicaCount: 1
+
+image:
+  repository: bradleylzh/landppt
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+app:
+  workers: 2
+  logLevel: info
+  # 应用配置（写入 ConfigMap，作为环境变量注入）
+  env:
+    LANDPPT_ENABLE_API_DOCS: "true"
+    LANDPPT_ALLOW_HEADER_SESSION_AUTH: "false"
+    INVITE_CODE_REQUIRED_FOR_REGISTRATION: "false"
+    LANDPPT_BOOTSTRAP_ADMIN_ENABLED: "false"
+  # 敏感配置（写入 Secret）。生产环境建议改用 existingSecret。
+  secrets:
+    SECRET_KEY: "change-me-in-production"
+    # OPENAI_API_KEY: ""
+    # ANTHROPIC_API_KEY: ""
+    # LANDPPT_API_KEY: ""
+  # 使用已有 Secret（key 即环境变量名）；设置后忽略上面的 secrets
+  existingSecret: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: landppt.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# 持久化数据卷（对应 docker-compose 的 named volumes）
+persistence:
+  enabled: true
+  storageClass: ""
+  data:
+    size: 5Gi
+  uploads:
+    size: 10Gi
+  reports:
+    size: 5Gi
+  cache:
+    size: 5Gi
+  lib:
+    size: 1Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+# Chromium 需要大于默认 64MB 的共享内存（compose 里 shm_size: 4gb）
+shmSize: 4Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 40
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# ---------- PostgreSQL ----------
+postgresql:
+  # true: 由本 chart 部署内置 PostgreSQL StatefulSet
+  enabled: true
+  image: postgres:16-alpine
+  auth:
+    username: landppt
+    password: landppt
+    database: landppt
+  persistence:
+    storageClass: ""
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# 使用外部数据库时：postgresql.enabled=false 并设置完整连接串
+externalDatabase:
+  # 例：postgresql://user:pass@host:5432/dbname
+  url: ""
+
+# ---------- Valkey (cache) ----------
+valkey:
+  enabled: true
+  image: valkey/valkey:8-alpine
+  persistence:
+    storageClass: ""
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# 使用外部 Valkey/Redis 时：valkey.enabled=false 并设置 URL
+externalValkey:
+  # 例：valkey://host:6379
+  url: ""

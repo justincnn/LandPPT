@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find . -name \"*.md\" -type f -exec grep -l \"^!image$\" {} ;)"
+      "Bash(find . -name \"*.md\" -type f -exec grep -l \"^!image$\" {} ;)",
+      "Bash(helm lint *)",
+      "Bash(helm template *)",
+      "Read(//tmp/**)"
     ],
     "deny": [],
     "ask": []
