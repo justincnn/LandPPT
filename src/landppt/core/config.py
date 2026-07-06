@@ -610,6 +610,11 @@ class AppConfig(BaseSettings):
     cache_ttl: int = Field(default=3600, env="CACHE_TTL")  # 1 hour
     cache_backend: str = Field(default="memory", env="CACHE_BACKEND")  # memory, valkey
     valkey_url: str = Field(default="valkey://localhost:6379", env="VALKEY_URL")
+
+    # Background task execution. Use queue mode with a separate worker process in Kubernetes.
+    task_execution_mode: str = Field(default="inline", env="TASK_EXECUTION_MODE")  # inline, queue
+    task_queue_name: str = Field(default="default", env="TASK_QUEUE_NAME")
+    task_worker_poll_timeout_seconds: int = Field(default=5, env="TASK_WORKER_POLL_TIMEOUT_SECONDS")
     
     # Credits System Configuration
     enable_credits_system: bool = Field(default=False, env="ENABLE_CREDITS_SYSTEM")

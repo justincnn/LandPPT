@@ -2,6 +2,15 @@
 
 replicaCount: 1
 
+web:
+  replicaCount: 1
+
+worker:
+  enabled: true
+  replicaCount: 1
+  queue: default
+  resources: {}
+
 image:
   repository: bradleylzh/landppt
   tag: "0.3.1"
@@ -63,7 +72,7 @@ ingress:
 
 # 持久化数据卷（对应 docker-compose 的 named volumes）
 persistence:
-  enabled: true
+  enabled: false
   storageClass: ""
   data:
     size: 5Gi

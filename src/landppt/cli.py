@@ -86,6 +86,15 @@ def migrate_and_bootstrap() -> None:
     click.echo(f"Migration and bootstrap completed: {count} templates available")
 
 
+@cli.command("worker")
+@click.option("--queue", "queue_name", default=None, help="Queue name to consume. Defaults to TASK_QUEUE_NAME.")
+def worker(queue_name: str | None = None) -> None:
+    """Run a queued task worker process."""
+    from .tasks.worker import run_worker
+
+    _run_async(run_worker(queue_name=queue_name))
+
+
 def main() -> None:
     cli(prog_name="landppt")
 

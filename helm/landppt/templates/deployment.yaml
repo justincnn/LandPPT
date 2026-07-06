@@ -5,13 +5,14 @@ metadata:
   labels:
     {{- include "landppt.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ default .Values.replicaCount .Values.web.replicaCount }}
   strategy:
     # PVC 为 RWO，滚动更新会因卷占用卡住，故用 Recreate
-    type: Recreate
+    type: {{ ternary "Recreate" "RollingUpdate" .Values.persistence.enabled }}
   selector:
     matchLabels:
       {{- include "landppt.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
   template:
     metadata:
       annotations:
@@ -22,6 +23,7 @@ spec:
         {{- end }}
       labels:
         {{- include "landppt.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

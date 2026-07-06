@@ -15,6 +15,8 @@ from typing import Dict, Optional, Any, Callable
 from dataclasses import dataclass, field, asdict
 import traceback
 
+from ..core.config import app_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -388,6 +390,20 @@ class BackgroundTaskManager:
         if task is None:
             return
         await self._save_task_to_cache(task)
+
+    async def submit_queued_task(
+        self,
+        task_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        queue_name: Optional[str] = None,
+    ) -> str:
+        """Create a task and enqueue it when queue mode is enabled."""
+        task_id = self.create_task(task_type, metadata)
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            from ..tasks.queue import enqueue_task
+
+            await enqueue_task(task_id, task_type, queue_name=queue_name)
+        return task_id
 
     async def execute_task(
         self,

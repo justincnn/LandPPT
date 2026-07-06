@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from ...auth.middleware import get_current_user_required
+from ...core.config import app_config
 from ...database.models import User
 from ...services.pdf_to_pptx_converter import get_pdf_to_pptx_converter
 from ...services.pyppeteer_pdf_converter import get_pdf_converter
@@ -90,6 +91,14 @@ async def _save_task_file_as_artifact(
     result = task.result if isinstance(task.result, dict) else {}
     artifact_id = result.get("artifact_id")
     artifact_service = get_artifact_service()
+
+    async def persist_artifact_id(artifact_id_value: str):
+        updater = getattr(task_manager, "update_task_status_async", None)
+        if updater is None:
+            return
+        merged = {**result, "artifact_id": artifact_id_value}
+        await updater(task.task_id, task.status, progress=task.progress, result=merged)
+
     if artifact_id:
         existing = await artifact_service.get_artifact(str(artifact_id))
         if existing:
@@ -97,8 +106,7 @@ async def _save_task_file_as_artifact(
 
     existing = await artifact_service.get_task_artifact(task.task_id, artifact_type=artifact_type)
     if existing:
-        merged = {**result, "artifact_id": existing.id}
-        await task_manager.update_task_status_async(task.task_id, task.status, progress=task.progress, result=merged)
+        await persist_artifact_id(existing.id)
         return existing
 
     metadata = task.metadata if isinstance(task.metadata, dict) else {}
@@ -112,8 +120,7 @@ async def _save_task_file_as_artifact(
         filename=filename,
         content_type=content_type,
     )
-    merged = {**result, "artifact_id": artifact.id}
-    await task_manager.update_task_status_async(task.task_id, task.status, progress=task.progress, result=merged)
+    await persist_artifact_id(artifact.id)
     return artifact
 
 
@@ -235,7 +242,7 @@ async def export_project_pdf_async(
         from ...services.background_tasks import get_task_manager, TaskStatus
 
         task_manager = get_task_manager()
-        
+
         # Check if there's already an active PDF export task for this project
         existing_task = await task_manager.find_active_task_async(
             task_type="pdf_generation",
@@ -252,6 +259,24 @@ async def export_project_pdf_async(
                     "polling_endpoint": f"/api/landppt/tasks/{existing_task.task_id}"
                 }
             )
+
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            task_id = await task_manager.submit_queued_task(
+                task_type="pdf_generation",
+                metadata={
+                    "project_id": project_id,
+                    "project_topic": project.topic,
+                    "slide_count": len(project.slides_data),
+                    "user_id": user.id,
+                },
+            )
+            return JSONResponse({
+                "status": "queued",
+                "task_id": task_id,
+                "message": "PDF generation queued",
+                "polling_endpoint": f"/api/landppt/tasks/{task_id}",
+                "slide_count": len(project.slides_data),
+            })
 
         # Create temp file for output
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf_file:
@@ -392,6 +417,24 @@ async def export_project_pptx(
             )
 
         # 创建临时文件路径
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            task_id = await task_manager.submit_queued_task(
+                task_type="pdf_to_pptx_conversion",
+                metadata={
+                    "project_id": project_id,
+                    "project_topic": project.topic,
+                    "slide_count": len(project.slides_data),
+                    "user_id": user.id,
+                },
+            )
+            return JSONResponse({
+                "status": "queued",
+                "task_id": task_id,
+                "message": "PPTX conversion queued",
+                "polling_endpoint": f"/api/landppt/tasks/{task_id}",
+                "slide_count": len(project.slides_data),
+            })
+
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf_file:
             temp_pdf_path = temp_pdf_file.name
         with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_pptx_file:
@@ -602,6 +645,27 @@ async def export_project_pptx_from_images(
         task_manager = get_task_manager()
 
         # 创建临时目录和PPTX文件路径
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            task_id = await task_manager.submit_queued_task(
+                task_type="html_to_pptx_screenshot",
+                metadata={
+                    "project_id": project_id,
+                    "project_topic": project.topic,
+                    "slide_count": len(slides),
+                    "slides": slides,
+                    "export_base_url": export_base_url,
+                    "progress_message": "Screenshot export task queued for worker execution.",
+                    "user_id": user.id,
+                },
+            )
+            return JSONResponse({
+                "status": "queued",
+                "task_id": task_id,
+                "message": "Screenshot PPTX export queued",
+                "polling_endpoint": f"/api/landppt/tasks/{task_id}",
+                "slide_count": len(slides),
+            })
+
         temp_dir = tempfile.mkdtemp()
         with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_pptx_file:
             temp_pptx_path = temp_pptx_file.name

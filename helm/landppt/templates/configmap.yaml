@@ -13,6 +13,8 @@ data:
   PYTHONUNBUFFERED: "1"
   CACHE_BACKEND: "valkey"
   VALKEY_URL: {{ include "landppt.valkeyUrl" . | quote }}
+  TASK_EXECUTION_MODE: {{ ternary "queue" "inline" .Values.worker.enabled | quote }}
+  TASK_QUEUE_NAME: {{ .Values.worker.queue | quote }}
   STORAGE_BACKEND: {{ .Values.storage.backend | quote }}
   LOCAL_STORAGE_ROOT: {{ .Values.storage.local.root | quote }}
   LOCAL_STORAGE_PUBLIC_BASE_URL: {{ .Values.storage.local.publicBaseUrl | quote }}
