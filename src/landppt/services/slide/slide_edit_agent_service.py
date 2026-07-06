@@ -169,12 +169,24 @@ def _attribute_value_text(value: Any) -> str:
     return str(value or "")
 
 
+def _attribute_value_scheme_text(value: Any) -> str:
+    return re.sub(r"[\x00-\x20]+", "", _attribute_value_text(value)).lower()
+
+
 def _has_javascript_attribute_value(soup: BeautifulSoup) -> bool:
     for node in soup.find_all(True):
         for value in getattr(node, "attrs", {}).values():
-            if "javascript:" in _attribute_value_text(value).strip().lower():
+            if "javascript:" in _attribute_value_scheme_text(value):
                 return True
     return False
+
+
+def _has_srcdoc_attribute(soup: BeautifulSoup) -> bool:
+    return any(
+        attr.lower() == "srcdoc"
+        for tag in soup.find_all(True)
+        for attr in getattr(tag, "attrs", {})
+    )
 
 
 def sanitize_slide_html(html: str) -> str:
@@ -187,11 +199,13 @@ def sanitize_slide_html(html: str) -> str:
         for attr in list(getattr(node, "attrs", {}).keys()):
             attr_lower = (attr or "").lower()
             value = node.attrs.get(attr)
-            value_lower = _attribute_value_text(value).strip().lower()
             if attr_lower.startswith("on"):
                 del node.attrs[attr]
                 continue
-            if "javascript:" in value_lower:
+            if attr_lower == "srcdoc":
+                del node.attrs[attr]
+                continue
+            if "javascript:" in _attribute_value_scheme_text(value):
                 del node.attrs[attr]
                 continue
             if attr_lower == "data-agent-id":
@@ -278,6 +292,9 @@ def validate_slide_html(html: str) -> SlideEditValidationResult:
 
     if "javascript:" in original_lower or _has_javascript_attribute_value(original_soup):
         errors.append("javascript urls are not allowed")
+
+    if _has_srcdoc_attribute(original_soup):
+        errors.append("srcdoc attributes are not allowed")
 
     errors.extend(_find_html_structure_errors(original))
 

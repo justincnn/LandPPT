@@ -86,6 +86,33 @@ def test_validate_slide_html_rejects_encoded_javascript_urls():
     assert result.valid is False
     assert "javascript urls are not allowed" in result.errors
     assert "javascript:" not in result.sanitized_html.lower()
+    assert "href=" not in result.sanitized_html.lower()
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        '<div><a href="java&#10;script:alert(1)">x</a></div>',
+        '<div><a href="jav&#x09;ascript:alert(1)">x</a></div>',
+    ],
+)
+def test_validate_slide_html_rejects_encoded_control_javascript_urls(html):
+    result = validate_slide_html(html)
+
+    assert result.valid is False
+    assert "javascript urls are not allowed" in result.errors
+    assert "href=" not in result.sanitized_html.lower()
+
+
+def test_validate_slide_html_rejects_srcdoc_attributes():
+    result = validate_slide_html(
+        '<div><iframe srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;"></iframe></div>'
+    )
+
+    assert result.valid is False
+    assert "srcdoc attributes are not allowed" in result.errors
+    assert "srcdoc" not in result.sanitized_html.lower()
+    assert "<script" not in result.sanitized_html.lower()
 
 
 def test_validate_slide_html_accepts_clean_slide_html():
