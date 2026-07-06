@@ -133,6 +133,12 @@ def test_html_zip_export_keeps_interactive_slide_html_without_duplicate_viewers(
         assert "slideFrame.addEventListener('load', installSlideFrameWheelBridge)" in index_html
         assert "window.addEventListener('message'" in index_html
         assert "landppt-projector-wheel" in index_html
+        assert "landppt-projector-key" in index_html
+        assert "function shouldRevealUiForKey(e)" in index_html
+        assert "ArrowLeft: true" in index_html
+        assert "if (navigationKeys[key]) return false;" in index_html
+        assert "if (shouldRevealUiForKey(e)) revealUi();" in index_html
+        assert "function handleProjectorKey(key)" in index_html
         assert "input, textarea, select" in index_html
 
         first_slide = archive.read("slides/slide_1.html").decode("utf-8")
@@ -140,7 +146,31 @@ def test_html_zip_export_keeps_interactive_slide_html_without_duplicate_viewers(
         assert 'onclick="window.clicked = true"' in first_slide
         assert "<script>window.loaded = true;</script>" in first_slide
         assert "window.parent.postMessage({ type: 'landppt-projector-wheel'" in first_slide
+        assert "window.parent.postMessage({ type: 'landppt-projector-key'" in first_slide
+        assert "window.addEventListener('keydown'" in first_slide
+        assert "if (e.defaultPrevented) return;" in first_slide
+        assert "'button'" in first_slide
+        assert "'a[href]'" in first_slide
+        assert "'[tabindex]:not([tabindex=\"-1\"])" in first_slide
 
         second_slide = archive.read("slides/slide_2.html").decode("utf-8")
         assert 'onclick="window.second = true"' in second_slide
         assert "window.parent.postMessage({ type: 'landppt-projector-wheel'" in second_slide
+        assert "window.parent.postMessage({ type: 'landppt-projector-key'" in second_slide
+
+
+def test_html_slide_bridge_adds_keyboard_bridge_when_wheel_marker_already_exists():
+    module = _load_export_support_module()
+    html = """
+<html>
+<body>
+    <script>window.marker = 'landppt-projector-wheel';</script>
+</body>
+</html>
+"""
+
+    enhanced = module._inject_projector_child_wheel_bridge(html)
+
+    assert "landppt-projector-wheel" in enhanced
+    assert "landppt-projector-key" in enhanced
+    assert enhanced.count("landppt-projector-wheel") == 1
