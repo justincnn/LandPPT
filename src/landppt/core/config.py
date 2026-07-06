@@ -571,6 +571,7 @@ class AppConfig(BaseSettings):
     # File Upload Configuration
     max_file_size: int = Field(default=10 * 1024 * 1024, env="MAX_FILE_SIZE")  # 10MB
     upload_dir: str = Field(default="uploads", env="UPLOAD_DIR")
+    expose_temp_static_files: bool = Field(default=True, env="LANDPPT_EXPOSE_TEMP_STATIC_FILES")
 
     # Artifact storage. Use STORAGE_BACKEND=s3 with MinIO/S3-compatible settings in production.
     storage_backend: str = Field(default="local", env="STORAGE_BACKEND")  # local, s3

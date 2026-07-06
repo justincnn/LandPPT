@@ -153,9 +153,11 @@ async def serve_font_asset(filename: str):
 
 # Mount temp directory for image cache
 temp_dir = os.path.join(os.getcwd(), "temp")
-if os.path.exists(temp_dir):
+if app_config.expose_temp_static_files and os.path.exists(temp_dir):
     app.mount("/temp", StaticFiles(directory=temp_dir), name="temp")
     logger.info(f"Mounted temp directory: {temp_dir}")
+elif not app_config.expose_temp_static_files:
+    logger.info("Temp static file mount disabled by configuration")
 else:
     logger.warning(f"Temp directory not found: {temp_dir}")
 

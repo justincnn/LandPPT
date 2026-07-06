@@ -270,6 +270,9 @@ async def test_slides_navigation(
 async def serve_temp_file(file_path: str):
     """提供临时幻灯片文件。"""
     try:
+        if not app_config.expose_temp_static_files:
+            raise HTTPException(status_code=404, detail="Temp file access is disabled")
+
         temp_dir = Path(tempfile.gettempdir()) / "landppt"
         full_path = temp_dir / file_path
 
