@@ -572,6 +572,19 @@ class AppConfig(BaseSettings):
     max_file_size: int = Field(default=10 * 1024 * 1024, env="MAX_FILE_SIZE")  # 10MB
     upload_dir: str = Field(default="uploads", env="UPLOAD_DIR")
 
+    # Artifact storage. Use STORAGE_BACKEND=s3 with MinIO/S3-compatible settings in production.
+    storage_backend: str = Field(default="local", env="STORAGE_BACKEND")  # local, s3
+    local_storage_root: str = Field(default="data/artifacts", env="LOCAL_STORAGE_ROOT")
+    local_storage_public_base_url: Optional[str] = Field(default=None, env="LOCAL_STORAGE_PUBLIC_BASE_URL")
+    s3_endpoint_url: Optional[str] = Field(default=None, env="S3_ENDPOINT_URL")
+    s3_region: str = Field(default="us-east-1", env="S3_REGION")
+    s3_bucket: str = Field(default="landppt", env="S3_BUCKET")
+    s3_access_key_id: Optional[str] = Field(default=None, env="S3_ACCESS_KEY_ID")
+    s3_secret_access_key: Optional[str] = Field(default=None, env="S3_SECRET_ACCESS_KEY")
+    s3_force_path_style: bool = Field(default=True, env="S3_FORCE_PATH_STYLE")
+    s3_public_base_url: Optional[str] = Field(default=None, env="S3_PUBLIC_BASE_URL")
+    s3_presigned_url_expires_seconds: int = Field(default=3600, env="S3_PRESIGNED_URL_EXPIRES_SECONDS")
+
     # ComfyUI (optional, for TTS via ComfyUI API)
     comfyui_base_url: str = Field(default="http://127.0.0.1:8188", env="COMFYUI_BASE_URL")
     comfyui_tts_workflow_path: str = Field(default="tests/Qwen3-TD-TTS.json", env="COMFYUI_TTS_WORKFLOW_PATH")

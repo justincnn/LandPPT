@@ -11,12 +11,13 @@ import time
 import urllib.parse
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from ...auth.middleware import get_current_user_required
 from ...database.models import User
 from ...services.pdf_to_pptx_converter import get_pdf_to_pptx_converter
 from ...services.pyppeteer_pdf_converter import get_pdf_converter
+from ...services.storage import get_artifact_service
 from ...utils.thread_pool import run_blocking_io
 from .export_support import (
     ImagePPTXExportRequest,
@@ -60,6 +61,73 @@ def _ensure_task_access(task, user: User) -> None:
     owner_id = _get_task_owner_id(task)
     if owner_id is None or owner_id != int(user.id):
         raise HTTPException(status_code=404, detail="Task not found")
+
+
+async def _stream_artifact_response(artifact, *, inline: bool = False):
+    artifact_service = get_artifact_service()
+    disposition = "inline" if inline else "attachment"
+    safe_filename = urllib.parse.quote(artifact.filename or "download", safe="")
+    return StreamingResponse(
+        artifact_service.open_stream(artifact),
+        media_type=artifact.content_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{safe_filename}",
+            "X-Artifact-Id": artifact.id,
+        },
+    )
+
+
+async def _save_task_file_as_artifact(
+    *,
+    task,
+    task_manager,
+    user: User,
+    local_path: str,
+    artifact_type: str,
+    filename: str,
+    content_type: str,
+):
+    result = task.result if isinstance(task.result, dict) else {}
+    artifact_id = result.get("artifact_id")
+    artifact_service = get_artifact_service()
+    if artifact_id:
+        existing = await artifact_service.get_artifact(str(artifact_id))
+        if existing:
+            return existing
+
+    existing = await artifact_service.get_task_artifact(task.task_id, artifact_type=artifact_type)
+    if existing:
+        merged = {**result, "artifact_id": existing.id}
+        await task_manager.update_task_status_async(task.task_id, task.status, progress=task.progress, result=merged)
+        return existing
+
+    metadata = task.metadata if isinstance(task.metadata, dict) else {}
+    project_id = metadata.get("project_id")
+    artifact = await artifact_service.save_file(
+        local_path=local_path,
+        user_id=int(user.id),
+        project_id=str(project_id) if project_id else None,
+        task_id=task.task_id,
+        artifact_type=artifact_type,
+        filename=filename,
+        content_type=content_type,
+    )
+    merged = {**result, "artifact_id": artifact.id}
+    await task_manager.update_task_status_async(task.task_id, task.status, progress=task.progress, result=merged)
+    return artifact
+
+
+@router.get("/api/artifacts/{artifact_id}/download")
+async def download_artifact(
+    artifact_id: str,
+    user: User = Depends(get_current_user_required),
+):
+    artifact = await get_artifact_service().get_artifact(artifact_id)
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    if not getattr(user, "is_admin", False) and int(artifact.user_id) != int(user.id):
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return await _stream_artifact_response(artifact)
 
 
 @router.get("/api/projects/{project_id}/export/pdf")
@@ -778,7 +846,6 @@ async def download_task_result(
 ):
     """下载任务结果文件（支持PDF、PPTX、讲解音频ZIP、讲解视频MP4）"""
     from ...services.background_tasks import get_task_manager, TaskStatus
-    from starlette.background import BackgroundTask
 
     task_manager = get_task_manager()
     # Use async version to check Valkey cache (for cross-worker task lookup)
@@ -793,6 +860,12 @@ async def download_task_result(
         raise HTTPException(status_code=400, detail=f"Task not completed yet (status: {task.status.value})")
 
     result = task.result if isinstance(task.result, dict) else {}
+    artifact_id = result.get("artifact_id")
+    if artifact_id:
+        artifact = await get_artifact_service().get_artifact(str(artifact_id))
+        if artifact:
+            return await _stream_artifact_response(artifact)
+
     pptx_path = result.get("pptx_path")
     pdf_path = result.get("pdf_path")
     video_path = result.get("video_path")
@@ -832,15 +905,18 @@ async def download_task_result(
                 f"{project_topic}_讲解音频_{task.metadata.get('language', 'zh')}{ext}",
                 safe="",
             )
-            return FileResponse(
-                audio_path,
-                media_type=media_type,
-                headers={
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
-                    "X-Export-Method": "Narration-Audio",
-                },
-                background=BackgroundTask(cleanup_temp_files),
+            filename = urllib.parse.unquote(safe_filename)
+            artifact = await _save_task_file_as_artifact(
+                task=task,
+                task_manager=task_manager,
+                user=user,
+                local_path=audio_path,
+                artifact_type="narration_audio_export",
+                filename=filename,
+                content_type=media_type,
             )
+            cleanup_temp_files()
+            return await _stream_artifact_response(artifact)
 
         if isinstance(result, dict) and result.get("error"):
             raise HTTPException(status_code=400, detail=str(result.get("error")))
@@ -880,15 +956,17 @@ async def download_task_result(
                 f"{project_topic}_narration_{task.metadata.get('language','zh')}.mp4",
                 safe="",
             )
-            # Videos are stored under uploads/; keep them by default (no temp cleanup).
-            return FileResponse(
-                video_path,
-                media_type="video/mp4",
-                headers={
-                    "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
-                    "X-Export-Method": "Narration-Video",
-                },
+            filename = urllib.parse.unquote(safe_filename)
+            artifact = await _save_task_file_as_artifact(
+                task=task,
+                task_manager=task_manager,
+                user=user,
+                local_path=video_path,
+                artifact_type="narration_video_export",
+                filename=filename,
+                content_type="video/mp4",
             )
+            return await _stream_artifact_response(artifact)
 
         # Provide a more helpful message when the result isn't downloadable.
         if isinstance(result, dict) and result.get("error"):
@@ -904,27 +982,31 @@ async def download_task_result(
     if task.task_type == "pdf_generation" and pdf_path and os.path.exists(pdf_path):
         # PDF生成任务：返回PDF文件
         safe_filename = urllib.parse.quote(f"{project_topic}_PPT.pdf", safe='')
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
-                "X-Conversion-Method": "PDF-Background"
-            },
-            background=BackgroundTask(cleanup_temp_files)
+        artifact = await _save_task_file_as_artifact(
+            task=task,
+            task_manager=task_manager,
+            user=user,
+            local_path=pdf_path,
+            artifact_type="pdf_export",
+            filename=urllib.parse.unquote(safe_filename),
+            content_type="application/pdf",
         )
+        cleanup_temp_files()
+        return await _stream_artifact_response(artifact)
     elif pptx_path and os.path.exists(pptx_path):
         # PPTX转换任务：返回PPTX文件
         safe_filename = urllib.parse.quote(f"{project_topic}_PPT.pptx", safe='')
-        return FileResponse(
-            pptx_path,
-            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            headers={
-                "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}",
-                "X-Conversion-Method": "PDF-to-PPTX-Background"
-            },
-            background=BackgroundTask(cleanup_temp_files)
+        artifact = await _save_task_file_as_artifact(
+            task=task,
+            task_manager=task_manager,
+            user=user,
+            local_path=pptx_path,
+            artifact_type="pptx_export",
+            filename=urllib.parse.unquote(safe_filename),
+            content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         )
+        cleanup_temp_files()
+        return await _stream_artifact_response(artifact)
     else:
         raise HTTPException(status_code=404, detail="Result file not found")
 

@@ -13,6 +13,15 @@ data:
   PYTHONUNBUFFERED: "1"
   CACHE_BACKEND: "valkey"
   VALKEY_URL: {{ include "landppt.valkeyUrl" . | quote }}
+  STORAGE_BACKEND: {{ .Values.storage.backend | quote }}
+  LOCAL_STORAGE_ROOT: {{ .Values.storage.local.root | quote }}
+  LOCAL_STORAGE_PUBLIC_BASE_URL: {{ .Values.storage.local.publicBaseUrl | quote }}
+  S3_ENDPOINT_URL: {{ .Values.storage.s3.endpointUrl | quote }}
+  S3_REGION: {{ .Values.storage.s3.region | quote }}
+  S3_BUCKET: {{ .Values.storage.s3.bucket | quote }}
+  S3_FORCE_PATH_STYLE: {{ .Values.storage.s3.forcePathStyle | quote }}
+  S3_PUBLIC_BASE_URL: {{ .Values.storage.s3.publicBaseUrl | quote }}
+  S3_PRESIGNED_URL_EXPIRES_SECONDS: {{ .Values.storage.s3.presignedUrlExpiresSeconds | quote }}
   {{- range $key, $value := .Values.app.env }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}

@@ -33,6 +33,8 @@ kubectl port-forward -n landppt svc/landppt 8000:8000
 | `app.secrets` | 敏感环境变量（Secret），生产建议使用 `app.existingSecret` | `{}` |
 | `app.existingSecret` | 使用已有 Secret（key 即环境变量名） | `""` |
 | `migration.enabled` / `migration.hook` | 数据库迁移 Job / Helm Hook | `false` / `false` |
+| `storage.backend` | 文件产物存储后端，生产默认使用 MinIO/S3 | `s3` |
+| `storage.s3.endpointUrl` / `storage.s3.bucket` | MinIO/S3 endpoint 和 bucket | `http://minio.minio.svc.cluster.local:9000` / `landppt` |
 | `postgresql.enabled` | 部署内置 PostgreSQL | `true` |
 | `externalDatabase.url` | 外部数据库连接串（关闭内置时必填） | `""` |
 | `valkey.enabled` | 部署内置 Valkey 缓存 | `true` |
@@ -57,12 +59,30 @@ helm install landppt ./helm/landppt \
 ```bash
 kubectl create secret generic landppt-keys \
   --from-literal=SECRET_KEY=... \
-  --from-literal=OPENAI_API_KEY=sk-...
+  --from-literal=OPENAI_API_KEY=sk-... \
+  --from-literal=S3_ACCESS_KEY_ID=minio \
+  --from-literal=S3_SECRET_ACCESS_KEY=minio-secret
 
 helm install landppt ./helm/landppt --set app.existingSecret=landppt-keys
 ```
 
 未设置 `app.existingSecret` 时，必须通过 `app.secrets` 显式提供 `SECRET_KEY` 等敏感值；chart 不再提供生产不安全的默认密钥。
+
+## MinIO / S3 对象存储
+
+Chart 默认设置 `storage.backend=s3`，用于将导出结果、音频、视频等产物写入 MinIO/S3 兼容对象存储。非敏感配置在 `storage.s3` 中设置，访问密钥通过 `app.existingSecret` 提供：
+
+```yaml
+storage:
+  backend: s3
+  s3:
+    endpointUrl: http://minio.minio.svc.cluster.local:9000
+    bucket: landppt
+    region: us-east-1
+    forcePathStyle: true
+```
+
+Secret 中需要包含 `S3_ACCESS_KEY_ID` 和 `S3_SECRET_ACCESS_KEY`。本地开发可设置 `storage.backend=local`。
 
 ## 数据库迁移 Job
 

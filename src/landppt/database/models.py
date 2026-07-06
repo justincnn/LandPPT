@@ -400,6 +400,30 @@ class NarrationAudio(Base):
         )
 
 
+class Artifact(Base):
+    """Stored artifact metadata for uploads, exports, media, and generated assets."""
+
+    __tablename__ = "artifacts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    project_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("projects.project_id"), nullable=True, index=True)
+    task_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    artifact_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    storage_backend: Mapped[str] = mapped_column(String(20), nullable=False)
+    storage_key: Mapped[str] = mapped_column(Text, nullable=False)
+    filename: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    size_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    checksum_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    expires_at: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
+    created_at: Mapped[float] = mapped_column(Float, default=time.time, nullable=False, index=True)
+    updated_at: Mapped[float] = mapped_column(Float, default=time.time, onupdate=time.time, nullable=False)
+
+    user: Mapped["User"] = relationship("User")
+    project: Mapped[Optional["Project"]] = relationship("Project")
+
+
 class CreditTransaction(Base):
     """Credit transaction history for audit trail"""
     __tablename__ = "credit_transactions"

@@ -33,6 +33,19 @@ migration:
   annotations: {}
   resources: {}
 
+storage:
+  backend: s3
+  local:
+    root: /app/data/artifacts
+    publicBaseUrl: ""
+  s3:
+    endpointUrl: http://minio.minio.svc.cluster.local:9000
+    region: us-east-1
+    bucket: landppt
+    forcePathStyle: true
+    publicBaseUrl: ""
+    presignedUrlExpiresSeconds: 3600
+
 service:
   type: ClusterIP
   port: 8000

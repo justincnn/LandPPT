@@ -141,6 +141,15 @@ class DatabaseMigration:
             "down": self._migration_013_down,
         })
 
+        # Migration 014: Stored artifacts metadata
+        self.migrations.append({
+            "version": "014",
+            "name": "add_artifacts_table",
+            "description": "Add artifacts table for object-storage backed generated files",
+            "up": self._migration_014_up,
+            "down": self._migration_014_down,
+        })
+
     @staticmethod
     def _dialect_name(session: AsyncSession) -> str:
         try:
@@ -1270,6 +1279,92 @@ class DatabaseMigration:
         except Exception as e:
             await session.rollback()
             logger.error(f"Migration 013 rollback failed: {e}")
+            raise
+
+    async def _migration_014_up(self, session: AsyncSession):
+        """Create artifacts table for object-storage backed generated files."""
+        logger.info("Running migration 014: Creating artifacts table")
+        dialect = self._dialect_name(session)
+        if dialect == "postgresql":
+            create_table_sql = """
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                project_id VARCHAR(36) NULL REFERENCES projects(project_id),
+                task_id VARCHAR(64) NULL,
+                artifact_type VARCHAR(50) NOT NULL,
+                storage_backend VARCHAR(20) NOT NULL,
+                storage_key TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                content_type VARCHAR(255) NULL,
+                size_bytes BIGINT NULL,
+                checksum_sha256 VARCHAR(64) NULL,
+                expires_at DOUBLE PRECISION NULL,
+                created_at DOUBLE PRECISION NOT NULL,
+                updated_at DOUBLE PRECISION NOT NULL
+            )
+            """
+        else:
+            create_table_sql = """
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                project_id VARCHAR(36) NULL,
+                task_id VARCHAR(64) NULL,
+                artifact_type VARCHAR(50) NOT NULL,
+                storage_backend VARCHAR(20) NOT NULL,
+                storage_key TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                content_type VARCHAR(255) NULL,
+                size_bytes INTEGER NULL,
+                checksum_sha256 VARCHAR(64) NULL,
+                expires_at FLOAT NULL,
+                created_at FLOAT NOT NULL,
+                updated_at FLOAT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(project_id) REFERENCES projects(project_id)
+            )
+            """
+
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_user_id ON artifacts(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_project_id ON artifacts(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_task_id ON artifacts(task_id)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(artifact_type)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_expires_at ON artifacts(expires_at)",
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_created_at ON artifacts(created_at)",
+        ]
+        try:
+            await session.execute(text(create_table_sql))
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.commit()
+            logger.info("Migration 014 completed successfully")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 014 failed: {e}")
+            raise
+
+    async def _migration_014_down(self, session: AsyncSession):
+        """Migration 014 rollback."""
+        logger.info("Rolling back migration 014: Removing artifacts table")
+        indexes = [
+            "DROP INDEX IF EXISTS idx_artifacts_user_id",
+            "DROP INDEX IF EXISTS idx_artifacts_project_id",
+            "DROP INDEX IF EXISTS idx_artifacts_task_id",
+            "DROP INDEX IF EXISTS idx_artifacts_type",
+            "DROP INDEX IF EXISTS idx_artifacts_expires_at",
+            "DROP INDEX IF EXISTS idx_artifacts_created_at",
+        ]
+        try:
+            for index_sql in indexes:
+                await session.execute(text(index_sql))
+            await session.execute(text("DROP TABLE IF EXISTS artifacts"))
+            await session.commit()
+            logger.info("Migration 014 rollback completed")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 014 rollback failed: {e}")
             raise
 
     async def _create_migration_table(self, session: AsyncSession):
