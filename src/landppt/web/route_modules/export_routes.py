@@ -932,6 +932,7 @@ async def download_task_result(
 @router.get("/api/projects/{project_id}/export/html")
 async def export_project_html(
     project_id: str,
+    http_request: Request,
     user: User = Depends(get_current_user_required)
 ):
     """Export project as HTML ZIP package with slideshow index"""
@@ -944,8 +945,10 @@ async def export_project_html(
         if not project.slides_data or len(project.slides_data) == 0:
             raise HTTPException(status_code=400, detail="PPT not generated yet")
 
+        export_base_url = _resolve_export_base_url(http_request)
+
         # Create temporary directory and generate files in thread pool
-        zip_content = await run_blocking_io(_generate_html_export_sync, project)
+        zip_content = await run_blocking_io(_generate_html_export_sync, project, export_base_url)
 
         # URL encode the filename to handle Chinese characters
         zip_filename = f"{project.topic}_PPT.zip"
