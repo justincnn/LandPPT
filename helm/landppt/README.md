@@ -87,6 +87,9 @@ storage:
     bucket: landppt
     region: us-east-1
     forcePathStyle: true
+    existingSecret: landppt-s3
+minio:
+  enabled: false
 ```
 
 Secret 中需要包含 `S3_ACCESS_KEY_ID` 和 `S3_SECRET_ACCESS_KEY`。本地开发可设置 `storage.backend=local`。

@@ -49,6 +49,10 @@ spec:
             - secretRef:
                 name: {{ .Values.app.existingSecret }}
             {{- end }}
+            {{- if .Values.storage.s3.existingSecret }}
+            - secretRef:
+                name: {{ .Values.storage.s3.existingSecret }}
+            {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

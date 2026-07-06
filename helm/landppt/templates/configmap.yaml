@@ -19,7 +19,7 @@ data:
   STORAGE_BACKEND: {{ .Values.storage.backend | quote }}
   LOCAL_STORAGE_ROOT: {{ .Values.storage.local.root | quote }}
   LOCAL_STORAGE_PUBLIC_BASE_URL: {{ .Values.storage.local.publicBaseUrl | quote }}
-  S3_ENDPOINT_URL: {{ .Values.storage.s3.endpointUrl | quote }}
+  S3_ENDPOINT_URL: {{ include "landppt.s3EndpointUrl" . | quote }}
   S3_REGION: {{ .Values.storage.s3.region | quote }}
   S3_BUCKET: {{ .Values.storage.s3.bucket | quote }}
   S3_FORCE_PATH_STYLE: {{ .Values.storage.s3.forcePathStyle | quote }}
