@@ -433,14 +433,61 @@ class _FakePPTService:
         self.responses = list(responses)
         self.calls = []
 
-    async def _chat_completion_for_role(self, role, messages):
-        self.calls.append((role, messages))
+    async def _chat_completion_for_role(self, role, messages, **kwargs):
+        self.calls.append((role, messages, kwargs))
         return SimpleNamespace(content=self.responses.pop(0))
 
 
+class _FakeNativeToolPPTService:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    async def _chat_completion_for_role(self, role, messages, **kwargs):
+        self.calls.append((role, messages, kwargs))
+        return self.responses.pop(0)
+
+
 class _FailingPPTService:
-    async def _chat_completion_for_role(self, role, messages):
+    async def _chat_completion_for_role(self, role, messages, **kwargs):
         raise RuntimeError("model unavailable")
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_uses_native_tool_calls_before_text_fallback():
+    service = SlideEditAgentService()
+    fake_ppt = _FakeNativeToolPPTService(
+        [
+            SimpleNamespace(
+                content="Inspecting.",
+                tool_calls=[
+                    {
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {
+                            "name": "update_text",
+                            "arguments": json.dumps({"selector": "h1", "text": "Short Title"}),
+                        },
+                    }
+                ],
+            ),
+            SimpleNamespace(content="Shortened the title.", tool_calls=[]),
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(), fake_ppt)
+
+    assert proposal.summary == "Shortened the title."
+    assert "Short Title" in proposal.html_content
+    first_role, _first_messages, first_kwargs = fake_ppt.calls[0]
+    assert first_role == "editor"
+    assert first_kwargs["tool_choice"] == "auto"
+    assert first_kwargs["parallel_tool_calls"] is False
+    assert first_kwargs["tools"][0]["type"] == "function"
+    assert first_kwargs["tools"][0]["function"]["parameters"]["type"] == "object"
+    second_messages = fake_ppt.calls[1][1]
+    assert second_messages[-1].role.value == "tool"
+    assert second_messages[-1].tool_call_id == "call-1"
 
 
 @pytest.mark.asyncio
@@ -643,7 +690,7 @@ async def test_slide_edit_agent_vision_mode_sends_multimodal_context():
     )
 
     assert proposal.summary == "Checked visual context."
-    role, messages = fake_ppt.calls[0]
+    role, messages, _kwargs = fake_ppt.calls[0]
     assert role == "vision_analysis"
     user_content = messages[-1].content
     assert isinstance(user_content, list)

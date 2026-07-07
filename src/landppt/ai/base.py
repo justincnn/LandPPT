@@ -4,7 +4,7 @@ Base classes for AI providers
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, AsyncGenerator, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 class MessageRole(str, Enum):
@@ -12,6 +12,7 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
+    TOOL = "tool"
 
 class MessageContentType(str, Enum):
     """Message content types for multimodal support"""
@@ -33,6 +34,8 @@ class AIMessage(BaseModel):
     role: MessageRole
     content: Union[str, List[Union[TextContent, ImageContent]]]  # Support both simple string and multimodal content
     name: Optional[str] = None
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_call_id: Optional[str] = None
 
 class AIResponse(BaseModel):
     """AI response model"""
@@ -40,7 +43,8 @@ class AIResponse(BaseModel):
     model: str
     usage: Dict[str, int]
     finish_reason: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class AIProvider(ABC):
     """Abstract base class for AI providers"""

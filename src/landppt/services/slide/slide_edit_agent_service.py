@@ -19,7 +19,6 @@ _MAX_CONVERSATION_HISTORY_MESSAGES = 10
 _MAX_CONVERSATION_HISTORY_TOTAL_CHARS = 6000
 _MAX_CONVERSATION_HISTORY_MESSAGE_CHARS = 1200
 
-
 class SlideEditAgentRequest(BaseModel):
     projectId: str
     slideIndex: int
@@ -839,6 +838,41 @@ class SlideEditAgentService:
         scratchpad: List[Dict[str, Any]] = []
         for iteration in range(1, max_iterations + 1):
             try:
+                proposal = await self._run_native_tool_iteration(
+                    request,
+                    user_ppt_service,
+                    runner,
+                    role,
+                    max_iterations,
+                    event_callback,
+                )
+                if proposal:
+                    return proposal
+                break
+            except Exception as exc:
+                if getattr(exc, "_slide_edit_error_emitted", False):
+                    raise
+                if self._is_native_tool_protocol_error(exc):
+                    await self._emit(
+                        event_callback,
+                        {
+                            "type": "agent_fallback",
+                            "reason": str(exc) or exc.__class__.__name__,
+                        },
+                    )
+                    break
+                else:
+                    await self._emit_error(
+                        event_callback,
+                        exc,
+                        phase="model",
+                        iteration=iteration,
+                    )
+                    raise
+
+        scratchpad = []
+        for iteration in range(1, max_iterations + 1):
+            try:
                 prompt = self._build_prompt(request, runner, scratchpad, max_iterations)
                 response = await user_ppt_service._chat_completion_for_role(
                     role,
@@ -924,11 +958,243 @@ class SlideEditAgentService:
         await self._emit_validation_and_draft(event_callback, proposal)
         return proposal
 
-    def _ai_message(self, role: str, content: Any):
+    async def _run_native_tool_iteration(
+        self,
+        request: SlideEditAgentRequest,
+        user_ppt_service: Any,
+        runner: SlideEditToolRunner,
+        role: str,
+        max_iterations: int,
+        event_callback: Optional[EventEmitter],
+    ) -> Optional[SlideEditProposal]:
+        messages = self._build_native_messages(request, runner)
+        tools = self._openai_tool_schemas(runner)
+        executed_native_or_text_tool = False
+
+        for iteration in range(1, max_iterations + 1):
+            response = await user_ppt_service._chat_completion_for_role(
+                role,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+                parallel_tool_calls=False,
+            )
+            tool_calls = list(getattr(response, "tool_calls", None) or [])
+            content = str(getattr(response, "content", "") or "")
+
+            if not tool_calls:
+                text_action = parse_agent_action(content)
+                if (
+                    not executed_native_or_text_tool
+                    and text_action.action == "final"
+                    and not self._is_structured_agent_action(content)
+                ):
+                    raise RuntimeError("Provider did not return native tool_calls for the slide edit agent")
+                await self._emit(
+                    event_callback,
+                    {
+                        "type": "agent_step",
+                        "iteration": iteration,
+                        "thought": text_action.thought,
+                        "action": text_action.action,
+                        "actionInput": text_action.action_input,
+                    },
+                )
+                if text_action.action != "final":
+                    await self._execute_agent_action(
+                        event_callback,
+                        runner,
+                        iteration,
+                        text_action.thought,
+                        text_action.action,
+                        text_action.action_input,
+                    )
+                    executed_native_or_text_tool = True
+                    messages.append(
+                        self._ai_message(
+                            "user",
+                            "Tool result applied. Continue with the next tool call or final summary.",
+                        )
+                    )
+                    continue
+                summary = content.strip() or "Prepared slide edit proposal."
+                if text_action.action == "final":
+                    summary = str(
+                        text_action.action_input.get("summary")
+                        or text_action.thought
+                        or summary
+                    )
+                proposal = runner.build_proposal(summary)
+                await self._emit_validation_and_draft(event_callback, proposal)
+                return proposal
+
+            messages.append(
+                self._ai_message(
+                    "assistant",
+                    content,
+                    tool_calls=tool_calls,
+                )
+            )
+
+            for call in tool_calls:
+                tool_name, tool_input = self._tool_call_name_and_input(call)
+                observation = await self._execute_agent_action(
+                    event_callback,
+                    runner,
+                    iteration,
+                    content,
+                    tool_name,
+                    tool_input,
+                )
+                executed_native_or_text_tool = True
+                messages.append(
+                    self._ai_message(
+                        "tool",
+                        json.dumps(self._compact_observation(observation), ensure_ascii=False),
+                        tool_call_id=str(call.get("id") or ""),
+                    )
+                )
+
+        proposal = runner.build_proposal(
+            "Reached the maximum edit iterations and prepared the current draft."
+        )
+        await self._emit_validation_and_draft(event_callback, proposal)
+        return proposal
+
+    async def _execute_agent_action(
+        self,
+        event_callback: Optional[EventEmitter],
+        runner: SlideEditToolRunner,
+        iteration: int,
+        thought: str,
+        action: str,
+        action_input: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        await self._emit(
+            event_callback,
+            {
+                "type": "tool_call",
+                "iteration": iteration,
+                "tool": action,
+                "toolInput": action_input,
+                "thought": thought,
+            },
+        )
+        try:
+            observation = await runner.execute_tool(action, action_input)
+        except Exception as exc:
+            await self._emit_error(
+                event_callback,
+                exc,
+                phase="tool",
+                iteration=iteration,
+                tool=action,
+            )
+            setattr(exc, "_slide_edit_error_emitted", True)
+            raise
+        await self._emit(
+            event_callback,
+            {
+                "type": "tool_result",
+                "iteration": iteration,
+                "tool": action,
+                "success": observation.get("success", False),
+                "observation": observation,
+            },
+        )
+        return observation
+
+    def _tool_call_name_and_input(self, call: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+        function = call.get("function") or {}
+        tool_name = str(function.get("name") or call.get("name") or "").strip()
+        raw_arguments = function.get("arguments") if "arguments" in function else call.get("arguments")
+        if isinstance(raw_arguments, dict):
+            return tool_name, raw_arguments
+        try:
+            parsed = json.loads(str(raw_arguments or "{}"))
+        except json.JSONDecodeError:
+            parsed = {}
+        return tool_name, parsed if isinstance(parsed, dict) else {}
+
+    def _ai_message(
+        self,
+        role: str,
+        content: Any,
+        *,
+        tool_calls: Optional[List[Dict[str, Any]]] = None,
+        tool_call_id: Optional[str] = None,
+    ):
         from ...ai import AIMessage, MessageRole
 
-        mapped_role = MessageRole.SYSTEM if role == "system" else MessageRole.USER
-        return AIMessage(role=mapped_role, content=content)
+        role_map = {
+            "system": MessageRole.SYSTEM,
+            "user": MessageRole.USER,
+            "assistant": MessageRole.ASSISTANT,
+            "tool": MessageRole.TOOL,
+        }
+        return AIMessage(
+            role=role_map.get(role, MessageRole.USER),
+            content=content,
+            tool_calls=tool_calls,
+            tool_call_id=tool_call_id,
+        )
+
+    def _build_native_messages(self, request: SlideEditAgentRequest, runner: SlideEditToolRunner) -> List[Any]:
+        context = {
+            "project": request.projectInfo or {},
+            "slide_index": request.slideIndex,
+            "slide_title": request.slideTitle,
+            "slide_outline": request.slideOutline or {},
+            "mode": request.mode,
+            "selected_element_id": request.selectedElementId,
+            "selected_element_html": request.selectedElementHtml,
+            "conversation_history": self._conversation_history_context(request),
+            "current_html": runner.current_html,
+            "vision": self._vision_context(request),
+            "max_iterations": coerce_agent_max_iterations(request.maxIterations),
+        }
+        prompt = (
+            "Edit this PPT slide by calling the provided tools. Use tool calls for inspection and edits. "
+            "When the draft is ready, respond with a concise summary and no tool calls.\n\n"
+            f"Latest user request: {request.userRequest}\n\n"
+            + json.dumps(context, ensure_ascii=False, indent=2)
+        )
+        messages = [
+            self._ai_message(
+                "system",
+                "You are LandPPT's slide editing agent. Use the provided tools to inspect and edit slides.",
+            )
+        ]
+        vision_urls = self._vision_image_urls(request)
+        if request.visionEnabled and vision_urls:
+            from ...ai.base import ImageContent, TextContent
+
+            user_content = [TextContent(text=prompt)]
+            user_content.extend(ImageContent(image_url={"url": url}) for url in vision_urls)
+            messages.append(self._ai_message("user", user_content))
+        else:
+            messages.append(self._ai_message("user", prompt))
+        return messages
+
+    def _is_native_tool_protocol_error(self, error: Exception) -> bool:
+        message = (str(error) or error.__class__.__name__).lower()
+        markers = (
+            "tools",
+            "tool_choice",
+            "tool calls",
+            "tool_calls",
+            "function calling",
+            "unsupported parameter",
+            "unknown parameter",
+            "unrecognized request argument",
+        )
+        return any(marker in message for marker in markers)
+
+    def _is_structured_agent_action(self, content: str) -> bool:
+        payload = _extract_json_payload(content or "")
+        if not isinstance(payload, dict):
+            return False
+        return bool(payload.get("action") or payload.get("tool"))
 
     def _build_messages(self, request: SlideEditAgentRequest, prompt: str) -> List[Any]:
         messages = [
@@ -1195,6 +1461,75 @@ class SlideEditAgentService:
         if missing:
             raise ValueError(f"Missing slide edit tool schemas: {', '.join(missing)}")
         return [schema_by_name[name] for name in tool_names]
+
+    def _openai_tool_schemas(self, runner: SlideEditToolRunner) -> List[Dict[str, Any]]:
+        def object_schema(properties: Dict[str, Any], required: Optional[List[str]] = None) -> Dict[str, Any]:
+            schema: Dict[str, Any] = {
+                "type": "object",
+                "properties": properties,
+                "additionalProperties": False,
+            }
+            if required:
+                schema["required"] = required
+            return schema
+
+        string = {"type": "string"}
+        integer = {"type": "integer"}
+        schema_by_name = {
+            "get_project_context": object_schema({}),
+            "get_slide": object_schema({"slide_index": integer}),
+            "list_slides": object_schema({}),
+            "inspect_slide_html": object_schema({"slide_index": integer}),
+            "select_elements": object_schema({"selector": string, "text": string}),
+            "replace_slide_html": object_schema({"html": string}, ["html"]),
+            "replace_element_html": object_schema({"element_id": string, "html": string}, ["html"]),
+            "update_text": object_schema({"selector": string, "element_id": string, "text": string}, ["text"]),
+            "update_style": object_schema(
+                {
+                    "selector": string,
+                    "element_id": string,
+                    "styles": {"type": "object", "additionalProperties": {"type": "string"}},
+                },
+                ["styles"],
+            ),
+            "insert_element": object_schema(
+                {"parent_selector": string, "element_id": string, "html": string},
+                ["html"],
+            ),
+            "delete_element": object_schema({"selector": string, "element_id": string}),
+            "validate_slide_html": object_schema({}),
+            "preview_patch": object_schema({}),
+        }
+        descriptions = {
+            "get_project_context": "Load project, outline, and edit mode context.",
+            "get_slide": "Load the current slide draft and base hash.",
+            "list_slides": "List editable slide summaries.",
+            "inspect_slide_html": "Inspect headings, text blocks, and images in the slide HTML.",
+            "select_elements": "Mark matching elements with agent ids for later edits.",
+            "replace_slide_html": "Replace the full slide HTML draft.",
+            "replace_element_html": "Replace one selected element with safe HTML.",
+            "update_text": "Update text content on one selected element.",
+            "update_style": "Update whitelisted inline styles on one selected element.",
+            "insert_element": "Insert safe HTML under a parent element.",
+            "delete_element": "Delete one selected element.",
+            "validate_slide_html": "Validate the current draft HTML.",
+            "preview_patch": "Summarize whether the draft differs from the base slide.",
+        }
+        tool_names = runner.available_tool_names()
+        missing = [name for name in tool_names if name not in schema_by_name]
+        if missing:
+            raise ValueError(f"Missing slide edit tool schemas: {', '.join(missing)}")
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": descriptions[name],
+                    "parameters": schema_by_name[name],
+                },
+            }
+            for name in tool_names
+        ]
 
     def _compact_observation(self, observation: Dict[str, Any]) -> Dict[str, Any]:
         compact = {
