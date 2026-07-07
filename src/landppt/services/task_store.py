@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from ..database.database import AsyncSessionLocal
 from ..database.models import AsyncTask
@@ -54,16 +55,24 @@ class TaskStore:
 
         try:
             async with AsyncSessionLocal() as session:
-                existing = await session.get(AsyncTask, str(payload["task_id"]))
+                task_id = str(payload["task_id"])
+                existing = await session.get(AsyncTask, task_id)
                 if existing is None:
                     existing = AsyncTask(
-                        id=str(payload["task_id"]),
+                        id=task_id,
                         task_type=str(payload.get("task_type") or "unknown"),
                         status=status,
                         created_at=created_ts,
                         updated_at=now_ts,
                     )
                     session.add(existing)
+                    try:
+                        await session.flush()
+                    except IntegrityError:
+                        await session.rollback()
+                        existing = await session.get(AsyncTask, task_id)
+                        if existing is None:
+                            raise
 
                 existing.task_type = str(payload.get("task_type") or existing.task_type or "unknown")
                 existing.status = status
