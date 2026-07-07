@@ -65528,7 +65528,7 @@
     let domOrderCounter = 0;
 
     // Sync Traversal Function
-    function collect(node, parentZIndex, parentOpacity, zIndexScale = 1) {
+    function collect(node, parentZIndex, parentOpacity, zIndexScale = 1, textOnlyMode = false) {
       const order = domOrderCounter++;
 
       let currentZ = parentZIndex;
@@ -65562,6 +65562,40 @@
         }
       }
 
+      // HYBRID MODE: subtrees using CSS features that OOXML cannot express are
+      // rasterized as a decoration layer, while their text is re-collected
+      // natively (editable) on top via textOnlyMode recursion.
+      if (!textOnlyMode && nodeType === 1 && nodeStyle && globalOptions.hybridRaster !== false) {
+        const hybridConfig = { ...layoutConfig, root };
+        const hybridReason = getHybridRasterReason(node, nodeStyle, hybridConfig);
+        if (hybridReason) {
+          // html2canvas already applies the node's own opacity; only the
+          // inherited (parent) opacity must be multiplied onto the raster.
+          const inheritedOpacity = Number.isFinite(parentOpacity)
+            ? Math.max(0, Math.min(1, parentOpacity))
+            : 1;
+          const hybrid = prepareHybridRasterItem(
+            node,
+            hybridConfig,
+            order,
+            currentZ,
+            nodeStyle,
+            globalOptions,
+            inheritedOpacity
+          );
+          if (hybrid) {
+            if (hybrid.items) renderQueue.push(...hybrid.items);
+            if (hybrid.job) asyncTasks.push(hybrid.job);
+            if (hybrid.recurseTextOnly) {
+              // Re-enter on the node itself in text-only mode so text held
+              // directly by the hybrid node (not just descendants) is emitted.
+              collect(node, parentZIndex, parentOpacity, zIndexScale, true);
+            }
+            return;
+          }
+        }
+      }
+
       // Prepare the item. If it needs async work, it returns a 'job'
       const result = prepareRenderItem(
         node,
@@ -65571,7 +65605,8 @@
         currentZ,
         nodeStyle,
         globalOptions,
-        currentOpacity
+        currentOpacity,
+        textOnlyMode
       );
 
       if (result) {
@@ -65589,7 +65624,7 @@
       // Recurse children synchronously
       const childNodes = node.childNodes;
       for (let i = 0; i < childNodes.length; i++) {
-        collect(childNodes[i], currentZ, currentOpacity, childZIndexScale);
+        collect(childNodes[i], currentZ, currentOpacity, childZIndexScale, textOnlyMode);
       }
     }
 
@@ -66859,6 +66894,425 @@
     return items;
   }
 
+  // ---------------------------------------------------------------------------
+  // HYBRID RASTER MODE
+  // Detects CSS features that OOXML/PptxGenJS cannot express faithfully. Such a
+  // subtree is exported as one raster "decoration layer" (with its text made
+  // transparent so it isn't baked in twice) plus native editable text boxes
+  // re-collected on top of it.
+  // ---------------------------------------------------------------------------
+
+  const HYBRID_MEDIA_TAGS = ['SVG', 'CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT', 'EMBED'];
+
+  function getHybridRasterReason(node, style, config) {
+    if (!node || node.nodeType !== 1 || !style) return null;
+    const tagUpper = String(node.tagName || '').toUpperCase();
+    // Media/formula/icon leaves already have dedicated raster handlers.
+    if (HYBRID_MEDIA_TAGS.includes(tagUpper)) return null;
+    if (tagUpper === 'TABLE') return null;
+    if (isFormulaElement(node) || isIconElement(node)) return null;
+    // Never hybrid-rasterize the slide root or slide-sized background layers:
+    // those keep children native via the background-only raster path, while a
+    // hybrid capture here would flatten the entire slide.
+    if (node === config.root) return null;
+    if (isSlideSizedBackgroundLayerNode(node, config)) return null;
+
+    const clipPath = style.clipPath || style.webkitClipPath;
+    if (clipPath && clipPath !== 'none') return 'clip-path';
+
+    const blend = style.mixBlendMode;
+    if (blend && blend !== 'normal') return 'mix-blend-mode';
+
+    const filter = style.filter;
+    if (filter && filter !== 'none' && !getSoftEdges(filter, 1)) return 'filter';
+
+    const backdrop = style.backdropFilter || style.webkitBackdropFilter;
+    if (backdrop && backdrop !== 'none') return 'backdrop-filter';
+
+    const maskImage = String(style.webkitMaskImage || style.maskImage || '').trim();
+    if (maskImage && maskImage !== 'none') return 'mask-image';
+
+    const borderImage = String(style.borderImageSource || '').trim();
+    if (borderImage && borderImage !== 'none') return 'border-image';
+
+    // Non-rotation transforms (scale/skew/matrix with shear) — getRotation()
+    // only extracts pure rotation, everything else silently distorts.
+    const transform = style.transform;
+    if (transform && transform !== 'none') {
+      const m = transform.match(/matrix\(([^)]+)\)/);
+      if (transform.includes('matrix3d')) return 'transform-3d';
+      if (m) {
+        const v = m[1].split(',').map(parseFloat);
+        if (v.length >= 4) {
+          const scaleX = Math.hypot(v[0], v[1]);
+          const scaleY = Math.hypot(v[2], v[3]);
+          const det = v[0] * v[3] - v[1] * v[2];
+          const notUnitScale = Math.abs(scaleX - 1) > 0.01 || Math.abs(scaleY - 1) > 0.01;
+          const hasShear = Math.abs(v[0] * v[2] + v[1] * v[3]) > 0.01 * scaleX * scaleY;
+          if (notUnitScale || hasShear || det < 0) return 'transform';
+        }
+      }
+    }
+
+    // Gradient backgrounds on containers WITH content: the sync path only
+    // supports single linear gradients on leaves; conic/radial/multi-layer
+    // gradients behind text/children need rasterization.
+    const bgImage = String(style.backgroundImage || '');
+    const bgClip = style.webkitBackgroundClip || style.backgroundClip;
+    if (bgClip !== 'text' && /\b(?:conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(bgImage)) {
+      return 'complex-gradient';
+    }
+    const hasChildren = node.children && node.children.length > 0;
+    const hasText = !!(node.textContent && node.textContent.trim());
+    if (
+      bgClip !== 'text' &&
+      (hasChildren || hasText) &&
+      /\bradial-gradient\s*\(/i.test(bgImage)
+    ) {
+      return 'radial-gradient-container';
+    }
+    const gradientLayers = splitTopLevelCommaParts(bgImage).filter((part) =>
+      /\b(?:linear|radial|conic|repeating-linear|repeating-radial)-gradient\s*\(/i.test(part)
+    ).length;
+    if (bgClip !== 'text' && gradientLayers > 1 && (hasChildren || hasText)) {
+      return 'layered-gradient-container';
+    }
+
+    // Multiple or inset box-shadows — PPTX supports a single outer shadow only.
+    const shadow = style.boxShadow;
+    if (shadow && shadow !== 'none') {
+      const shadowParts = shadow.split(/,(?![^()]*\))/);
+      if (shadowParts.length > 1 || /\binset\b/.test(shadow)) return 'box-shadow';
+    }
+
+    return null;
+  }
+
+  function hybridSubtreeHasText(node) {
+    return !!(node && node.textContent && node.textContent.trim().length > 0);
+  }
+
+  /**
+   * Builds the raster decoration layer for a hybrid subtree.
+   * Returns { items, job, recurseTextOnly } or null to fall back to the
+   * standard per-element pipeline.
+   */
+  function prepareHybridRasterItem(
+    node,
+    config,
+    domOrder,
+    effectiveZIndex,
+    style,
+    globalOptions,
+    effectiveOpacity
+  ) {
+    const rect = node.getBoundingClientRect();
+    if (rect.width < 0.5 || rect.height < 0.5) return null;
+
+    // Overflow guard: filters/shadows can paint outside the border box.
+    const overflowPx = estimateHybridOverflowPx(style);
+    const widthPx = rect.width + overflowPx * 2;
+    const heightPx = rect.height + overflowPx * 2;
+
+    const zIndex = normalizeRenderableZIndex(effectiveZIndex);
+    const x =
+      config.offX + (rect.left - overflowPx - config.rootX) * PX_TO_INCH * config.scale;
+    const y =
+      config.offY + (rect.top - overflowPx - config.rootY) * PX_TO_INCH * config.scale;
+    const w = widthPx * PX_TO_INCH * config.scale;
+    const h = heightPx * PX_TO_INCH * config.scale;
+
+    const hasText = hybridSubtreeHasText(node);
+
+    const item = {
+      type: 'image',
+      zIndex,
+      domOrder,
+      options: { x, y, w, h, data: null },
+    };
+
+    const job = async () => {
+      const rasterData = await rasterizeHybridDecorLayer(node, rect, overflowPx, {
+        hideText: hasText,
+        opacity: effectiveOpacity,
+      });
+      if (rasterData) item.options.data = rasterData;
+      else item.skip = true;
+    };
+
+    return { items: [item], job, recurseTextOnly: hasText };
+  }
+
+  function estimateHybridOverflowPx(style) {
+    let overflow = 0;
+    const shadow = style.boxShadow;
+    if (shadow && shadow !== 'none') {
+      const re = /(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px(?:\s+(-?[\d.]+)px)?/g;
+      let m;
+      while ((m = re.exec(shadow))) {
+        const reach =
+          Math.max(Math.abs(parseFloat(m[1])), Math.abs(parseFloat(m[2]))) +
+          (parseFloat(m[3]) || 0) +
+          (parseFloat(m[4]) || 0);
+        if (reach > overflow) overflow = reach;
+      }
+    }
+    const filter = style.filter;
+    if (filter && filter !== 'none') {
+      const blurMatch = filter.match(/blur\(([\d.]+)px\)/);
+      if (blurMatch) overflow = Math.max(overflow, parseFloat(blurMatch[1]) * 3);
+      const dsMatch = filter.match(/drop-shadow\([^)]*?(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px/);
+      if (dsMatch) {
+        overflow = Math.max(
+          overflow,
+          Math.max(Math.abs(parseFloat(dsMatch[1])), Math.abs(parseFloat(dsMatch[2]))) +
+            parseFloat(dsMatch[3])
+        );
+      }
+    }
+    return Math.min(80, Math.ceil(overflow));
+  }
+
+  /**
+   * True when a hybrid subtree can be rendered through SVG <foreignObject>.
+   * foreignObject uses the browser's native CSS renderer (conic gradients,
+   * clip-path, blend modes all paint correctly) but cannot fetch external
+   * resources (images, icon fonts) once serialized into an <img> source.
+   */
+  function canUseForeignObjectForHybrid(node) {
+    if (node.querySelector && node.querySelector('img, canvas, video, iframe, object, embed')) {
+      return false;
+    }
+    if (isIconElement(node)) return false;
+    if (node.querySelectorAll) {
+      const candidates = node.querySelectorAll('i, span, [class]');
+      for (let i = 0; i < candidates.length; i++) {
+        if (isIconElement(candidates[i])) return false;
+      }
+    }
+    // url(...) backgrounds anywhere in the subtree also need external fetches.
+    const win = getNodeWindow(node);
+    const all = [node, ...(node.querySelectorAll ? Array.from(node.querySelectorAll('*')) : [])];
+    for (const el of all) {
+      const bg = win.getComputedStyle(el).backgroundImage || '';
+      if (/\burl\s*\(/i.test(bg)) return false;
+    }
+    return true;
+  }
+
+  function inlineComputedStylesForForeignObject(sourceEl, targetEl, options = {}) {
+    const win = getNodeWindow(sourceEl);
+    const computed = win.getComputedStyle(sourceEl);
+    let cssText = '';
+    for (let i = 0; i < computed.length; i++) {
+      const prop = computed[i];
+      cssText += `${prop}:${computed.getPropertyValue(prop)};`;
+    }
+    targetEl.setAttribute('style', cssText);
+    if (options.hideText && !isFormulaElement(sourceEl)) {
+      let hasDirectText = false;
+      for (let i = 0; i < sourceEl.childNodes.length; i++) {
+        const child = sourceEl.childNodes[i];
+        if (child.nodeType === 3 && child.nodeValue && child.nodeValue.trim()) {
+          hasDirectText = true;
+          break;
+        }
+      }
+      if (hasDirectText) {
+        targetEl.style.setProperty('color', 'transparent', 'important');
+        targetEl.style.setProperty('text-shadow', 'none', 'important');
+        targetEl.style.setProperty('text-decoration-color', 'transparent', 'important');
+      }
+    }
+    const sourceChildren = sourceEl.children;
+    const targetChildren = targetEl.children;
+    for (let i = 0; i < sourceChildren.length; i++) {
+      if (targetChildren[i]) {
+        inlineComputedStylesForForeignObject(sourceChildren[i], targetChildren[i], options);
+      }
+    }
+  }
+
+  async function rasterizeHybridViaForeignObject(node, rect, overflowPx, options = {}) {
+    const width = Math.max(1, Math.ceil(rect.width + overflowPx * 2));
+    const height = Math.max(1, Math.ceil(rect.height + overflowPx * 2));
+
+    const clone = node.cloneNode(true);
+    inlineComputedStylesForForeignObject(node, clone, options);
+    // Neutralize layout-context styles so the clone renders standalone at (overflow, overflow).
+    clone.style.setProperty('position', 'static', 'important');
+    clone.style.setProperty('margin', `${overflowPx}px 0 0 ${overflowPx}px`, 'important');
+    clone.style.setProperty('left', 'auto', 'important');
+    clone.style.setProperty('top', 'auto', 'important');
+    clone.style.setProperty('right', 'auto', 'important');
+    clone.style.setProperty('bottom', 'auto', 'important');
+    clone.style.setProperty('width', `${Math.ceil(rect.width)}px`, 'important');
+    clone.style.setProperty('height', `${Math.ceil(rect.height)}px`, 'important');
+    clone.style.setProperty('box-sizing', 'border-box', 'important');
+    // mix-blend-mode against an empty SVG canvas is a no-op that can blank the
+    // layer entirely; paint it normally and let PPTX stacking approximate it.
+    clone.style.setProperty('mix-blend-mode', 'normal', 'important');
+
+    const serializer = new XMLSerializer();
+    const wrapper = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+    wrapper.appendChild(clone);
+    const svgMarkup =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+      `<foreignObject x="0" y="0" width="100%" height="100%">` +
+      serializer.serializeToString(wrapper) +
+      `</foreignObject></svg>`;
+
+    const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+
+    const img = await new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = svgUrl;
+    });
+    if (!img) return null;
+
+    const maxPixels = 8_000_000;
+    let captureScale = 2;
+    if (width * height * captureScale * captureScale > maxPixels) {
+      captureScale = Math.max(1, Math.sqrt(maxPixels / Math.max(1, width * height)));
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(width * captureScale);
+    canvas.height = Math.ceil(height * captureScale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const rawOpacity = Number(options.opacity);
+    ctx.globalAlpha = Number.isFinite(rawOpacity) ? Math.max(0, Math.min(1, rawOpacity)) : 1;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const data = canvas.toDataURL('image/png');
+      if (!data || data.length < 64) return null;
+      // A fully transparent capture means foreignObject silently failed
+      // (e.g. unsupported markup) — return null so html2canvas takes over.
+      const probe = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let hasInk = false;
+      for (let i = 3; i < probe.data.length; i += 4) {
+        if (probe.data[i] > 0) {
+          hasInk = true;
+          break;
+        }
+      }
+      return hasInk ? data : null;
+    } catch (_) {
+      // Tainted canvas — caller falls back to html2canvas.
+      return null;
+    }
+  }
+
+  /**
+   * Rasterizes a hybrid subtree via html2canvas. When hideText is true, text
+   * is made transparent inside the clone so the editable text layer above is
+   * the only visible copy; icon/formula/media subtrees keep their fill.
+   */
+  async function rasterizeHybridDecorLayer(node, rect, overflowPx, options = {}) {
+    if (canUseForeignObjectForHybrid(node)) {
+      try {
+        const foData = await rasterizeHybridViaForeignObject(node, rect, overflowPx, options);
+        if (foData) return foData;
+      } catch (e) {
+        console.warn('foreignObject hybrid raster failed, trying html2canvas:', e);
+      }
+    }
+    return rasterizeHybridViaHtml2Canvas(node, rect, overflowPx, options);
+  }
+
+  async function rasterizeHybridViaHtml2Canvas(node, rect, overflowPx, options = {}) {
+    const sourceDoc = node.ownerDocument || document;
+    const sourceWin = sourceDoc.defaultView || window;
+    const width = Math.max(1, Math.ceil(rect.width + overflowPx * 2));
+    const height = Math.max(1, Math.ceil(rect.height + overflowPx * 2));
+
+    const originalId = node.id;
+    const tempId = 'pptx-hybrid-' + Math.random().toString(36).substr(2, 9);
+    node.id = tempId;
+
+    const maxPixels = 8_000_000;
+    let captureScale = 2;
+    if (width * height * captureScale * captureScale > maxPixels) {
+      captureScale = Math.max(1, Math.sqrt(maxPixels / Math.max(1, width * height)));
+    }
+
+    const shouldKeepTextVisible = (el) => {
+      if (isFormulaElement(el) || isIconElement(el)) return true;
+      let p = el.parentElement;
+      while (p) {
+        if (isFormulaElement(p) || isIconElement(p)) return true;
+        p = p.parentElement;
+      }
+      return false;
+    };
+
+    try {
+      const canvas = await html2canvas(node, {
+        backgroundColor: null,
+        logging: false,
+        scale: captureScale,
+        useCORS: true,
+        width,
+        height,
+        x: -overflowPx,
+        y: -overflowPx,
+        removeContainer: true,
+        imageTimeout: 3500,
+        onclone: (clonedDoc) => {
+          const clonedNode = clonedDoc.getElementById(tempId);
+          if (!clonedNode) return;
+          clonedNode.style.overflow = 'visible';
+          if (options.hideText) {
+            const walker = clonedDoc.createTreeWalker(clonedNode, NodeFilter.SHOW_ELEMENT);
+            const toHide = [];
+            let cur = clonedNode;
+            while (cur) {
+              let hasDirectText = false;
+              for (let i = 0; i < cur.childNodes.length; i++) {
+                const child = cur.childNodes[i];
+                if (child.nodeType === 3 && child.nodeValue && child.nodeValue.trim()) {
+                  hasDirectText = true;
+                  break;
+                }
+              }
+              if (hasDirectText && !shouldKeepTextVisible(cur)) toHide.push(cur);
+              cur = walker.nextNode();
+            }
+            toHide.forEach((el) => {
+              el.style.setProperty('color', 'transparent', 'important');
+              el.style.setProperty('text-shadow', 'none', 'important');
+              el.style.setProperty('text-decoration-color', 'transparent', 'important');
+            });
+          }
+        },
+      });
+
+      const rawOpacity = Number(options.opacity);
+      const opacity = Number.isFinite(rawOpacity) ? Math.max(0, Math.min(1, rawOpacity)) : 1;
+      let outCanvas = canvas;
+      if (opacity < 0.999) {
+        outCanvas = document.createElement('canvas');
+        outCanvas.width = canvas.width;
+        outCanvas.height = canvas.height;
+        const ctx = outCanvas.getContext('2d');
+        ctx.globalAlpha = opacity;
+        ctx.drawImage(canvas, 0, 0);
+      }
+      const data = outCanvas.toDataURL('image/png');
+      return data && data.length > 64 ? data : null;
+    } catch (e) {
+      console.warn('Hybrid raster capture failed, falling back to element pipeline:', e);
+      return null;
+    } finally {
+      if (originalId) node.id = originalId;
+      else node.removeAttribute('id');
+    }
+  }
+
   /**
    * Replaces createRenderItem.
    * Returns { items: [], job: () => Promise, stopRecursion: boolean }
@@ -66871,7 +67325,8 @@
     effectiveZIndex,
     computedStyle,
     globalOptions = {},
-    effectiveOpacity = 1
+    effectiveOpacity = 1,
+    textOnlyMode = false
   ) {
     // 1. Text Node Handling
     if (node.nodeType === 3) {
@@ -66957,6 +67412,74 @@
     let h = unrotatedH;
 
     const items = [];
+
+    // TEXT-ONLY MODE (hybrid raster): visuals are already baked into the
+    // decoration raster; only re-emit editable text on top. Media, icons and
+    // formulas stay visible inside the raster, so skip them here.
+    if (textOnlyMode) {
+      const tagUpper = String(node.tagName || '').toUpperCase();
+      if (['SVG', 'CANVAS', 'IMG', 'VIDEO', 'IFRAME', 'OBJECT', 'EMBED'].includes(tagUpper)) {
+        return { items: [], stopRecursion: true };
+      }
+      if (isFormulaElement(node) || isIconElement(node)) {
+        return { items: [], stopRecursion: true };
+      }
+      const isListRoot = (tagUpper === 'UL' || tagUpper === 'OL') && !isComplexHierarchy(node);
+      if (!isListRoot) {
+        if (node.tagName === 'TABLE') {
+          // Keep table text editable; visuals come from the raster layer.
+          const tableData = extractTableData(node, config.scale);
+          return {
+            items: [
+              {
+                type: 'table',
+                zIndex: nextRenderableZIndex(zIndex),
+                domOrder,
+                tableData,
+                options: { x, y, w: unrotatedW, h: unrotatedH },
+              },
+            ],
+            stopRecursion: true,
+          };
+        }
+        if (!isTextContainer(node)) return null;
+        const textParts = finalizeInlineTextParts(
+          collectInlineTextParts(node, config.scale, safeOpacity, node)
+        );
+        if (textParts.length === 0) return { items: [], stopRecursion: true };
+
+        let align = style.textAlign || 'left';
+        if (align === 'start') align = 'left';
+        if (align === 'end') align = 'right';
+        let valign = 'top';
+        if (style.alignItems === 'center') valign = 'middle';
+        if (style.justifyContent === 'center' && style.display.includes('flex')) align = 'center';
+        textParts[0].options.fontSize = Math.floor(textParts[0]?.options?.fontSize) || 12;
+
+        items.push({
+          type: 'text',
+          zIndex: nextRenderableZIndex(zIndex),
+          domOrder,
+          textParts,
+          options: {
+            x,
+            y,
+            w,
+            h,
+            align,
+            valign,
+            inset: getPadding(style, config.scale),
+            rotate: rotation,
+            margin: 0,
+            wrap: true,
+            autoFit: false,
+          },
+        });
+        return { items, stopRecursion: true };
+      }
+      // List roots fall through to the standard UL/OL text extraction below,
+      // where textOnlyMode suppresses their background/formula visuals.
+    }
 
     if (node.tagName === 'TABLE') {
       const tableData = extractTableData(node, config.scale);
@@ -67124,9 +67647,9 @@
       });
 
       if (listItems.length > 0) {
-        // Add background if exists
+        // Add background if exists (skip in hybrid text-only mode: raster has it)
         const bgColorObj = parseColor(style.backgroundColor);
-        if (bgColorObj.hex && bgColorObj.opacity > 0) {
+        if (!textOnlyMode && bgColorObj.hex && bgColorObj.opacity > 0) {
           items.push({
             type: 'shape',
             zIndex,
@@ -67159,12 +67682,12 @@
           },
         });
 
-        if (formulaArtifacts.items.length > 0) {
+        if (!textOnlyMode && formulaArtifacts.items.length > 0) {
           items.push(...formulaArtifacts.items);
         }
 
         const formulaJob =
-          formulaArtifacts.jobs.length > 0
+          !textOnlyMode && formulaArtifacts.jobs.length > 0
             ? async () => {
                 for (const job of formulaArtifacts.jobs) {
                   await job();
@@ -68002,7 +68525,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-06-14-bg-layer-v4';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-07-07-hybrid-raster-v1';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;

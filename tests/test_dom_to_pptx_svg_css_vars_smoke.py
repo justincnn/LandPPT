@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_svg_css_vars_smoke.html"
-EXPECTED_PATCH_VERSION = "2026-06-14-bg-layer-v4"
+EXPECTED_PATCH_VERSION = "2026-07-07-hybrid-raster-v1"
 
 
 def _read_pptx(result):
