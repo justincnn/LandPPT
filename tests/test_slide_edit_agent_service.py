@@ -47,7 +47,8 @@ def test_coerce_agent_max_iterations_defaults_and_clamps():
     assert coerce_agent_max_iterations(None) == 6
     assert coerce_agent_max_iterations(1) == 2
     assert coerce_agent_max_iterations(8) == 8
-    assert coerce_agent_max_iterations(99) == 12
+    assert coerce_agent_max_iterations(99) == 99
+    assert coerce_agent_max_iterations(999) == 100
     assert coerce_agent_max_iterations("bad") == 6
 
 
@@ -512,6 +513,26 @@ def test_slide_edit_agent_prompt_limits_conversation_history_to_recent_messages(
     assert len(conversation_history[-1]["content"]) <= 1200
 
 
+def test_slide_edit_agent_prompt_limits_scratchpad_entries():
+    service = SlideEditAgentService()
+    request = _tool_request()
+    runner = SlideEditToolRunner(SlideEditAgentContext.from_request(request))
+    scratchpad = [
+        {"iteration": index, "observation": {"summary": f"result {index}"}}
+        for index in range(25)
+    ]
+
+    prompt = service._build_prompt(
+        request, runner, scratchpad=scratchpad, max_iterations=100
+    )
+    context = json.loads(prompt.split("\n\n", 1)[1])
+
+    assert context["max_iterations"] == 100
+    assert len(context["scratchpad"]) == 21
+    assert context["scratchpad"][0]["note"].startswith("5 earlier scratchpad")
+    assert context["scratchpad"][1]["iteration"] == 5
+
+
 class _FakePPTService:
     def __init__(self, responses):
         self.responses = list(responses)
@@ -530,6 +551,13 @@ class _FakeNativeToolPPTService:
     async def _chat_completion_for_role(self, role, messages, **kwargs):
         self.calls.append((role, messages, kwargs))
         return self.responses.pop(0)
+
+
+class _NoNativeToolPPTService(_FakePPTService):
+    async def _chat_completion_for_role(self, role, messages, **kwargs):
+        if kwargs.get("tools"):
+            raise RuntimeError("unsupported parameter: tools")
+        return await super()._chat_completion_for_role(role, messages, **kwargs)
 
 
 class _FailingPPTService:
@@ -660,6 +688,60 @@ async def test_slide_edit_agent_runs_tools_and_returns_proposal():
         "draft_ready",
         "needs_confirmation",
     }
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_retries_initial_unstructured_text_response():
+    service = SlideEditAgentService()
+    fake_ppt = _NoNativeToolPPTService(
+        [
+            "I will make the title shorter.",
+            json.dumps(
+                {
+                    "thought": "Use a structured tool call.",
+                    "action": "update_text",
+                    "action_input": {"selector": "h1", "text": "Short Title"},
+                }
+            ),
+            json.dumps(
+                {
+                    "thought": "The title is shorter.",
+                    "action": "final",
+                    "action_input": {"summary": "Shortened the title."},
+                }
+            ),
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(maxIterations=3), fake_ppt)
+
+    assert proposal.summary == "Shortened the title."
+    assert "Short Title" in proposal.html_content
+    second_prompt = fake_ppt.calls[1][1][-1].content
+    second_context = json.loads(second_prompt.split("\n\n", 1)[1])
+    assert "Response was not a valid JSON action" in second_context["scratchpad"][0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_allows_unstructured_final_after_tool_execution():
+    service = SlideEditAgentService()
+    fake_ppt = _NoNativeToolPPTService(
+        [
+            json.dumps(
+                {
+                    "thought": "Update the title text.",
+                    "action": "update_text",
+                    "action_input": {"selector": "h1", "text": "Short Title"},
+                }
+            ),
+            "Shortened the title.",
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(maxIterations=3), fake_ppt)
+
+    assert proposal.summary == "Shortened the title."
+    assert "Short Title" in proposal.html_content
 
 
 @pytest.mark.asyncio

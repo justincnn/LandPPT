@@ -19,6 +19,12 @@ _MAX_CONVERSATION_HISTORY_MESSAGES = 10
 _MAX_CONVERSATION_HISTORY_TOTAL_CHARS = 6000
 _MAX_CONVERSATION_HISTORY_MESSAGE_CHARS = 1200
 
+_AGENT_MIN_ITERATIONS = 2
+_AGENT_MAX_ITERATIONS = 100
+_AGENT_DEFAULT_ITERATIONS = 6
+_MAX_PROMPT_SCRATCHPAD_ENTRIES = 20
+
+
 class SlideEditAgentRequest(BaseModel):
     projectId: str
     slideIndex: int
@@ -101,10 +107,13 @@ def compute_slide_html_hash(html: str) -> str:
 def coerce_agent_max_iterations(raw_value: Any) -> int:
     try:
         if raw_value is not None:
-            return max(2, min(12, int(raw_value)))
+            return max(
+                _AGENT_MIN_ITERATIONS,
+                min(_AGENT_MAX_ITERATIONS, int(raw_value)),
+            )
     except (TypeError, ValueError):
         pass
-    return 6
+    return _AGENT_DEFAULT_ITERATIONS
 
 
 def _extract_json_payload(text: str) -> Optional[Dict[str, Any]]:
@@ -863,7 +872,6 @@ class SlideEditAgentService:
             },
         )
 
-        scratchpad: List[Dict[str, Any]] = []
         try:
             return await self._run_native_tool_iteration(
                 request,
@@ -884,6 +892,9 @@ class SlideEditAgentService:
                         "reason": str(exc) or exc.__class__.__name__,
                     },
                 )
+                # Restart from the base slide so any partial native-loop edits
+                # are not silently re-applied on top of themselves.
+                runner = SlideEditToolRunner(context)
             else:
                 await self._emit_error(
                     event_callback,
@@ -893,7 +904,8 @@ class SlideEditAgentService:
                 )
                 raise
 
-        scratchpad = []
+        scratchpad: List[Dict[str, Any]] = []
+        executed_tool = False
         for iteration in range(1, max_iterations + 1):
             try:
                 prompt = self._build_prompt(request, runner, scratchpad, max_iterations)
@@ -901,7 +913,8 @@ class SlideEditAgentService:
                     role,
                     messages=self._build_messages(request, prompt),
                 )
-                action = parse_agent_action(response.content or "")
+                content = str(getattr(response, "content", "") or "")
+                action = parse_agent_action(content)
             except Exception as exc:
                 await self._emit_error(
                     event_callback,
@@ -910,6 +923,24 @@ class SlideEditAgentService:
                     iteration=iteration,
                 )
                 raise
+
+            if (
+                action.action == "final"
+                and not executed_tool
+                and not self._is_structured_agent_action(content)
+                and iteration < max_iterations
+            ):
+                scratchpad.append(
+                    {
+                        "iteration": iteration,
+                        "error": (
+                            "Response was not a valid JSON action. Return strict JSON "
+                            'with "thought", "action", and "action_input".'
+                        ),
+                        "response": content[:500],
+                    }
+                )
+                continue
 
             await self._emit(
                 event_callback,
@@ -965,6 +996,7 @@ class SlideEditAgentService:
                     "observation": observation,
                 },
             )
+            executed_tool = True
             scratchpad.append(
                 {
                     "iteration": iteration,
@@ -1312,7 +1344,7 @@ class SlideEditAgentService:
             "current_html": runner.current_html,
             "vision": self._vision_context(request),
             "available_tools": self._tool_schemas(runner),
-            "scratchpad": scratchpad,
+            "scratchpad": self._prompt_scratchpad(scratchpad),
             "max_iterations": max_iterations,
         }
         return (
@@ -1321,6 +1353,16 @@ class SlideEditAgentService:
             "user_request. Use final when the draft is ready. Return strict JSON only.\n\n"
             + json.dumps(context, ensure_ascii=False, indent=2)
         )
+
+    def _prompt_scratchpad(
+        self, scratchpad: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        if len(scratchpad) <= _MAX_PROMPT_SCRATCHPAD_ENTRIES:
+            return scratchpad
+        omitted = len(scratchpad) - _MAX_PROMPT_SCRATCHPAD_ENTRIES
+        return [
+            {"note": f"{omitted} earlier scratchpad entries omitted to bound prompt size."}
+        ] + scratchpad[-_MAX_PROMPT_SCRATCHPAD_ENTRIES:]
 
     def _conversation_history_context(
         self, request: SlideEditAgentRequest
