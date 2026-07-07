@@ -18,7 +18,9 @@ env_paths = [
 for env_path in env_paths:
     try:
         if os.path.exists(env_path):
-            load_dotenv(env_path, override=True)
+            # Do not let image-baked .env defaults override orchestrator-provided
+            # environment variables in Docker/Kubernetes deployments.
+            load_dotenv(env_path, override=False)
             break
     except (PermissionError, FileNotFoundError):
         continue
