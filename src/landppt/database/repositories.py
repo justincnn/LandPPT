@@ -158,6 +158,8 @@ class ProjectRepository:
             PPTTemplate,
             SpeechScript,
             NarrationAudio,
+            Artifact,
+            AsyncTask,
         )
         
         user_id = _effective_user_id(user_id)
@@ -212,7 +214,17 @@ class ProjectRepository:
                 delete(NarrationAudio).where(NarrationAudio.project_id == project_id)
             )
 
-            # 9. Finally delete the project itself
+            # 9. Delete generated/exported artifact metadata (references projects)
+            await self.session.execute(
+                delete(Artifact).where(Artifact.project_id == project_id)
+            )
+
+            # 10. Delete persisted async task state (references projects)
+            await self.session.execute(
+                delete(AsyncTask).where(AsyncTask.project_id == project_id)
+            )
+
+            # 11. Finally delete the project itself
             await self.session.execute(
                 delete(Project).where(Project.project_id == project_id)
             )
