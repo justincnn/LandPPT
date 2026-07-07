@@ -30,6 +30,7 @@ CLAUDE.md
 
 # Temporary files and cache
 temp/
+tmp/
 *.tmp
 *.cache
 *.db
