@@ -155,6 +155,27 @@ async def test_tool_runner_inspects_slide_html():
 
 
 @pytest.mark.asyncio
+async def test_compact_observation_keeps_tool_results_needed_by_model():
+    service = SlideEditAgentService()
+    runner = SlideEditToolRunner(_tool_context())
+
+    inspect_result = await runner.execute_tool("inspect_slide_html", {})
+    inspect_compact = service._compact_observation(inspect_result)
+
+    assert inspect_compact["headings"][0]["text"] == "Long Original Title"
+
+    select_result = await runner.execute_tool("select_elements", {"selector": "h1"})
+    select_compact = service._compact_observation(select_result)
+
+    assert select_compact["matches"][0]["agent_id"].startswith("agent-el-")
+
+    slide_result = await runner.execute_tool("get_slide", {})
+    slide_compact = service._compact_observation(slide_result)
+
+    assert "html_content" in slide_compact["slide"]
+
+
+@pytest.mark.asyncio
 async def test_tool_runner_replace_slide_html_updates_draft_not_base():
     context = _tool_context()
     runner = SlideEditToolRunner(context)
@@ -172,6 +193,22 @@ async def test_tool_runner_replace_slide_html_updates_draft_not_base():
 
 
 @pytest.mark.asyncio
+async def test_tool_runner_replace_slide_html_rejects_invalid_without_mutating_draft():
+    runner = SlideEditToolRunner(_tool_context())
+    original_html = runner.current_html
+
+    result = await runner.execute_tool(
+        "replace_slide_html",
+        {"html": '<div style="width:1280px;height:720px"><script>alert(1)</script><h1>Bad</h1></div>'},
+    )
+
+    assert result["success"] is False
+    assert result["tool"] == "replace_slide_html"
+    assert "script tags are not allowed" in result["errors"]
+    assert runner.current_html == original_html
+
+
+@pytest.mark.asyncio
 async def test_tool_runner_updates_text_by_selector():
     runner = SlideEditToolRunner(_tool_context())
 
@@ -180,6 +217,27 @@ async def test_tool_runner_updates_text_by_selector():
     assert result["success"] is True
     assert "Short Title" in runner.current_html
     assert "Long Original Title" not in runner.current_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_selector_takes_priority_over_selected_element_context():
+    runner = SlideEditToolRunner(
+        _tool_context(
+            mode="element",
+            slideContent=(
+                '<div style="width:1280px;height:720px">'
+                '<h1 data-quick-ai-id="el1">Long Original Title</h1><p>Body</p>'
+                "</div>"
+            ),
+            selectedElementId="el1",
+        )
+    )
+
+    result = await runner.execute_tool("update_text", {"selector": "p", "text": "Updated Body"})
+
+    assert result["success"] is True
+    assert "Long Original Title" in runner.current_html
+    assert "Updated Body" in runner.current_html
 
 
 @pytest.mark.asyncio
@@ -229,6 +287,32 @@ async def test_tool_runner_replaces_element_and_preserves_quick_ai_id_in_draft()
     assert result["success"] is True
     assert 'data-quick-ai-id="el1"' in runner.current_html
     assert "Short Title" in runner.current_html
+
+
+@pytest.mark.asyncio
+async def test_tool_runner_replace_element_by_selector_preserves_target_id_only():
+    runner = SlideEditToolRunner(
+        _tool_context(
+            mode="element",
+            slideContent=(
+                '<div style="width:1280px;height:720px">'
+                '<h1 data-quick-ai-id="el1">Long Original Title</h1>'
+                '<p data-quick-ai-id="body1">Body</p>'
+                "</div>"
+            ),
+            selectedElementId="el1",
+        )
+    )
+
+    result = await runner.execute_tool(
+        "replace_element_html",
+        {"selector": "p", "html": "<p>Updated Body</p>"},
+    )
+
+    assert result["success"] is True
+    assert runner.current_html.count('data-quick-ai-id="el1"') == 1
+    assert 'data-quick-ai-id="body1"' in runner.current_html
+    assert "Updated Body" in runner.current_html
 
 
 @pytest.mark.asyncio
@@ -488,6 +572,43 @@ async def test_slide_edit_agent_uses_native_tool_calls_before_text_fallback():
     second_messages = fake_ppt.calls[1][1]
     assert second_messages[-1].role.value == "tool"
     assert second_messages[-1].tool_call_id == "call-1"
+
+
+@pytest.mark.asyncio
+async def test_slide_edit_agent_native_text_action_keeps_observation_in_history():
+    service = SlideEditAgentService()
+    fake_ppt = _FakeNativeToolPPTService(
+        [
+            SimpleNamespace(
+                content=json.dumps(
+                    {
+                        "thought": "Inspect before editing.",
+                        "action": "inspect_slide_html",
+                        "action_input": {},
+                    }
+                ),
+                tool_calls=[],
+            ),
+            SimpleNamespace(
+                content=json.dumps(
+                    {
+                        "thought": "Use the inspected title.",
+                        "action": "final",
+                        "action_input": {"summary": "Inspected the slide."},
+                    }
+                ),
+                tool_calls=[],
+            ),
+        ]
+    )
+
+    proposal = await service.run_agent(_tool_request(), fake_ppt)
+
+    assert proposal.summary == "Inspected the slide."
+    second_messages = fake_ppt.calls[1][1]
+    assert second_messages[-1].role.value == "user"
+    assert "Tool result:" in second_messages[-1].content
+    assert "Long Original Title" in second_messages[-1].content
 
 
 @pytest.mark.asyncio

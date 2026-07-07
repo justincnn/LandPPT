@@ -468,6 +468,15 @@ class SlideEditToolRunner:
     def _set_html_from_soup(self, soup: BeautifulSoup) -> None:
         self.current_html = str(soup).strip()
 
+    def _next_agent_element_id(self, soup: BeautifulSoup) -> str:
+        max_index = 0
+        for node in soup.find_all(attrs={"data-agent-id": True}):
+            value = str(node.get("data-agent-id") or "")
+            match = re.fullmatch(r"agent-el-(\d+)", value)
+            if match:
+                max_index = max(max_index, int(match.group(1)))
+        return f"agent-el-{max_index + 1}"
+
     def _invalid_selector_error(
         self, tool_name: str, selector: str, error: Exception
     ) -> Dict[str, Any]:
@@ -568,7 +577,7 @@ class SlideEditToolRunner:
             node_text = node.get_text(" ", strip=True)
             if text and text not in node_text.lower():
                 continue
-            agent_id = node.get("data-agent-id") or f"agent-el-{idx}"
+            agent_id = node.get("data-agent-id") or self._next_agent_element_id(soup)
             node["data-agent-id"] = agent_id
             matches.append({"agent_id": agent_id, "tag": node.name, "text": node_text[:200]})
         self._set_html_from_soup(soup)
@@ -583,9 +592,7 @@ class SlideEditToolRunner:
         self, soup: BeautifulSoup, tool_input: Dict[str, Any], tool_name: str
     ) -> tuple[Any, Optional[Dict[str, Any]]]:
         selector = str(tool_input.get("selector") or "").strip()
-        element_id = str(
-            tool_input.get("element_id") or self.context.selected_element_id or ""
-        ).strip()
+        element_id = str(tool_input.get("element_id") or "").strip()
         if element_id:
             found = soup.find(attrs={"data-agent-id": element_id}) or soup.find(
                 attrs={"data-quick-ai-id": element_id}
@@ -602,6 +609,18 @@ class SlideEditToolRunner:
                 return soup.select_one(selector), None
             except Exception as exc:
                 return None, self._invalid_selector_error(tool_name, selector, exc)
+        fallback_element_id = str(self.context.selected_element_id or "").strip()
+        if fallback_element_id:
+            found = soup.find(attrs={"data-agent-id": fallback_element_id}) or soup.find(
+                attrs={"data-quick-ai-id": fallback_element_id}
+            )
+            if found:
+                return found, None
+            return None, {
+                "success": False,
+                "tool": tool_name,
+                "error": f'target element id "{fallback_element_id}" not found',
+            }
         return None, {
             "success": False,
             "tool": tool_name,
@@ -617,9 +636,16 @@ class SlideEditToolRunner:
                 "tool": "replace_slide_html",
                 "error": "replacement html is empty",
             }
+        if not validation.valid:
+            return {
+                "success": False,
+                "tool": "replace_slide_html",
+                "errors": validation.errors,
+                "summary": "Replacement slide HTML failed validation.",
+            }
         self.current_html = validation.sanitized_html
         return {
-            "success": validation.valid,
+            "success": True,
             "tool": "replace_slide_html",
             "errors": validation.errors,
             "summary": "Replaced full slide draft HTML.",
@@ -644,11 +670,13 @@ class SlideEditToolRunner:
         if error:
             return error
         replacement = fragment.find(True)
-        element_id = str(
-            tool_input.get("element_id") or self.context.selected_element_id or ""
-        ).strip()
-        if element_id:
-            replacement["data-quick-ai-id"] = element_id
+        explicit_element_id = str(tool_input.get("element_id") or "").strip()
+        target_agent_id = str(target.get("data-agent-id") or "").strip()
+        target_quick_ai_id = str(target.get("data-quick-ai-id") or "").strip()
+        if target_agent_id:
+            replacement["data-agent-id"] = target_agent_id
+        if explicit_element_id or target_quick_ai_id:
+            replacement["data-quick-ai-id"] = explicit_element_id or target_quick_ai_id
         target.replace_with(replacement)
         self._set_html_from_soup(soup)
         return {
@@ -836,39 +864,34 @@ class SlideEditAgentService:
         )
 
         scratchpad: List[Dict[str, Any]] = []
-        for iteration in range(1, max_iterations + 1):
-            try:
-                proposal = await self._run_native_tool_iteration(
-                    request,
-                    user_ppt_service,
-                    runner,
-                    role,
-                    max_iterations,
+        try:
+            return await self._run_native_tool_iteration(
+                request,
+                user_ppt_service,
+                runner,
+                role,
+                max_iterations,
+                event_callback,
+            )
+        except Exception as exc:
+            if getattr(exc, "_slide_edit_error_emitted", False):
+                raise
+            if self._is_native_tool_protocol_error(exc):
+                await self._emit(
                     event_callback,
+                    {
+                        "type": "agent_fallback",
+                        "reason": str(exc) or exc.__class__.__name__,
+                    },
                 )
-                if proposal:
-                    return proposal
-                break
-            except Exception as exc:
-                if getattr(exc, "_slide_edit_error_emitted", False):
-                    raise
-                if self._is_native_tool_protocol_error(exc):
-                    await self._emit(
-                        event_callback,
-                        {
-                            "type": "agent_fallback",
-                            "reason": str(exc) or exc.__class__.__name__,
-                        },
-                    )
-                    break
-                else:
-                    await self._emit_error(
-                        event_callback,
-                        exc,
-                        phase="model",
-                        iteration=iteration,
-                    )
-                    raise
+            else:
+                await self._emit_error(
+                    event_callback,
+                    exc,
+                    phase="model",
+                    iteration=1,
+                )
+                raise
 
         scratchpad = []
         for iteration in range(1, max_iterations + 1):
@@ -1001,7 +1024,13 @@ class SlideEditAgentService:
                     },
                 )
                 if text_action.action != "final":
-                    await self._execute_agent_action(
+                    messages.append(
+                        self._ai_message(
+                            "assistant",
+                            content,
+                        )
+                    )
+                    observation = await self._execute_agent_action(
                         event_callback,
                         runner,
                         iteration,
@@ -1013,7 +1042,8 @@ class SlideEditAgentService:
                     messages.append(
                         self._ai_message(
                             "user",
-                            "Tool result applied. Continue with the next tool call or final summary.",
+                            "Tool result:\n"
+                            + json.dumps(self._compact_observation(observation), ensure_ascii=False),
                         )
                     )
                     continue
@@ -1536,8 +1566,44 @@ class SlideEditAgentService:
             "success": observation.get("success", False),
             "summary": observation.get("summary") or observation.get("error") or "",
         }
+        tool_name = observation.get("tool")
+        if tool_name:
+            compact["tool"] = tool_name
+        preserved_keys_by_tool = {
+            "get_project_context": ("project", "slide_index", "mode", "outline"),
+            "get_slide": ("slide", "base_hash"),
+            "list_slides": ("slides",),
+            "inspect_slide_html": ("headings", "text_blocks", "images"),
+            "select_elements": ("matches",),
+            "validate_slide_html": ("errors", "warnings"),
+            "preview_patch": ("base_hash", "new_hash", "changed"),
+        }
+        for key in preserved_keys_by_tool.get(str(tool_name), ()):
+            if key in observation:
+                compact[key] = self._compact_observation_value(observation[key])
         if observation.get("errors"):
             compact["errors"] = observation["errors"]
         if observation.get("warnings"):
             compact["warnings"] = observation["warnings"]
         return compact
+
+    def _compact_observation_value(
+        self, value: Any, *, max_string: int = 1600, max_items: int = 20
+    ) -> Any:
+        if isinstance(value, str):
+            if len(value) <= max_string:
+                return value
+            return value[: max_string - 3].rstrip() + "..."
+        if isinstance(value, list):
+            return [
+                self._compact_observation_value(
+                    item, max_string=max_string, max_items=max_items
+                )
+                for item in value[:max_items]
+            ]
+        if isinstance(value, dict):
+            return {
+                str(key): self._compact_observation_value(item, max_string=max_string, max_items=max_items)
+                for key, item in list(value.items())[:max_items]
+            }
+        return value
