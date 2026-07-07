@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_layered_background_smoke.html"
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_hybrid_raster_smoke.html"
 EXPECTED_PATCH_VERSION = "2026-07-07-hybrid-raster-v1"
 
 
@@ -14,7 +14,7 @@ def _read_pptx(result):
     return zipfile.ZipFile(io.BytesIO(pptx_bytes))
 
 
-def test_dom_to_pptx_preserves_layered_root_background():
+def test_dom_to_pptx_hybrid_raster_keeps_text_editable():
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:  # pragma: no cover - depends on local dependency install
@@ -32,8 +32,8 @@ def test_dom_to_pptx_preserves_layered_root_background():
 
         try:
             page.goto(FIXTURE_PATH.resolve().as_uri(), wait_until="load")
-            page.wait_for_function("window.domToPptx && window.runLayeredBackgroundPptxSmokeTest")
-            result = page.evaluate("() => window.runLayeredBackgroundPptxSmokeTest()")
+            page.wait_for_function("window.domToPptx && window.runHybridRasterPptxSmokeTest")
+            result = page.evaluate("() => window.runHybridRasterPptxSmokeTest()")
         finally:
             browser.close()
 
@@ -47,6 +47,13 @@ def test_dom_to_pptx_preserves_layered_root_background():
         media_entries = [name for name in archive.namelist() if name.startswith("ppt/media/")]
         media_payloads = [archive.read(name) for name in media_entries]
 
-    assert "F2F2F2" in slide_xml
+    # Hybrid decoration layers exported as PNG images.
     assert "<p:pic>" in slide_xml
     assert any(payload.startswith(b"\x89PNG\r\n\x1a\n") for payload in media_payloads)
+    # At least 3 raster layers: clipped badge, conic card, multi-shadow card.
+    assert len(media_entries) >= 3
+
+    # Text inside hybrid subtrees must remain native editable text runs.
+    assert "Conic gradient backgrounds rasterize" in slide_xml
+    assert "Multi layer shadows rasterize" in slide_xml
+    assert "Hybrid raster export" in slide_xml
