@@ -1,10 +1,3 @@
-x-landppt-build: &landppt-build
-  context: .
-  dockerfile: Dockerfile
-  args:
-    - APT_DEBIAN_URL=${APT_DEBIAN_URL:-http://deb.debian.org/debian}
-    - APT_SECURITY_URL=${APT_SECURITY_URL:-http://deb.debian.org/debian-security}
-
 x-landppt-volumes: &landppt-volumes
   - ./.env:/app/.env
   - landppt_data:/app/data
@@ -62,7 +55,6 @@ x-landppt-depends-on: &landppt-depends-on
 
 services:
   landppt:
-    build: *landppt-build
     image: ${LANDPPT_IMAGE:-bradleylzh/landppt:latest}
     shm_size: ${LANDPPT_SHM_SIZE:-4gb}
     ports:
@@ -85,7 +77,6 @@ services:
       - landppt_network
 
   worker:
-    build: *landppt-build
     image: ${LANDPPT_IMAGE:-bradleylzh/landppt:latest}
     command: ["python", "-m", "landppt.cli", "worker", "--queue", "${TASK_QUEUE_NAME:-default}"]
     shm_size: ${LANDPPT_SHM_SIZE:-4gb}
