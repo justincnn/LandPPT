@@ -17,7 +17,7 @@
     <!-- CodeMirror Search Dialog CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/dialog/dialog.min.css">
     <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.css?v=20260613-thumbnail-fill-v1">
-    <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.aiSidebar.css?v=20260707-agent-collapse-v1">
+    <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.aiSidebar.css?v=20260707-compact-empty-v1">
     <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.nativeChat.css?v=20260402-split">
     <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.quickEdit.css?v=20260614-modalui3">
     <link rel="stylesheet" href="/static/css/pages/project/slides_editor/projectSlidesEditor.imageLibrary.css?v=20260402-split">
@@ -606,23 +606,12 @@
             <div class="ai-chat-container">
                 <div class="ai-chat-messages" id="aiChatMessages">
                     <div class="ai-message system">
-                        <div style="text-align: center; padding: var(--spacing-sm);">
-                            <div
-                                style="font-size: 2rem; margin-bottom: var(--spacing-sm); color: var(--text-secondary);">
-                                <i class="fas fa-magic"></i>
-                            </div>
-                            <div
-                                style="font-weight: 600; margin-bottom: var(--spacing-xs); color: var(--text-primary);">
-                                欢迎使用AI编辑助手！
-                            </div>
-                            <div style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-muted);">
-                                您可以告诉我如何修改当前幻灯片，例如：
-                                <br>• "修改标题颜色为蓝色"
-                                <br>• "添加更多图表"
-                                <br>• "调整布局为左右分栏"
-                                <br>• "根据上传的图片设计内容"
-                                <br>• "将图片居中显示"
-                            </div>
+                        <div class="ai-empty-hint">
+                            <i class="fas fa-magic" aria-hidden="true"></i>
+                            <span class="ai-empty-hint-title">输入编辑指令开始</span>
+                            <span class="ai-empty-hint-chip">改标题颜色</span>
+                            <span class="ai-empty-hint-chip">调整布局</span>
+                            <span class="ai-empty-hint-chip">按图片设计</span>
                         </div>
                     </div>
                 </div>

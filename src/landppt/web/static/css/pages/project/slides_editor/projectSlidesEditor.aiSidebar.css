@@ -383,11 +383,41 @@
 .ai-message.system {
     background: var(--surface-elevated);
     color: var(--text-secondary);
-    font-style: italic;
-    text-align: center;
-    margin: var(--spacing-xs) var(--spacing-md);
+    margin: var(--spacing-xs) var(--spacing-sm);
     font-size: 0.75rem;
     border: 1px solid var(--border-color);
+}
+
+.ai-empty-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--text-muted);
+    line-height: 1.25;
+}
+
+.ai-empty-hint i {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.ai-empty-hint-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.ai-empty-hint-chip {
+    max-width: 96px;
+    padding: 2px 7px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .ai-message:hover {
