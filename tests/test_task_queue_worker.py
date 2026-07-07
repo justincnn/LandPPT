@@ -2,6 +2,24 @@ import pytest
 
 
 @pytest.mark.asyncio
+async def test_dequeue_task_treats_valkey_timeout_as_empty_queue(monkeypatch):
+    from valkey.exceptions import TimeoutError as ValkeyTimeoutError
+
+    from landppt.tasks import queue
+
+    class TimeoutClient:
+        async def brpop(self, key, timeout):
+            raise ValkeyTimeoutError("Timeout reading from landppt-valkey:6379")
+
+    async def fake_connected_client():
+        return TimeoutClient()
+
+    monkeypatch.setattr(queue, "_connected_client", fake_connected_client)
+
+    assert await queue.dequeue_task("default", timeout_seconds=1) is None
+
+
+@pytest.mark.asyncio
 async def test_submit_queued_task_enqueues_when_queue_mode_enabled(monkeypatch):
     from landppt.core.config import app_config
     from landppt.services.background_tasks import BackgroundTaskManager, TaskStatus

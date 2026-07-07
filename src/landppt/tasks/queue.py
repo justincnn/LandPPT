@@ -7,6 +7,8 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
+from valkey.exceptions import TimeoutError as ValkeyTimeoutError
+
 from ..core.config import app_config
 from ..services.cache_service import get_cache_service
 
@@ -44,10 +46,13 @@ async def enqueue_task(task_id: str, task_type: str, queue_name: Optional[str] =
 async def dequeue_task(queue_name: Optional[str] = None, timeout_seconds: Optional[int] = None) -> Optional[QueueMessage]:
     client = await _connected_client()
     timeout = timeout_seconds if timeout_seconds is not None else app_config.task_worker_poll_timeout_seconds
-    item = await client.brpop(queue_key(queue_name), timeout=timeout)
+    try:
+        item = await client.brpop(queue_key(queue_name), timeout=timeout)
+    except ValkeyTimeoutError:
+        logger.debug("Timed out waiting for task queue %s", queue_key(queue_name))
+        return None
     if not item:
         return None
     _, payload = item
     data = json.loads(payload)
     return QueueMessage(task_id=str(data["task_id"]), task_type=str(data["task_type"]))
-
