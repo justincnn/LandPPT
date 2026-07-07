@@ -668,6 +668,35 @@ function getAgentEventDetail(event) {
     return event.message || event.summary || '';
 }
 
+function shouldCollapseAgentEvent(event) {
+    return event && (event.type === 'tool_call' || event.type === 'tool_result');
+}
+
+function getAgentEventSummary(event) {
+    if (!event) {
+        return '';
+    }
+    if (event.type === 'tool_call') {
+        return event.tool || event.action || 'tool';
+    }
+    if (event.type === 'tool_result') {
+        const observation = event.observation || {};
+        return compactAgentText(observation.summary || observation.error || (event.success ? 'done' : 'failed'), 120);
+    }
+    return compactAgentText(getAgentEventDetail(event), 120);
+}
+
+function getAgentEventExpandedDetail(event) {
+    if (!event) {
+        return '';
+    }
+    if (event.type === 'tool_result') {
+        const payload = stringifyAgentPayload(event.observation || {});
+        return payload || getAgentEventDetail(event);
+    }
+    return getAgentEventDetail(event);
+}
+
 function addAgentTimelineEvent(messageDiv, event) {
     if (!messageDiv || !event) return;
 
@@ -675,27 +704,67 @@ function addAgentTimelineEvent(messageDiv, event) {
     if (!timeline) {
         timeline = document.createElement('div');
         timeline.className = 'ai-agent-timeline';
-        timeline.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
         const regenerateBtn = messageDiv.querySelector('.ai-answer-regenerate-btn');
         messageDiv.insertBefore(timeline, regenerateBtn || null);
     }
 
     const item = document.createElement('div');
     item.className = `ai-agent-event ai-agent-event-${event.type || 'unknown'}`;
-    item.style.cssText = 'border:1px solid #e5e7eb;border-radius:6px;padding:8px;background:#fff;font-size:13px;color:#374151;';
 
-    const title = document.createElement('div');
-    title.style.cssText = 'font-weight:600;margin-bottom:4px;color:#111827;';
-    title.textContent = getAgentEventLabel(event);
+    const isCollapsible = shouldCollapseAgentEvent(event);
+    const detailText = compactAgentText(getAgentEventExpandedDetail(event), isCollapsible ? 1400 : 700);
 
-    const detailText = compactAgentText(getAgentEventDetail(event), 700);
-    const detail = document.createElement('div');
-    detail.style.cssText = 'white-space:pre-wrap;line-height:1.4;color:#4b5563;';
-    detail.textContent = detailText;
+    if (isCollapsible) {
+        item.classList.add('is-collapsed');
 
-    item.appendChild(title);
-    if (detailText) {
-        item.appendChild(detail);
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'ai-agent-event-toggle';
+        toggle.setAttribute('aria-expanded', 'false');
+
+        const title = document.createElement('span');
+        title.className = 'ai-agent-event-title';
+        title.textContent = getAgentEventLabel(event);
+
+        const summary = document.createElement('span');
+        summary.className = 'ai-agent-event-summary';
+        summary.textContent = getAgentEventSummary(event);
+
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-chevron-right ai-agent-event-caret';
+        icon.setAttribute('aria-hidden', 'true');
+
+        toggle.appendChild(title);
+        if (summary.textContent) {
+            toggle.appendChild(summary);
+        }
+        toggle.appendChild(icon);
+        item.appendChild(toggle);
+
+        if (detailText) {
+            const detail = document.createElement('div');
+            detail.className = 'ai-agent-event-detail';
+            detail.textContent = detailText;
+            item.appendChild(detail);
+        }
+
+        toggle.addEventListener('click', () => {
+            const expanded = item.classList.toggle('is-expanded');
+            item.classList.toggle('is-collapsed', !expanded);
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+    } else {
+        const title = document.createElement('div');
+        title.className = 'ai-agent-event-title';
+        title.textContent = getAgentEventLabel(event);
+
+        item.appendChild(title);
+        if (detailText) {
+            const detail = document.createElement('div');
+            detail.className = 'ai-agent-event-detail';
+            detail.textContent = detailText;
+            item.appendChild(detail);
+        }
     }
     timeline.appendChild(item);
 
