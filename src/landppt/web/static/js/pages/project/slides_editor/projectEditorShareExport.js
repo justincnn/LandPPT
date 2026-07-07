@@ -34,7 +34,7 @@ async function exportToPDF() {
             throw new Error('服务器返回了未知的响应格式。');
         }
 
-        if (data.status === 'processing' && data.task_id) {
+        if ((data.status === 'processing' || data.status === 'queued' || data.status === 'pending') && data.task_id) {
             const slideCount = data.slide_count || '多个';
             updateProgressToast(progressToast, `PDF生成任务已启动（共${slideCount}页），正在后台处理...`, 15);
             await trackPdfExportTask(data.task_id, progressToast);
@@ -170,7 +170,7 @@ async function exportToPPTX() {
             throw new Error('服务器返回了未知的响应格式。');
         }
 
-        if (data.status === 'processing' && data.task_id) {
+        if ((data.status === 'processing' || data.status === 'queued' || data.status === 'pending') && data.task_id) {
             updateProgressToast(progressToast, 'PPTX转换任务已启动，正在后台处理...', 20);
             await trackPptxExportTask(data.task_id, progressToast);
         } else if (data.download_url) {
@@ -330,7 +330,7 @@ async function exportToPPTXAsImages() {
             throw new Error('服务器返回了未知的响应格式。');
         }
 
-        if (data.status === 'processing' && data.task_id) {
+        if ((data.status === 'processing' || data.status === 'queued' || data.status === 'pending') && data.task_id) {
             updateProgressToast(progressToast, '图片PPTX生成任务已启动，正在后台处理...', 25);
             await trackPptxExportTask(data.task_id, progressToast, {
                 startProgress: 25,
