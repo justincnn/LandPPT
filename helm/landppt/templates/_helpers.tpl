@@ -67,3 +67,38 @@ valkey://{{ include "landppt.fullname" . }}-valkey:6379
 {{ required "externalValkey.url is required when valkey.enabled=false" .Values.externalValkey.url }}
 {{- end -}}
 {{- end }}
+
+{{/*
+S3/MinIO endpoint URL.
+*/}}
+{{- define "landppt.s3EndpointUrl" -}}
+{{- if .Values.minio.enabled -}}
+http://{{ include "landppt.fullname" . }}-minio:9000
+{{- else if ne .Values.storage.backend "s3" -}}
+{{ .Values.storage.s3.endpointUrl | default "" }}
+{{- else -}}
+{{ required "storage.s3.endpointUrl is required when minio.enabled=false and storage.backend=s3" .Values.storage.s3.endpointUrl }}
+{{- end -}}
+{{- end }}
+
+{{/*
+Secret containing S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY.
+*/}}
+{{- define "landppt.s3SecretName" -}}
+{{- if .Values.storage.s3.existingSecret -}}
+{{ .Values.storage.s3.existingSecret }}
+{{- else -}}
+{{ include "landppt.fullname" . }}
+{{- end -}}
+{{- end }}
+
+{{/*
+Secret containing MinIO root credentials.
+*/}}
+{{- define "landppt.minioSecretName" -}}
+{{- if .Values.minio.auth.existingSecret -}}
+{{ .Values.minio.auth.existingSecret }}
+{{- else -}}
+{{ include "landppt.fullname" . }}-minio
+{{- end -}}
+{{- end }}

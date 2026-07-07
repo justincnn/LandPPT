@@ -15,10 +15,9 @@ LandPPT 已部署！
 {{- end }}
 
 {{- if not .Values.app.existingSecret }}
-{{- if eq (index .Values.app.secrets "SECRET_KEY" | default "") "change-me-in-production" }}
+{{- if not (index .Values.app.secrets "SECRET_KEY") }}
 
-⚠️  当前使用默认 SECRET_KEY，生产环境请修改：
-  --set app.secrets.SECRET_KEY=<random-string>
+⚠️  未配置 SECRET_KEY。请通过 app.existingSecret 或 app.secrets.SECRET_KEY 注入密钥。
 {{- end }}
 {{- end }}
 

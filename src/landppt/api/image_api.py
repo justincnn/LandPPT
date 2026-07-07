@@ -23,6 +23,7 @@ import aiohttp
 from ..services.image.image_service import get_image_service
 from ..services.image.config.image_config import get_image_config, ImageServiceConfig
 from ..services.db_config_service import get_db_config_service
+from ..services.storage import get_artifact_service
 from ..auth.middleware import get_current_user_required
 from ..auth.request_context import current_user_id, USER_SCOPE_ALL
 from ..database.models import User
@@ -31,6 +32,26 @@ from ..utils.thread_pool import run_blocking_io, to_thread
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def _get_image_cache_artifact(image_id: str):
+    return await get_artifact_service().get_task_artifact(image_id, artifact_type="image_cache")
+
+
+async def _stream_artifact_response(artifact, *, attachment: bool = False):
+    disposition = "attachment" if attachment else "inline"
+    return StreamingResponse(
+        get_artifact_service().open_stream(artifact),
+        media_type=artifact.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'{disposition}; filename="{artifact.filename}"'},
+    )
+
+
+async def _read_artifact_bytes(artifact) -> bytes:
+    chunks = []
+    async for chunk in get_artifact_service().open_stream(artifact):
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 class ImageGenerationRequest(BaseModel):
@@ -762,6 +783,10 @@ async def view_image(
         image_service = get_image_service()
         image_info = await image_service.get_image(image_id)
 
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact)
+
         if not image_info or not image_info.local_path:
             raise HTTPException(status_code=404, detail="Image not found")
 
@@ -801,6 +826,10 @@ async def get_image_thumbnail(
 
         # 如果没有缩略图，返回原图
         image_info = await image_service.get_image(image_id)
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact)
+
         if image_info and image_info.local_path and Path(image_info.local_path).exists():
             return FileResponse(
                 path=str(image_info.local_path),
@@ -825,6 +854,10 @@ async def download_image(
     try:
         image_service = get_image_service()
         image_info = await image_service.get_image(image_id)
+
+        artifact = await _get_image_cache_artifact(image_id)
+        if artifact:
+            return await _stream_artifact_response(artifact, attachment=True)
 
         if not image_info or not image_info.local_path:
             raise HTTPException(status_code=404, detail="Image not found")
@@ -928,30 +961,50 @@ async def batch_download_images(
         image_service = get_image_service()
 
         # 获取所有图片信息
-        image_infos = []
-        for image_id in request.image_ids:
-            try:
-                image_info = await image_service.get_image(image_id)
-                if image_info and image_info.local_path:
-                    image_path = Path(image_info.local_path)
-                    if image_path.exists():
-                        image_infos.append({
-                            'path': str(image_path),
-                            'filename': image_info.filename
-                        })
-            except Exception as e:
-                logger.warning(f"Failed to get image {image_id}: {e}")
-                continue
+        zip_buffer = io.BytesIO()
+        added_count = 0
+        used_names = set()
+        artifact_service = get_artifact_service()
 
-        # 在线程池中创建ZIP文件
-        zip_data = await run_blocking_io(_create_zip_sync, image_infos)
+        def safe_zip_name(name: str, fallback: str) -> str:
+            candidate = os.path.basename(name or fallback) or fallback
+            stem, ext = os.path.splitext(candidate)
+            unique = candidate
+            index = 2
+            while unique in used_names:
+                unique = f"{stem}-{index}{ext}"
+                index += 1
+            used_names.add(unique)
+            return unique
 
-        # 生成文件名
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for image_id in request.image_ids:
+                try:
+                    artifact = await artifact_service.get_task_artifact(image_id, artifact_type="image_cache")
+                    if artifact:
+                        zip_file.writestr(safe_zip_name(artifact.filename, image_id), await _read_artifact_bytes(artifact))
+                        added_count += 1
+                        continue
+
+                    image_info = await image_service.get_image(image_id)
+                    if image_info and image_info.local_path:
+                        image_path = Path(image_info.local_path)
+                        if image_path.exists():
+                            zip_file.write(str(image_path), safe_zip_name(image_info.filename, image_path.name))
+                            added_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to get image {image_id}: {e}")
+                    continue
+
+        if added_count == 0:
+            raise HTTPException(status_code=404, detail="No downloadable images found")
+
+        zip_buffer.seek(0)
         timestamp = int(time.time())
         filename = f"images_{timestamp}.zip"
 
         return StreamingResponse(
-            io.BytesIO(zip_data),
+            io.BytesIO(zip_buffer.read()),
             media_type="application/zip",
             headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
         )

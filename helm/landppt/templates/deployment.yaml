@@ -5,13 +5,14 @@ metadata:
   labels:
     {{- include "landppt.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ default .Values.replicaCount .Values.web.replicaCount }}
   strategy:
     # PVC 为 RWO，滚动更新会因卷占用卡住，故用 Recreate
-    type: Recreate
+    type: {{ ternary "Recreate" "RollingUpdate" .Values.persistence.enabled }}
   selector:
     matchLabels:
       {{- include "landppt.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
   template:
     metadata:
       annotations:
@@ -22,6 +23,7 @@ spec:
         {{- end }}
       labels:
         {{- include "landppt.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -31,8 +33,44 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.postgresql.enabled }}
+      {{- if or .Values.postgresql.enabled .Values.minio.enabled }}
       initContainers:
+        {{- if .Values.minio.enabled }}
+        - name: wait-for-minio
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "landppt.fullname" . }}-minio 9000; do
+                echo "waiting for minio..."; sleep 2;
+              done
+        - name: ensure-minio-bucket
+          image: {{ .Values.minio.mcImage }}
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "landppt.minioSecretName" . }}
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "landppt.minioSecretName" . }}
+                  key: MINIO_ROOT_PASSWORD
+            - name: S3_BUCKET
+              value: {{ .Values.storage.s3.bucket | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              until mc alias set local http://{{ include "landppt.fullname" . }}-minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                echo "waiting for minio..."; sleep 2;
+              done
+              mc mb -p "local/$S3_BUCKET" || true
+        {{- end }}
+        {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
           image: busybox:1.36
           command:
@@ -42,6 +80,7 @@ spec:
               until nc -z {{ include "landppt.fullname" . }}-postgresql 5432; do
                 echo "waiting for postgresql..."; sleep 2;
               done
+        {{- end }}
       {{- end }}
       containers:
         - name: landppt
@@ -63,6 +102,10 @@ spec:
             {{- if .Values.app.existingSecret }}
             - secretRef:
                 name: {{ .Values.app.existingSecret }}
+            {{- end }}
+            {{- if .Values.storage.s3.existingSecret }}
+            - secretRef:
+                name: {{ .Values.storage.s3.existingSecret }}
             {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:

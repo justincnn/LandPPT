@@ -486,6 +486,33 @@ async def export_narration_audio(
                 },
             )
 
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            task_id = await task_manager.submit_queued_task(
+                task_type="narration_audio_export",
+                metadata={
+                    "project_id": project_id,
+                    "project_topic": project.topic,
+                    "language": language,
+                    "provider": provider,
+                    "voice": request.voice,
+                    "rate": request.rate,
+                    "reference_audio_path": reference_audio_path,
+                    "reference_text": request.reference_text,
+                    "voice_prompt": request.voice_prompt,
+                    "force_regenerate": bool(request.force_regenerate),
+                    "user_id": user.id,
+                    "progress_message": "Narration audio export queued for worker execution.",
+                },
+            )
+            return JSONResponse(
+                {
+                    "status": "queued",
+                    "task_id": task_id,
+                    "message": "Narration audio export queued",
+                    "polling_endpoint": f"/api/landppt/tasks/{task_id}",
+                }
+            )
+
         task_id = ""
 
         async def export_task():
@@ -600,6 +627,29 @@ async def export_narration_video(
                     "message": "Narration video export is already in progress for this project/language/fps",
                     "polling_endpoint": f"/api/landppt/tasks/{existing.task_id}",
                 },
+            )
+
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            task_id = await task_manager.submit_queued_task(
+                task_type="narration_video_export",
+                metadata={
+                    "project_id": project_id,
+                    "project_topic": project.topic,
+                    "language": language,
+                    "fps": fps,
+                    "embed_subtitles": bool(request.embed_subtitles),
+                    "subtitle_style": request.subtitle_style,
+                    "render_mode": request.render_mode or "live",
+                    "user_id": user.id,
+                },
+            )
+            return JSONResponse(
+                {
+                    "status": "queued",
+                    "task_id": task_id,
+                    "message": "Narration video export queued",
+                    "polling_endpoint": f"/api/landppt/tasks/{task_id}",
+                }
             )
 
         async def export_task():

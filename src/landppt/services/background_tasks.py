@@ -15,6 +15,8 @@ from typing import Dict, Optional, Any, Callable
 from dataclasses import dataclass, field, asdict
 import traceback
 
+from ..core.config import app_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -172,6 +174,16 @@ class BackgroundTaskManager:
                     await self._remove_from_active_index(task.task_id)
             except Exception as e:
                 logger.warning(f"Failed to save task to cache: {e}")
+        await self._save_task_to_db(task)
+
+    async def _save_task_to_db(self, task: BackgroundTask):
+        """Persist task state to the database as the durable task source."""
+        try:
+            from .task_store import get_task_store
+
+            await get_task_store().save_task(task)
+        except Exception as e:
+            logger.debug(f"Failed to save task to database: {e}")
     
     async def _add_to_active_index(self, task: BackgroundTask):
         """Add task to active tasks index in Valkey (for multi-worker lookup)"""
@@ -270,6 +282,25 @@ class BackgroundTaskManager:
                 logger.warning(f"Failed to get task from cache: {e}")
         return None
 
+    async def _get_task_from_db(self, task_id: str) -> Optional[BackgroundTask]:
+        """Get task from the persistent database store."""
+        try:
+            from .task_store import get_task_store
+
+            return await get_task_store().get_task(task_id)
+        except Exception as e:
+            logger.debug(f"Failed to get task from database: {e}")
+            return None
+
+    @staticmethod
+    def _task_updated_ts(task: Optional[BackgroundTask]) -> float:
+        if task is None:
+            return 0.0
+        try:
+            return task.updated_at.timestamp() if isinstance(task.updated_at, datetime) else float(task.updated_at or 0)
+        except Exception:
+            return 0.0
+
     def create_task(self, task_type: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """创建新任务
 
@@ -301,37 +332,27 @@ class BackgroundTaskManager:
     async def get_task_async(self, task_id: str) -> Optional[BackgroundTask]:
         """获取任务信息 (异步版本，从Valkey获取)"""
         # In multi-worker setups, local memory is not shared and can become stale.
-        # Prefer Valkey when available, but return the newest version across both.
+        # Prefer the newest available state across Valkey, local memory, and DB.
         cached = await self._get_task_from_cache(task_id)
         local = self.tasks.get(task_id)
+        persisted = None
+        if cached is None and local is None:
+            persisted = await self._get_task_from_db(task_id)
 
-        if cached is None:
-            return local
-        if local is None:
-            self.tasks[task_id] = cached
-            return cached
+        candidates = [task for task in (cached, local, persisted) if task is not None]
+        if not candidates:
+            return None
 
-        # Both exist: return newer one (by updated_at).
-        try:
-            cached_ts = cached.updated_at.timestamp() if isinstance(cached.updated_at, datetime) else float(cached.updated_at or 0)
-        except Exception:
-            cached_ts = 0.0
-        try:
-            local_ts = local.updated_at.timestamp() if isinstance(local.updated_at, datetime) else float(local.updated_at or 0)
-        except Exception:
-            local_ts = 0.0
+        latest = max(candidates, key=self._task_updated_ts)
+        self.tasks[task_id] = latest
 
-        if cached_ts >= local_ts:
-            self.tasks[task_id] = cached
-            return cached
-
-        # Local is newer; ensure Valkey is updated (best-effort).
+        # Propagate the best-known state to cache and DB (best-effort).
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(self._save_task_to_cache(local))
+            loop.create_task(self._save_task_to_cache(latest))
         except RuntimeError:
             pass
-        return local
+        return latest
 
     def _apply_task_status(
         self,
@@ -388,6 +409,20 @@ class BackgroundTaskManager:
         if task is None:
             return
         await self._save_task_to_cache(task)
+
+    async def submit_queued_task(
+        self,
+        task_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        queue_name: Optional[str] = None,
+    ) -> str:
+        """Create a task and enqueue it when queue mode is enabled."""
+        task_id = self.create_task(task_type, metadata)
+        if str(app_config.task_execution_mode or "inline").lower() == "queue":
+            from ..tasks.queue import enqueue_task
+
+            await enqueue_task(task_id, task_type, queue_name=queue_name)
+        return task_id
 
     async def execute_task(
         self,
@@ -609,6 +644,17 @@ class BackgroundTaskManager:
                 return task
         except Exception as e:
             logger.warning(f"Failed to check Valkey for active tasks: {e}")
+
+        try:
+            from .task_store import get_task_store
+
+            task = await get_task_store().find_active_task(task_type, metadata_filter)
+            if task:
+                self.tasks[task.task_id] = task
+                logger.info(f"Found active task in database: {task.task_id}")
+                return task
+        except Exception as e:
+            logger.debug(f"Failed to check database for active tasks: {e}")
         
         return None
 

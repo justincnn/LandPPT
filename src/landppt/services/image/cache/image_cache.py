@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import hashlib
+import mimetypes
 from datetime import datetime, timedelta
 
 from ..models import (
@@ -254,6 +255,7 @@ class ImageCacheManager:
 
             # 保存图片元数据
             await self._save_image_metadata(cache_key, image_info)
+            await self._save_image_artifact(cache_key, image_info, file_path, owner_user_id)
 
             # 异步保存缓存索引
             asyncio.create_task(self._save_cache_index())
@@ -269,6 +271,35 @@ class ImageCacheManager:
         """保存图片文件"""
         with open(file_path, 'wb') as f:
             f.write(image_data)
+
+    async def _save_image_artifact(
+        self,
+        cache_key: str,
+        image_info: ImageInfo,
+        local_path: Path,
+        owner_user_id: Optional[int],
+    ) -> None:
+        """Persist a cached image into artifact storage for cross-pod reads."""
+        if owner_user_id is None:
+            return
+        try:
+            from ...storage import get_artifact_service
+
+            artifact_service = get_artifact_service()
+            existing = await artifact_service.get_task_artifact(cache_key, artifact_type="image_cache")
+            if existing:
+                return
+            content_type = mimetypes.guess_type(image_info.filename)[0] or f"image/{image_info.metadata.format.value}"
+            await artifact_service.save_file(
+                local_path=str(local_path),
+                user_id=int(owner_user_id),
+                task_id=cache_key,
+                artifact_type="image_cache",
+                filename=image_info.filename or local_path.name,
+                content_type=content_type,
+            )
+        except Exception as exc:
+            logger.warning("Failed to save image cache artifact %s: %s", cache_key, exc)
     
     async def get_cached_image(self, cache_key: str) -> Optional[Tuple[ImageInfo, Path]]:
         """获取缓存的图片"""

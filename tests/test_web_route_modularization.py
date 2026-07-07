@@ -458,6 +458,15 @@ def test_editor_page_modules_own_their_responsibilities():
         assert marker in narration_text
 
 
+def test_editor_export_polling_accepts_queued_task_responses():
+    share_text = _read("src/landppt/web/static/js/pages/project/slides_editor/projectEditorShareExport.js")
+    template_text = _read("src/landppt/web/templates/pages/project/project_slides_editor.html")
+
+    assert "data.status === 'queued'" in share_text
+    assert share_text.count("data.status === 'queued'") >= 3
+    assert "projectEditorShareExport.js?v=20260707-queued-export-v1" in template_text
+
+
 def test_enhanced_ppt_service_delegates_file_outline_workflow_to_extracted_service():
     service_text = _read("src/landppt/services/enhanced_ppt_service.py")
 
