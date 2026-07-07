@@ -201,6 +201,10 @@ class OpenAIProvider(AIProvider):
 
         if message.name:
             openai_message["name"] = message.name
+        if message.tool_call_id:
+            openai_message["tool_call_id"] = message.tool_call_id
+        if message.tool_calls:
+            openai_message["tool_calls"] = message.tool_calls
 
         return openai_message
 
@@ -241,6 +245,9 @@ class OpenAIProvider(AIProvider):
         *,
         stream: bool = False,
     ) -> Dict[str, Any]:
+        tools = config.pop("tools", None)
+        tool_choice = config.pop("tool_choice", None)
+        parallel_tool_calls = config.pop("parallel_tool_calls", None)
         request_kwargs: Dict[str, Any] = {
             "model": config.get("model", self.model),
             "messages": openai_messages,
@@ -249,10 +256,33 @@ class OpenAIProvider(AIProvider):
         }
         if stream:
             request_kwargs["stream"] = True
+        if tools:
+            request_kwargs["tools"] = tools
+        if tool_choice is not None:
+            request_kwargs["tool_choice"] = tool_choice
+        if parallel_tool_calls is not None:
+            request_kwargs["parallel_tool_calls"] = parallel_tool_calls
 
         self._apply_reasoning_config(request_kwargs, config, responses_api=False)
 
         return request_kwargs
+
+    def _extract_openai_tool_calls(self, message: Any) -> List[Dict[str, Any]]:
+        tool_calls = getattr(message, "tool_calls", None) or []
+        normalized: List[Dict[str, Any]] = []
+        for call in tool_calls:
+            function = getattr(call, "function", None)
+            normalized.append(
+                {
+                    "id": getattr(call, "id", None) or "",
+                    "type": getattr(call, "type", None) or "function",
+                    "function": {
+                        "name": getattr(function, "name", None) or "",
+                        "arguments": getattr(function, "arguments", None) or "{}",
+                    },
+                }
+            )
+        return normalized
 
     def _build_responses_request(
         self,
@@ -356,6 +386,7 @@ class OpenAIProvider(AIProvider):
         response = await self.client.chat.completions.create(**request_kwargs)
 
         choice = response.choices[0]
+        tool_calls = self._extract_openai_tool_calls(choice.message)
         filtered_content = self._filter_think_content(choice.message.content or "")
 
         return AIResponse(
@@ -368,6 +399,7 @@ class OpenAIProvider(AIProvider):
                 total_key="total_tokens",
             ),
             finish_reason=choice.finish_reason,
+            tool_calls=tool_calls,
             metadata={"provider": "openai", "transport": "chat_completions"},
         )
 
@@ -403,7 +435,7 @@ class OpenAIProvider(AIProvider):
             raise RuntimeError("OpenAI client not available")
 
         config = self._merge_config(**kwargs)
-        use_responses_api = self._should_use_responses_api(config)
+        use_responses_api = self._should_use_responses_api(config) and not config.get("tools")
         
         try:
             if use_responses_api:
@@ -538,7 +570,42 @@ class AnthropicProvider(AIProvider):
 
     def _convert_message_to_anthropic(self, message: AIMessage) -> Dict[str, Any]:
         """Convert AIMessage to Anthropic format, supporting multimodal content"""
+        if message.role == MessageRole.TOOL:
+            return {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": message.tool_call_id or "",
+                        "content": message.content if isinstance(message.content, str) else str(message.content),
+                    }
+                ],
+            }
+
         anthropic_message = {"role": message.role.value}
+
+        if message.tool_calls:
+            content_parts: List[Dict[str, Any]] = []
+            if isinstance(message.content, str) and message.content:
+                content_parts.append({"type": "text", "text": message.content})
+            for call in message.tool_calls:
+                function = call.get("function") or {}
+                arguments = function.get("arguments") or {}
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments or "{}")
+                    except json.JSONDecodeError:
+                        arguments = {}
+                content_parts.append(
+                    {
+                        "type": "tool_use",
+                        "id": call.get("id") or "",
+                        "name": function.get("name") or "",
+                        "input": arguments if isinstance(arguments, dict) else {},
+                    }
+                )
+            anthropic_message["content"] = content_parts
+            return anthropic_message
 
         if isinstance(message.content, str):
             # Simple text message
@@ -580,6 +647,55 @@ class AnthropicProvider(AIProvider):
             anthropic_message["content"] = str(message.content)
 
         return anthropic_message
+
+    def _convert_tools_to_anthropic(self, tools: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
+        if not tools:
+            return None
+        converted: List[Dict[str, Any]] = []
+        for tool in tools:
+            function = tool.get("function") if tool.get("type") == "function" else tool
+            if not isinstance(function, dict):
+                continue
+            converted.append(
+                {
+                    "name": function.get("name"),
+                    "description": function.get("description") or "",
+                    "input_schema": function.get("parameters") or {"type": "object", "properties": {}},
+                }
+            )
+        return converted or None
+
+    def _extract_anthropic_response(self, response: Any) -> tuple[str, List[Dict[str, Any]], str, Dict[str, int]]:
+        text_parts: List[str] = []
+        tool_calls: List[Dict[str, Any]] = []
+        for part in getattr(response, "content", None) or []:
+            part_type = getattr(part, "type", None)
+            if part_type == "text":
+                text_parts.append(getattr(part, "text", "") or "")
+            elif part_type == "tool_use":
+                tool_calls.append(
+                    {
+                        "id": getattr(part, "id", "") or "",
+                        "type": "function",
+                        "function": {
+                            "name": getattr(part, "name", "") or "",
+                            "arguments": json.dumps(getattr(part, "input", {}) or {}, ensure_ascii=False),
+                        },
+                    }
+                )
+        usage_obj = getattr(response, "usage", None)
+        input_tokens = int(getattr(usage_obj, "input_tokens", 0) or 0)
+        output_tokens = int(getattr(usage_obj, "output_tokens", 0) or 0)
+        return (
+            "".join(text_parts),
+            tool_calls,
+            str(getattr(response, "stop_reason", None) or "stop"),
+            {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+            },
+        )
     
     async def chat_completion(self, messages: List[AIMessage], **kwargs) -> AIResponse:
         """Generate chat completion using Anthropic Claude (uses streaming internally to avoid timeout)"""
@@ -590,6 +706,48 @@ class AnthropicProvider(AIProvider):
 
         # 使用流式响应来避免 SDK 的 10 分钟超时限制
         # 收集所有流式块后返回完整响应
+        tools = config.pop("tools", None)
+        tool_choice = config.pop("tool_choice", None)
+
+        if tools:
+            system_message = None
+            claude_messages = []
+            for msg in messages:
+                if msg.role == MessageRole.SYSTEM:
+                    system_message = msg.content if isinstance(msg.content, str) else str(msg.content)
+                else:
+                    claude_messages.append(self._convert_message_to_anthropic(msg))
+
+            request_kwargs: Dict[str, Any] = {
+                "model": config.get("model", self.model),
+                "messages": claude_messages,
+                "temperature": config.get("temperature", 0.7),
+                "max_tokens": int(config.get("anthropic_max_tokens") or config.get("max_completion_tokens") or 4096),
+                "tools": self._convert_tools_to_anthropic(tools),
+            }
+            if system_message:
+                request_kwargs["system"] = system_message
+            if tool_choice and isinstance(tool_choice, dict):
+                function = tool_choice.get("function") or {}
+                name = function.get("name") or tool_choice.get("name")
+                if name:
+                    request_kwargs["tool_choice"] = {"type": "tool", "name": name}
+
+            try:
+                response = await self.client.messages.create(**request_kwargs)
+                content, tool_calls, finish_reason, usage = self._extract_anthropic_response(response)
+                return AIResponse(
+                    content=content,
+                    model=getattr(response, "model", None) or config.get("model", self.model),
+                    usage=usage,
+                    finish_reason=finish_reason,
+                    tool_calls=tool_calls,
+                    metadata={"provider": "anthropic", "transport": "messages"},
+                )
+            except Exception as e:
+                logger.error(f"Anthropic API error: {e}")
+                raise
+
         try:
             full_content = ""
             async for chunk in self.stream_chat_completion(messages, **kwargs):
@@ -900,6 +1058,46 @@ class GoogleProvider(AIProvider):
         }
         return content, str(finish_reason), usage
 
+    def _convert_tools_to_gemini(self, tools: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
+        if not tools:
+            return None
+        declarations: List[Dict[str, Any]] = []
+        for tool in tools:
+            function = tool.get("function") if tool.get("type") == "function" else tool
+            if not isinstance(function, dict):
+                continue
+            declarations.append(
+                {
+                    "name": function.get("name"),
+                    "description": function.get("description") or "",
+                    "parameters": function.get("parameters") or {"type": "object", "properties": {}},
+                }
+            )
+        return [{"function_declarations": declarations}] if declarations else None
+
+    def _extract_gemini_tool_calls_from_response(self, response: Any) -> List[Dict[str, Any]]:
+        tool_calls: List[Dict[str, Any]] = []
+        candidates = getattr(response, "candidates", None) or []
+        if not candidates:
+            return tool_calls
+        parts = getattr(getattr(candidates[0], "content", None), "parts", None) or []
+        for index, part in enumerate(parts, start=1):
+            function_call = getattr(part, "function_call", None)
+            if not function_call:
+                continue
+            args = getattr(function_call, "args", {}) or {}
+            tool_calls.append(
+                {
+                    "id": f"gemini-tool-call-{index}",
+                    "type": "function",
+                    "function": {
+                        "name": getattr(function_call, "name", "") or "",
+                        "arguments": json.dumps(dict(args), ensure_ascii=False),
+                    },
+                }
+            )
+        return tool_calls
+
     def _convert_messages_to_gemini(self, messages: List[AIMessage]):
         """Convert AIMessage list to Gemini format, supporting multimodal content"""
         import google.generativeai as genai
@@ -1016,6 +1214,7 @@ class GoogleProvider(AIProvider):
     async def chat_completion(self, messages: List[AIMessage], **kwargs) -> AIResponse:
         """Generate chat completion using Google Gemini"""
         config = self._merge_config(**kwargs)
+        tools = config.pop("tools", None)
         base_url = config.get("base_url") or self.base_url
 
         # Use direct REST for mirrors/proxies to honor base_url.
@@ -1082,6 +1281,7 @@ class GoogleProvider(AIProvider):
                 prompt,
                 generation_config,
                 safety_settings,
+                tools=self._convert_tools_to_gemini(tools),
                 timeout_seconds=_get_llm_timeout_seconds(config),
             )
             logger.debug(f"Google Gemini API response: {response}")
@@ -1139,6 +1339,7 @@ class GoogleProvider(AIProvider):
                     "total_tokens": response.usage_metadata.total_token_count if hasattr(response, 'usage_metadata') else 0
                 },
                 finish_reason=finish_reason,
+                tool_calls=self._extract_gemini_tool_calls_from_response(response),
                 metadata={"provider": "google"}
             )
 
@@ -1151,6 +1352,7 @@ class GoogleProvider(AIProvider):
         prompt,
         generation_config: Dict[str, Any],
         safety_settings=None,
+        tools=None,
         *,
         timeout_seconds: float = 600.0,
     ):
@@ -1164,6 +1366,8 @@ class GoogleProvider(AIProvider):
             }
             if safety_settings:
                 kwargs["safety_settings"] = safety_settings
+            if tools:
+                kwargs["tools"] = tools
 
             return self.model_instance.generate_content(
                 prompt,  # Can be string or list of parts
@@ -1198,13 +1402,19 @@ class OllamaProvider(AIProvider):
             raise RuntimeError("Ollama client not available")
         
         config = self._merge_config(**kwargs)
+        tools = config.pop("tools", None)
         
         # Convert messages to Ollama format with multimodal support
         ollama_messages = []
         for msg in messages:
             if isinstance(msg.content, str):
                 # Simple text message
-                ollama_messages.append({"role": msg.role.value, "content": msg.content})
+                message = {"role": msg.role.value, "content": msg.content}
+                if msg.tool_call_id:
+                    message["tool_call_id"] = msg.tool_call_id
+                if msg.tool_calls:
+                    message["tool_calls"] = msg.tool_calls
+                ollama_messages.append(message)
             elif isinstance(msg.content, list):
                 # Multimodal message - convert to text description for Ollama
                 content_parts = []
@@ -1236,21 +1446,25 @@ class OllamaProvider(AIProvider):
                 self.client.chat(
                     model=config.get("model", self.model),
                     messages=ollama_messages,
+                    tools=tools,
                     options=options,
                 ),
                 timeout=_get_llm_timeout_seconds(config),
             )
             
-            content = response.get("message", {}).get("content", "")
+            response_message = response.get("message", {}) or {}
+            content = response_message.get("content", "") or ""
+            tool_calls = response_message.get("tool_calls") or []
             
             return AIResponse(
                 content=content,
                 model=config.get("model", self.model),
                 usage=self._calculate_usage(
-                    " ".join([msg.content for msg in messages]),
+                    " ".join([msg.content for msg in messages if isinstance(msg.content, str)]),
                     content
                 ),
                 finish_reason="stop",
+                tool_calls=tool_calls,
                 metadata={"provider": "ollama"}
             )
             

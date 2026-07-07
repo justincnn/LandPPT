@@ -21,12 +21,21 @@ class _FakeChatCompletions:
 
     async def create(self, **kwargs):
         self.create_calls.append(kwargs)
+        message = types.SimpleNamespace(content="Hello from chat completions")
+        if kwargs.get("tools"):
+            message.tool_calls = [
+                types.SimpleNamespace(
+                    id="call-1",
+                    type="function",
+                    function=types.SimpleNamespace(name="inspect_slide_html", arguments='{"slide_index":1}'),
+                )
+            ]
         return types.SimpleNamespace(
             model=kwargs["model"],
             choices=[
                 types.SimpleNamespace(
-                    message=types.SimpleNamespace(content="Hello from chat completions"),
-                    finish_reason="stop",
+                    message=message,
+                    finish_reason="tool_calls" if kwargs.get("tools") else "stop",
                 )
             ],
             usage=types.SimpleNamespace(prompt_tokens=13, completion_tokens=8, total_tokens=21),
@@ -185,3 +194,59 @@ async def test_openai_provider_chat_completions_uses_reasoning_effort(monkeypatc
     assert len(instances) == 1
     assert instances[0].chat.completions.create_calls[0]["reasoning_effort"] == "low"
     assert "max_tokens" not in instances[0].chat.completions.create_calls[0]
+
+
+@pytest.mark.asyncio
+async def test_openai_provider_chat_completion_passes_standard_tools(monkeypatch):
+    instances = []
+
+    class _FakeAsyncOpenAI:
+        def __init__(self, **kwargs):
+            self.responses = _FakeResponsesAPI()
+            self.chat = types.SimpleNamespace(completions=_FakeChatCompletions())
+            instances.append(self)
+
+    monkeypatch.setitem(sys.modules, "openai", types.SimpleNamespace(AsyncOpenAI=_FakeAsyncOpenAI))
+
+    provider = OpenAIProvider(
+        {
+            "api_key": "test-key",
+            "base_url": "https://api.openai.com/v1",
+            "model": "gpt-4.1",
+            "use_responses_api": True,
+        }
+    )
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "inspect_slide_html",
+                "description": "Inspect slide HTML.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"slide_index": {"type": "integer"}},
+                },
+            },
+        }
+    ]
+
+    response = await provider.chat_completion(
+        [AIMessage(role=MessageRole.USER, content="inspect")],
+        tools=tools,
+        tool_choice="auto",
+        parallel_tool_calls=False,
+    )
+
+    call = instances[0].chat.completions.create_calls[0]
+    assert call["tools"] == tools
+    assert call["tool_choice"] == "auto"
+    assert call["parallel_tool_calls"] is False
+    assert instances[0].responses.create_calls == []
+    assert response.finish_reason == "tool_calls"
+    assert response.tool_calls == [
+        {
+            "id": "call-1",
+            "type": "function",
+            "function": {"name": "inspect_slide_html", "arguments": '{"slide_index":1}'},
+        }
+    ]
