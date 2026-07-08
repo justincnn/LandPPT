@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import hashlib
 import mimetypes
+import tempfile
 from datetime import datetime, timedelta
 
 from ..models import (
@@ -115,21 +116,32 @@ class ImageCacheManager:
         return hashlib.sha256(image_data).hexdigest()
 
     async def get_user_storage_usage_bytes(self, user_id: int, *, refresh_index: bool = True) -> int:
-        """Return total cached bytes for a user scope (best-effort, file-exists checked)."""
-        if refresh_index:
-            await asyncio.get_event_loop().run_in_executor(None, self._load_cache_index)
+        """Return total image artifact bytes for a user scope."""
+        try:
+            from ...storage import get_artifact_service
 
-        prefix = f"u{user_id}_"
-        total_size = 0
-        for cache_key, cache_info in list(self._cache_index.items()):
-            if not cache_key.startswith(prefix):
-                continue
-            try:
-                if Path(cache_info.file_path).exists():
-                    total_size += int(cache_info.file_size or 0)
-            except Exception:
-                continue
-        return total_size
+            artifacts = await get_artifact_service().list_artifacts(
+                artifact_type="image_cache",
+                user_id=user_id,
+                limit=None,
+            )
+            return sum(int(artifact.size_bytes or 0) for artifact in artifacts)
+        except Exception as exc:
+            logger.warning("Failed to read image artifact usage for user %s: %s", user_id, exc)
+            if refresh_index:
+                await asyncio.get_event_loop().run_in_executor(None, self._load_cache_index)
+
+            prefix = f"u{user_id}_"
+            total_size = 0
+            for cache_key, cache_info in list(self._cache_index.items()):
+                if not cache_key.startswith(prefix):
+                    continue
+                try:
+                    if Path(cache_info.file_path).exists():
+                        total_size += int(cache_info.file_size or 0)
+                except Exception:
+                    continue
+            return total_size
 
     def _get_owner_user_id(self, image_info: ImageInfo) -> Optional[int]:
         owner = image_info.owner_user_id
@@ -287,9 +299,12 @@ class ImageCacheManager:
 
             artifact_service = get_artifact_service()
             existing = await artifact_service.get_task_artifact(cache_key, artifact_type="image_cache")
-            if existing:
-                return
             content_type = mimetypes.guess_type(image_info.filename)[0] or f"image/{image_info.metadata.format.value}"
+            metadata_json = image_info.model_dump(mode="json")
+            if existing:
+                # Keep the artifact row as the authoritative gallery metadata record.
+                await artifact_service.update_artifact_metadata(existing.id, metadata_json=metadata_json)
+                return
             await artifact_service.save_file(
                 local_path=str(local_path),
                 user_id=int(owner_user_id),
@@ -297,6 +312,7 @@ class ImageCacheManager:
                 artifact_type="image_cache",
                 filename=image_info.filename or local_path.name,
                 content_type=content_type,
+                metadata_json=metadata_json,
             )
         except Exception as exc:
             logger.warning("Failed to save image cache artifact %s: %s", cache_key, exc)
@@ -306,16 +322,23 @@ class ImageCacheManager:
         try:
             cache_info = self._cache_index.get(cache_key)
             if not cache_info:
-                # Fallback: multi-worker processes may have stale in-memory index.
-                # Discover the cached file on disk by cache_key and rebuild index entry on demand.
+                # Artifact storage is authoritative. If there is an image artifact, materialize a
+                # temporary local copy for processors that still require a filesystem path.
+                artifact_result = await self._materialize_artifact(cache_key)
+                if artifact_result:
+                    return artifact_result
+
+                # Compatibility fallback: discover legacy cache files on disk.
                 cache_info = await self._discover_cache_info(cache_key)
                 if not cache_info:
                     return None
 
-            # 检查文件是否存在
+            # 检查文件是否存在；缺失时从 artifact 重新拉取，而不是删除权威记录。
             file_path = Path(cache_info.file_path)
             if not file_path.exists():
-                await self.remove_from_cache(cache_key)
+                artifact_result = await self._materialize_artifact(cache_key)
+                if artifact_result:
+                    return artifact_result
                 return None
 
             # 加载图片元数据
@@ -366,6 +389,76 @@ class ImageCacheManager:
 
         except Exception as e:
             logger.error(f"Failed to get cached image {cache_key}: {e}")
+            return None
+
+    async def _materialize_artifact(self, cache_key: str) -> Optional[Tuple[ImageInfo, Path]]:
+        """Fetch an image_cache artifact into a local scratch file on demand."""
+        try:
+            from ...storage import get_artifact_service
+            from ..models import ImageInfo, ImageMetadata, ImageFormat, ImageSourceType, ImageProvider
+
+            artifact_service = get_artifact_service()
+            artifact = await artifact_service.get_task_artifact(cache_key, artifact_type="image_cache")
+            if not artifact:
+                return None
+
+            metadata = artifact.metadata_json or {}
+            if metadata:
+                image_info = ImageInfo(**metadata)
+            else:
+                suffix = Path(artifact.filename or "").suffix.lower()
+                format_map = {
+                    '.jpg': ImageFormat.JPEG,
+                    '.jpeg': ImageFormat.JPEG,
+                    '.png': ImageFormat.PNG,
+                    '.webp': ImageFormat.WEBP,
+                    '.gif': ImageFormat.GIF,
+                    '.svg': ImageFormat.SVG,
+                }
+                image_format = format_map.get(suffix, ImageFormat.JPEG)
+                image_info = ImageInfo(
+                    image_id=cache_key,
+                    owner_user_id=artifact.user_id,
+                    source_type=ImageSourceType.LOCAL_STORAGE,
+                    provider=ImageProvider.LOCAL_STORAGE,
+                    original_url="",
+                    local_path="",
+                    filename=artifact.filename or f"{cache_key}{suffix or '.jpg'}",
+                    metadata=ImageMetadata(
+                        format=image_format,
+                        width=0,
+                        height=0,
+                        file_size=int(artifact.size_bytes or 0),
+                    ),
+                )
+
+            suffix = Path(image_info.filename or artifact.filename or "").suffix or ".img"
+            target_dir = self.cache_root / ".artifact_materialized"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_path = target_dir / f"{cache_key}{suffix}"
+            if not target_path.exists():
+                with tempfile.NamedTemporaryFile(delete=False, dir=str(target_dir)) as tmp:
+                    tmp_path = Path(tmp.name)
+                    async for chunk in artifact_service.open_stream(artifact):
+                        tmp.write(chunk)
+                tmp_path.replace(target_path)
+
+            image_info.local_path = str(target_path)
+            await self._save_image_metadata(cache_key, image_info)
+            stat = target_path.stat()
+            cache_info = ImageCacheInfo(
+                cache_key=cache_key,
+                file_path=str(target_path),
+                file_size=int(artifact.size_bytes or stat.st_size),
+                created_at=float(artifact.created_at or stat.st_ctime),
+                last_accessed=time.time(),
+                access_count=1,
+                expires_at=None,
+            )
+            self._cache_index[cache_key] = cache_info
+            return image_info, target_path
+        except Exception as exc:
+            logger.warning("Failed to materialize image artifact %s: %s", cache_key, exc)
             return None
 
     async def _discover_cache_info(self, cache_key: str) -> Optional[ImageCacheInfo]:
@@ -434,12 +527,24 @@ class ImageCacheManager:
 
         return None
     
-    async def remove_from_cache(self, cache_key: str) -> bool:
-        """从缓存中移除图片"""
+    async def remove_from_cache(self, cache_key: str, *, delete_artifact: bool = True) -> bool:
+        """从缓存中移除图片；默认同步删除权威 artifact 对象和记录。"""
         try:
             cache_info = self._cache_index.get(cache_key)
+            artifact_deleted = False
+            if delete_artifact:
+                try:
+                    from ...storage import get_artifact_service
+                    artifact_deleted = bool(
+                        await get_artifact_service().delete_task_artifacts(
+                            cache_key,
+                            artifact_type="image_cache",
+                        )
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to delete image artifact %s: %s", cache_key, exc)
             if not cache_info:
-                return False
+                return artifact_deleted
             
             # 删除图片文件
             file_path = Path(cache_info.file_path)
@@ -463,7 +568,7 @@ class ImageCacheManager:
             await self._save_cache_index()
             
             logger.info(f"Removed from cache: {cache_key}")
-            return True
+            return True or artifact_deleted
             
         except Exception as e:
             logger.error(f"Failed to remove from cache {cache_key}: {e}")

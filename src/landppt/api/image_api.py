@@ -34,8 +34,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def _get_image_cache_artifact(image_id: str):
-    return await get_artifact_service().get_task_artifact(image_id, artifact_type="image_cache")
+async def _get_image_cache_artifact(image_id: str, user_id: Optional[int] = None):
+    return await get_artifact_service().get_task_artifact(
+        image_id,
+        artifact_type="image_cache",
+        user_id=user_id,
+    )
 
 
 async def _stream_artifact_response(artifact, *, attachment: bool = False):
@@ -780,12 +784,12 @@ async def view_image(
 ):
     """查看图片"""
     try:
-        image_service = get_image_service()
-        image_info = await image_service.get_image(image_id)
-
         artifact = await _get_image_cache_artifact(image_id)
         if artifact:
             return await _stream_artifact_response(artifact)
+
+        image_service = get_image_service()
+        image_info = await image_service.get_image(image_id)
 
         if not image_info or not image_info.local_path:
             raise HTTPException(status_code=404, detail="Image not found")
@@ -824,12 +828,12 @@ async def get_image_thumbnail(
                 media_type="image/jpeg"
             )
 
-        # 如果没有缩略图，返回原图
-        image_info = await image_service.get_image(image_id)
+        # 如果没有缩略图，返回原图 artifact/S3 对象
         artifact = await _get_image_cache_artifact(image_id)
         if artifact:
             return await _stream_artifact_response(artifact)
 
+        image_info = await image_service.get_image(image_id)
         if image_info and image_info.local_path and Path(image_info.local_path).exists():
             return FileResponse(
                 path=str(image_info.local_path),
@@ -855,7 +859,7 @@ async def download_image(
         image_service = get_image_service()
         image_info = await image_service.get_image(image_id)
 
-        artifact = await _get_image_cache_artifact(image_id)
+        artifact = await _get_image_cache_artifact(image_id, user_id=user.id)
         if artifact:
             return await _stream_artifact_response(artifact, attachment=True)
 
@@ -980,7 +984,7 @@ async def batch_download_images(
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for image_id in request.image_ids:
                 try:
-                    artifact = await artifact_service.get_task_artifact(image_id, artifact_type="image_cache")
+                    artifact = await artifact_service.get_task_artifact(image_id, artifact_type="image_cache", user_id=user.id)
                     if artifact:
                         zip_file.writestr(safe_zip_name(artifact.filename, image_id), await _read_artifact_bytes(artifact))
                         added_count += 1

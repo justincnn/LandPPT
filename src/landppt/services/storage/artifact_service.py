@@ -9,9 +9,9 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 
 from ...core.config import app_config
 from ...database.database import AsyncSessionLocal
@@ -37,6 +37,7 @@ class ArtifactService:
         filename: Optional[str] = None,
         content_type: Optional[str] = None,
         expires_at: Optional[float] = None,
+        metadata_json: Optional[dict[str, Any]] = None,
     ) -> Artifact:
         source = Path(local_path)
         if not await asyncio.to_thread(source.is_file):
@@ -78,6 +79,7 @@ class ArtifactService:
             content_type=detected_content_type,
             size_bytes=int(size_bytes.st_size),
             checksum_sha256=checksum,
+            metadata_json=metadata_json,
             expires_at=expires_at,
             created_at=now,
             updated_at=now,
@@ -93,13 +95,113 @@ class ArtifactService:
             result = await session.execute(select(Artifact).where(Artifact.id == artifact_id))
             return result.scalar_one_or_none()
 
-    async def get_task_artifact(self, task_id: str, artifact_type: Optional[str] = None) -> Optional[Artifact]:
+    async def get_task_artifact(
+        self,
+        task_id: str,
+        artifact_type: Optional[str] = None,
+        user_id: Optional[int] = None,
+    ) -> Optional[Artifact]:
         stmt = select(Artifact).where(Artifact.task_id == task_id).order_by(Artifact.created_at.desc())
         if artifact_type:
             stmt = stmt.where(Artifact.artifact_type == artifact_type)
+        if user_id is not None:
+            stmt = stmt.where(Artifact.user_id == user_id)
         async with AsyncSessionLocal() as session:
             result = await session.execute(stmt)
             return result.scalars().first()
+
+    async def list_artifacts(
+        self,
+        *,
+        artifact_type: Optional[str] = None,
+        user_id: Optional[int] = None,
+        offset: int = 0,
+        limit: Optional[int] = None,
+        order_desc: bool = True,
+    ) -> list[Artifact]:
+        stmt = select(Artifact)
+        if artifact_type:
+            stmt = stmt.where(Artifact.artifact_type == artifact_type)
+        if user_id is not None:
+            stmt = stmt.where(Artifact.user_id == user_id)
+        stmt = stmt.order_by(Artifact.created_at.desc() if order_desc else Artifact.created_at.asc())
+        if offset:
+            stmt = stmt.offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def count_artifacts(self, *, artifact_type: Optional[str] = None, user_id: Optional[int] = None) -> int:
+        stmt = select(func.count(Artifact.id))
+        if artifact_type:
+            stmt = stmt.where(Artifact.artifact_type == artifact_type)
+        if user_id is not None:
+            stmt = stmt.where(Artifact.user_id == user_id)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(stmt)
+            return int(result.scalar() or 0)
+
+    async def update_artifact_metadata(
+        self,
+        artifact_id: str,
+        *,
+        metadata_json: Optional[dict[str, Any]] = None,
+    ) -> Optional[Artifact]:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Artifact).where(Artifact.id == artifact_id))
+            artifact = result.scalar_one_or_none()
+            if not artifact:
+                return None
+            artifact.metadata_json = metadata_json
+            artifact.updated_at = time.time()
+            await session.commit()
+            await session.refresh(artifact)
+            return artifact
+
+    async def delete_artifact(self, artifact: Artifact) -> None:
+        """Delete both the storage object and the metadata row."""
+        await self.storage.delete(artifact.storage_key)
+        async with AsyncSessionLocal() as session:
+            await session.execute(delete(Artifact).where(Artifact.id == artifact.id))
+            await session.commit()
+
+    async def delete_task_artifacts(
+        self,
+        task_id: str,
+        *,
+        artifact_type: Optional[str] = None,
+        user_id: Optional[int] = None,
+    ) -> int:
+        artifacts = []
+        stmt = select(Artifact).where(Artifact.task_id == task_id)
+        if artifact_type:
+            stmt = stmt.where(Artifact.artifact_type == artifact_type)
+        if user_id is not None:
+            stmt = stmt.where(Artifact.user_id == user_id)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(stmt)
+            artifacts = list(result.scalars().all())
+
+        deleted_count = 0
+        for artifact in artifacts:
+            await self.delete_artifact(artifact)
+            deleted_count += 1
+        return deleted_count
+
+    async def delete_artifacts(
+        self,
+        *,
+        artifact_type: Optional[str] = None,
+        user_id: Optional[int] = None,
+    ) -> int:
+        artifacts = await self.list_artifacts(artifact_type=artifact_type, user_id=user_id, limit=None)
+        deleted_count = 0
+        for artifact in artifacts:
+            await self.delete_artifact(artifact)
+            deleted_count += 1
+        return deleted_count
 
     async def open_stream(self, artifact: Artifact):
         async for chunk in self.storage.open_stream(artifact.storage_key):

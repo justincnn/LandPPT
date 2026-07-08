@@ -159,6 +159,24 @@ class DatabaseMigration:
             "down": self._migration_015_down,
         })
 
+        # Migration 016: Store application metadata on artifacts
+        self.migrations.append({
+            "version": "016",
+            "name": "add_artifact_metadata_json",
+            "description": "Add metadata_json to artifacts for object-storage backed image gallery metadata",
+            "up": self._migration_016_up,
+            "down": self._migration_016_down,
+        })
+
+        # Migration 017: Allow long image cache task IDs
+        self.migrations.append({
+            "version": "017",
+            "name": "expand_artifact_task_id",
+            "description": "Expand artifacts.task_id to support user-scoped SHA256 image cache IDs",
+            "up": self._migration_017_up,
+            "down": self._migration_017_down,
+        })
+
     @staticmethod
     def _dialect_name(session: AsyncSession) -> str:
         try:
@@ -1300,7 +1318,7 @@ class DatabaseMigration:
                 id VARCHAR(36) PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id),
                 project_id VARCHAR(36) NULL REFERENCES projects(project_id),
-                task_id VARCHAR(64) NULL,
+                task_id VARCHAR(128) NULL,
                 artifact_type VARCHAR(50) NOT NULL,
                 storage_backend VARCHAR(20) NOT NULL,
                 storage_key TEXT NOT NULL,
@@ -1308,6 +1326,7 @@ class DatabaseMigration:
                 content_type VARCHAR(255) NULL,
                 size_bytes BIGINT NULL,
                 checksum_sha256 VARCHAR(64) NULL,
+                metadata_json JSONB NULL,
                 expires_at DOUBLE PRECISION NULL,
                 created_at DOUBLE PRECISION NOT NULL,
                 updated_at DOUBLE PRECISION NOT NULL
@@ -1319,7 +1338,7 @@ class DatabaseMigration:
                 id VARCHAR(36) PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 project_id VARCHAR(36) NULL,
-                task_id VARCHAR(64) NULL,
+                task_id VARCHAR(128) NULL,
                 artifact_type VARCHAR(50) NOT NULL,
                 storage_backend VARCHAR(20) NOT NULL,
                 storage_key TEXT NOT NULL,
@@ -1327,6 +1346,7 @@ class DatabaseMigration:
                 content_type VARCHAR(255) NULL,
                 size_bytes INTEGER NULL,
                 checksum_sha256 VARCHAR(64) NULL,
+                metadata_json JSON NULL,
                 expires_at FLOAT NULL,
                 created_at FLOAT NOT NULL,
                 updated_at FLOAT NOT NULL,
@@ -1462,6 +1482,65 @@ class DatabaseMigration:
         except Exception as e:
             await session.rollback()
             logger.error(f"Migration 015 rollback failed: {e}")
+            raise
+
+    async def _migration_016_up(self, session: AsyncSession):
+        """Add application metadata to artifact records."""
+        logger.info("Running migration 016: Adding artifacts.metadata_json")
+        try:
+            if not await self._column_exists(session, "artifacts", "metadata_json"):
+                dialect = self._dialect_name(session)
+                column_type = "JSONB" if dialect == "postgresql" else "JSON"
+                await session.execute(text(f"ALTER TABLE artifacts ADD COLUMN metadata_json {column_type} NULL"))
+            await session.commit()
+            logger.info("Migration 016 completed successfully")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 016 failed: {e}")
+            raise
+
+    async def _migration_016_down(self, session: AsyncSession):
+        """Remove artifact application metadata."""
+        logger.info("Rolling back migration 016: Removing artifacts.metadata_json")
+        try:
+            if await self._column_exists(session, "artifacts", "metadata_json"):
+                await session.execute(text("ALTER TABLE artifacts DROP COLUMN metadata_json"))
+            await session.commit()
+            logger.info("Migration 016 rollback completed")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 016 rollback failed: {e}")
+            raise
+
+    async def _migration_017_up(self, session: AsyncSession):
+        """Expand artifacts.task_id for user-scoped SHA256 image cache IDs."""
+        logger.info("Running migration 017: Expanding artifacts.task_id")
+        try:
+            if await self._column_exists(session, "artifacts", "task_id"):
+                dialect = self._dialect_name(session)
+                if dialect == "postgresql":
+                    await session.execute(text("ALTER TABLE artifacts ALTER COLUMN task_id TYPE VARCHAR(128)"))
+                else:
+                    logger.info("Migration 017: non-PostgreSQL dialect detected; skipping task_id type alteration")
+            await session.commit()
+            logger.info("Migration 017 completed successfully")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 017 failed: {e}")
+            raise
+
+    async def _migration_017_down(self, session: AsyncSession):
+        """Shrink artifacts.task_id back to the previous length where possible."""
+        logger.info("Rolling back migration 017: Shrinking artifacts.task_id")
+        try:
+            dialect = self._dialect_name(session)
+            if dialect == "postgresql" and await self._column_exists(session, "artifacts", "task_id"):
+                await session.execute(text("ALTER TABLE artifacts ALTER COLUMN task_id TYPE VARCHAR(64)"))
+            await session.commit()
+            logger.info("Migration 017 rollback completed")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Migration 017 rollback failed: {e}")
             raise
 
     async def _create_migration_table(self, session: AsyncSession):
