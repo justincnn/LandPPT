@@ -106,7 +106,7 @@ LandPPT is an intelligent presentation generation platform powered by Large Lang
 - Speech-script generation (DOCX / Markdown / PPT notes), fullscreen playback, 16:9 live preview
 
 ### Platform & Operations
-- Docker / Compose single-container and multi-service; PostgreSQL + Valkey production stack
+- Docker / Compose single-container and multi-service; PostgreSQL + Valkey + MinIO production stack
 - Async background tasks (PDF / PPTX / narration video) with multi-worker fault tolerance
 - Account system: local auth, GitHub / Linux Do OAuth, email verification, registration rate limiting
 - Optional credits, SMTP / Resend, Cloudflare Turnstile; local-deployment friendly
@@ -190,8 +190,10 @@ docker run -d \
   -p 8000:8000 \
   -v $(pwd)/.env:/app/.env \
   -v landppt_data:/app/data \
+  -v landppt_uploads:/app/uploads \
   -v landppt_reports:/app/research_reports \
   -v landppt_cache:/app/temp \
+  -v landppt_lib:/app/lib \
   bradleylzh/landppt:latest
 
 # View logs
@@ -202,33 +204,35 @@ docker logs -f landppt
 
 #### Docker Compose (Recommended for Production)
 
-The repository includes `docker-compose.yml`, which starts `landppt + PostgreSQL + Valkey` together. This is the recommended setup for multi-user deployments, background jobs, and long-running environments. For standalone local use, you can run `python run.py` / `uv run python run.py` directly and use the default SQLite + memory-cache setup without extra services.
+The repository includes `docker-compose.yml`, which uses the pre-built image and starts `landppt` (web service), `worker` (background task queue), PostgreSQL, Valkey, and MinIO (S3 object storage; `minio-init` creates the bucket automatically). This is the recommended setup for multi-user deployments, background jobs, and long-running environments. For standalone local use, you can run `python run.py` / `uv run python run.py` directly and use the default SQLite + memory-cache setup without extra services.
 
 ```bash
-# Prepare configuration
+# Prepare configuration (compose mounts .env into the container, so create it first)
 cp .env.example .env
 # At minimum, set AI keys, SECRET_KEY, and POSTGRES_PASSWORD
 
-# Start the production stack
-docker compose up -d --build
+# Start the production stack (uses bradleylzh/landppt:latest; override with LANDPPT_IMAGE)
+docker compose up -d
 
 # View logs
 docker compose logs -f landppt
 ```
 
-Default URL: `http://localhost:6003`
+Default URL: `http://localhost:8000` (change with `LANDPPT_PORT`); MinIO console: `http://localhost:9001`.
+
+The production stack disables admin auto-bootstrap by default. For a first-time deployment, set `LANDPPT_BOOTSTRAP_ADMIN_ENABLED=true` along with the admin username/password variables.
 
 #### Development Mode (Hot Reload)
 
-Use `docker-compose-dev.yaml` for source-mounted development with hot reload enabled.
+Use `docker-compose-dev.yaml` for local development. It builds the image from the local Dockerfile, mounts the source directory, and enables hot reload. An admin account (`admin` / `admin123`) is bootstrapped by default.
 
 ```bash
 cp .env.example .env
 docker compose -f docker-compose-dev.yaml up -d --build
-docker compose -f docker-compose-dev.yaml logs -f landppt-dev
+docker compose -f docker-compose-dev.yaml logs -f landppt
 ```
 
-Default URL: `http://localhost:8001`
+Default URL: `http://localhost:8000`
 
 ##  Usage Guide
 
@@ -407,7 +411,7 @@ A: Standard PPTX depends on `APRYSE_LICENSE_KEY` and is better when you want to 
 A: Use the share action in the project editor or call `POST /api/projects/{project_id}/share/generate`. Shared URLs use the `/share/{share_token}` pattern and can be disabled later via `share/disable`.
 
 ### Q: How do I run development mode vs production compose?
-A: For production, use `docker compose up -d --build` with the bundled `docker-compose.yml`. For local development, use `docker compose -f docker-compose-dev.yaml up -d --build` to enable source mounts and hot reload.
+A: For production, use `docker compose up -d` with the bundled `docker-compose.yml` (pre-built image; includes web, worker, PostgreSQL, Valkey, and MinIO). For local development, use `docker compose -f docker-compose-dev.yaml up -d --build` to build locally with source mounts and hot reload.
 
 ### Q: Which narration providers are supported?
 A: Edge-TTS is supported by default. You can also configure ComfyUI Qwen3-TD and upload reference audio for voice-cloning style workflows.
