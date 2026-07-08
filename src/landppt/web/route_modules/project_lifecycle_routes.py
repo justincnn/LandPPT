@@ -59,9 +59,15 @@ async def web_dashboard(
             page_size=100,
             user_id=user.id,
         )
+        if projects_response.total > len(projects_response.projects):
+            projects_response = await ppt_service.project_manager.list_projects(
+                page=1,
+                page_size=projects_response.total,
+                user_id=user.id,
+            )
         projects = projects_response.projects
 
-        total_projects = len(projects)
+        total_projects = projects_response.total
         completed_projects = len([project for project in projects if project.status == "completed"])
         in_progress_projects = len([project for project in projects if project.status == "in_progress"])
         draft_projects = len([project for project in projects if project.status == "draft"])
