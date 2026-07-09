@@ -67120,6 +67120,11 @@
       }
       if (hasDirectText) {
         targetEl.style.setProperty('color', 'transparent', 'important');
+        // The inlined computed styles include -webkit-text-fill-color, which
+        // overrides `color` when painting text — it must be cleared too, or
+        // the raster keeps the text and it doubles up with the editable layer.
+        targetEl.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+        targetEl.style.setProperty('-webkit-text-stroke-color', 'transparent', 'important');
         targetEl.style.setProperty('text-shadow', 'none', 'important');
         targetEl.style.setProperty('text-decoration-color', 'transparent', 'important');
       }
@@ -67284,6 +67289,10 @@
             }
             toHide.forEach((el) => {
               el.style.setProperty('color', 'transparent', 'important');
+              // -webkit-text-fill-color overrides `color` for text painting;
+              // clear it too so hidden text can't survive in the raster.
+              el.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+              el.style.setProperty('-webkit-text-stroke-color', 'transparent', 'important');
               el.style.setProperty('text-shadow', 'none', 'important');
               el.style.setProperty('text-decoration-color', 'transparent', 'important');
             });
@@ -68525,7 +68534,7 @@
     return items;
   }
 
-  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-07-07-hybrid-raster-v1';
+  var LANDPPT_DOM_TO_PPTX_PATCH_VERSION = '2026-07-09-hybrid-raster-v2';
   exports.exportToPptx = exportToPptx;
   exports.setIconRules = setIconRules;
   exports.getIconRules = getIconRules;

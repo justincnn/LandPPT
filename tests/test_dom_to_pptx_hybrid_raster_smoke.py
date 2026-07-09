@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dom_to_pptx_hybrid_raster_smoke.html"
-EXPECTED_PATCH_VERSION = "2026-07-07-hybrid-raster-v1"
+EXPECTED_PATCH_VERSION = "2026-07-09-hybrid-raster-v2"
 
 
 def _read_pptx(result):

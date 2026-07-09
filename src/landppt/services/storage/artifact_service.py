@@ -110,6 +110,14 @@ class ArtifactService:
             result = await session.execute(stmt)
             return result.scalars().first()
 
+    async def get_task_artifacts(self, task_id: str, artifact_type: Optional[str] = None) -> list[Artifact]:
+        stmt = select(Artifact).where(Artifact.task_id == task_id).order_by(Artifact.created_at.desc())
+        if artifact_type:
+            stmt = stmt.where(Artifact.artifact_type == artifact_type)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
     async def list_artifacts(
         self,
         *,
