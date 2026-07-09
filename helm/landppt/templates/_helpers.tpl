@@ -47,14 +47,62 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Database URL: internal StatefulSet or external.
+Secret containing the internal PostgreSQL password.
+*/}}
+{{- define "landppt.postgresqlSecretName" -}}
+{{- if .Values.postgresql.auth.existingSecret -}}
+{{ .Values.postgresql.auth.existingSecret }}
+{{- else -}}
+{{ include "landppt.fullname" . }}-postgresql
+{{- end -}}
+{{- end }}
+
+{{/*
+Key containing the internal PostgreSQL password.
+*/}}
+{{- define "landppt.postgresqlPasswordKey" -}}
+{{- .Values.postgresql.auth.passwordKey | default "POSTGRES_PASSWORD" -}}
+{{- end }}
+
+{{/*
+Database URL for cases where it is safe to render directly into a Helm-managed Secret.
+For production, prefer existingSecret-based injection instead.
 */}}
 {{- define "landppt.databaseUrl" -}}
 {{- if .Values.postgresql.enabled -}}
-postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include "landppt.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}
+postgresql://{{ .Values.postgresql.auth.username }}:{{ required "postgresql.auth.password is required when postgresql.enabled=true and postgresql.auth.existingSecret is empty" .Values.postgresql.auth.password }}@{{ include "landppt.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}
+{{- else if .Values.externalDatabase.existingSecret -}}
+{{- printf "" -}}
 {{- else -}}
-{{ required "externalDatabase.url is required when postgresql.enabled=false" .Values.externalDatabase.url }}
+{{ required "externalDatabase.url or externalDatabase.existingSecret is required when postgresql.enabled=false" .Values.externalDatabase.url }}
 {{- end -}}
+{{- end }}
+
+{{/*
+DATABASE_URL environment variables without exposing internal PostgreSQL passwords in rendered manifests.
+*/}}
+{{- define "landppt.databaseEnv" -}}
+{{- if .Values.postgresql.enabled }}
+- name: POSTGRES_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "landppt.postgresqlSecretName" . }}
+      key: {{ include "landppt.postgresqlPasswordKey" . }}
+- name: DATABASE_URL
+  value: {{ printf "postgresql://%s:$(POSTGRES_PASSWORD)@%s-postgresql:5432/%s" .Values.postgresql.auth.username (include "landppt.fullname" .) .Values.postgresql.auth.database | quote }}
+{{- else if .Values.externalDatabase.existingSecret }}
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalDatabase.existingSecret }}
+      key: {{ .Values.externalDatabase.urlKey | default "DATABASE_URL" }}
+{{- else }}
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "landppt.fullname" . }}
+      key: DATABASE_URL
+{{- end }}
 {{- end }}
 
 {{/*

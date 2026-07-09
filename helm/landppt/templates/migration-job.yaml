@@ -53,6 +53,8 @@ spec:
             - secretRef:
                 name: {{ .Values.storage.s3.existingSecret }}
             {{- end }}
+          env:
+            {{- include "landppt.databaseEnv" . | nindent 12 }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

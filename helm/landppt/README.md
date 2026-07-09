@@ -13,7 +13,8 @@ kubectl create secret generic landppt-keys \
 helm install landppt ./helm/landppt \
   --namespace landppt --create-namespace \
   --set app.existingSecret=landppt-keys \
-  --set postgresql.auth.password=$(openssl rand -hex 16)
+  --set postgresql.auth.password=$(openssl rand -hex 16) \
+  --set minio.auth.rootPassword=$(openssl rand -hex 24)
 ```
 
 访问：
@@ -23,28 +24,48 @@ kubectl port-forward -n landppt svc/landppt 8000:8000
 # 打开 http://localhost:8000/web
 ```
 
+## 生产性能配置
+
+仓库提供了生产向的覆盖文件，提升 Web/Worker 副本、资源、HPA、PDB、PostgreSQL/Valkey/MinIO 容量与关键性能参数：
+
+```bash
+helm upgrade --install landppt ./helm/landppt \
+  --namespace landppt --create-namespace \
+  -f helm/landppt/values-production.yaml \
+  --set app.existingSecret=landppt-keys \
+  --set postgresql.auth.password=$(openssl rand -hex 24) \
+  --set minio.auth.rootPassword=$(openssl rand -hex 24)
+```
+
+内置 PostgreSQL/Valkey/MinIO 适合中小生产部署；核心生产环境建议使用托管 PostgreSQL、托管 Redis/Valkey 和对象存储，并通过 `externalDatabase.url`、`externalValkey.url`、`storage.s3.existingSecret` 接入。
+
 ## 常用配置
 
 | 参数 | 说明 | 默认值 |
 |---|---|---|
 | `image.repository` / `image.tag` | 镜像 | `bradleylzh/landppt:0.3.1` |
 | `app.workers` | uvicorn worker 数 | `2` |
-| `app.env` | 非敏感环境变量（ConfigMap） | 见 values.yaml |
+| `app.env` | 非敏感环境变量（ConfigMap），包含 DB 连接池参数 `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` 等 | 见 values.yaml |
 | `app.secrets` | 敏感环境变量（Secret），生产建议使用 `app.existingSecret` | `{}` |
 | `app.existingSecret` | 使用已有 Secret（key 即环境变量名） | `""` |
 | `migration.enabled` / `migration.hook` | 数据库迁移 Job / Helm Hook | `false` / `false` |
 | `storage.backend` | 文件产物存储后端，生产默认使用 MinIO/S3 | `s3` |
 | `storage.s3.endpointUrl` / `storage.s3.bucket` | MinIO/S3 endpoint 和 bucket | `http://minio.minio.svc.cluster.local:9000` / `landppt` |
-| `worker.enabled` / `worker.replicaCount` | 启用独立任务 Worker 和副本数 | `true` / `1` |
+| `worker.enabled` / `worker.replicaCount` | 启用独立任务 Worker 和副本数；每个 Worker Pod 一次处理一个队列任务，提升吞吐主要靠增加副本/HPA | `true` / `1` |
+| `worker.resources` | Worker 资源，Chromium/导出任务较重，默认已单独配置 | `1C/2Gi` request，`2C/4Gi` limit |
 | `persistence.enabled` | 是否挂载旧式业务 PVC；对象存储模式默认关闭 | `false` |
 | `LANDPPT_EXPOSE_TEMP_STATIC_FILES` | Helm 默认关闭 `/temp` 本地临时目录暴露 | `false` |
-| `web.autoscaling.enabled` / `worker.autoscaling.enabled` | Web / Worker HPA | `false` / `false` |
+| `ENABLE_CREDITS_SYSTEM` | 启用积分系统 | `true` |
+| `web.autoscaling.enabled` / `worker.autoscaling.enabled` | Web / Worker HPA，支持 CPU 与 Memory 双指标 | `false` / `false` |
 | `web.pdb.enabled` / `worker.pdb.enabled` | Web / Worker PodDisruptionBudget | `false` / `false` |
 | `networkPolicy.enabled` | 生成基础 NetworkPolicy | `false` |
 | `observability.serviceMonitor.enabled` | 生成 Prometheus Operator ServiceMonitor | `false` |
 | `postgresql.enabled` | 部署内置 PostgreSQL | `true` |
-| `externalDatabase.url` | 外部数据库连接串（关闭内置时必填） | `""` |
-| `valkey.enabled` | 部署内置 Valkey 缓存 | `true` |
+| `postgresql.auth.existingSecret` / `postgresql.auth.passwordKey` | 使用已有 Secret 管理内置 PostgreSQL 密码，生产/公开仓库推荐 | `""` / `POSTGRES_PASSWORD` |
+| `postgresql.configuration` | 内置 PostgreSQL `postgres -c` 性能参数（连接数、shared_buffers、WAL 等） | 见 values.yaml |
+| `externalDatabase.url` | 外部数据库连接串（关闭内置时必填；生产推荐改用 `externalDatabase.existingSecret`） | `""` |
+| `valkey.enabled` | 部署内置 Valkey 缓存/队列 | `true` |
+| `valkey.maxmemory` / `valkey.maxmemoryPolicy` | 内置 Valkey 内存上限与淘汰策略 | `1536mb` / `allkeys-lru` |
 | `externalValkey.url` | 外部 Valkey/Redis URL | `""` |
 | `persistence.enabled` | 应用数据持久化（5 个 PVC） | `true` |
 | `persistence.storageClass` | 存储类 | 集群默认 |
@@ -73,7 +94,7 @@ kubectl create secret generic landppt-keys \
 helm install landppt ./helm/landppt --set app.existingSecret=landppt-keys
 ```
 
-未设置 `app.existingSecret` 时，必须通过 `app.secrets` 显式提供 `SECRET_KEY` 等敏感值；chart 不再提供生产不安全的默认密钥。
+未设置 `app.existingSecret` 时，必须通过 `app.secrets` 显式提供 `SECRET_KEY` 等敏感值；chart 不再提供生产不安全的默认密钥。内置 PostgreSQL/MinIO 也不再提供默认密码，生产建议使用 `postgresql.auth.existingSecret` 和 `minio.auth.existingSecret`。
 
 ## MinIO / S3 对象存储
 

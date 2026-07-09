@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "landppt.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.web.autoscaling.enabled }}
   replicas: {{ default .Values.replicaCount .Values.web.replicaCount }}
+  {{- end }}
   strategy:
     # PVC 为 RWO，滚动更新会因卷占用卡住，故用 Recreate
     type: {{ ternary "Recreate" "RollingUpdate" .Values.persistence.enabled }}
@@ -107,6 +109,8 @@ spec:
             - secretRef:
                 name: {{ .Values.storage.s3.existingSecret }}
             {{- end }}
+          env:
+            {{- include "landppt.databaseEnv" . | nindent 12 }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

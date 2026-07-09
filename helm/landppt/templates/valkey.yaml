@@ -43,7 +43,15 @@ spec:
           args:
             - valkey-server
             - --appendonly
-            - "yes"
+            - {{ ternary "yes" "no" .Values.valkey.appendonly | quote }}
+            {{- with .Values.valkey.maxmemory }}
+            - --maxmemory
+            - {{ . | quote }}
+            {{- end }}
+            {{- with .Values.valkey.maxmemoryPolicy }}
+            - --maxmemory-policy
+            - {{ . | quote }}
+            {{- end }}
           ports:
             - name: valkey
               containerPort: 6379

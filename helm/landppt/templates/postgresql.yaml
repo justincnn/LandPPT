@@ -40,6 +40,13 @@ spec:
       containers:
         - name: postgresql
           image: {{ .Values.postgresql.image }}
+          {{- with .Values.postgresql.configuration }}
+          args:
+            {{- range $key, $value := . }}
+            - -c
+            - {{ printf "%s=%v" $key $value | quote }}
+            {{- end }}
+          {{- end }}
           ports:
             - name: postgresql
               containerPort: 5432
@@ -51,8 +58,8 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "landppt.fullname" . }}-postgresql
-                  key: POSTGRES_PASSWORD
+                  name: {{ include "landppt.postgresqlSecretName" . }}
+                  key: {{ include "landppt.postgresqlPasswordKey" . }}
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           livenessProbe:
@@ -93,14 +100,16 @@ spec:
           requests:
             storage: {{ .Values.postgresql.persistence.size }}
 ---
+{{- if not .Values.postgresql.auth.existingSecret }}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "landppt.fullname" . }}-postgresql
+  name: {{ include "landppt.postgresqlSecretName" . }}
   labels:
     {{- include "landppt.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgresql
 type: Opaque
 stringData:
-  POSTGRES_PASSWORD: {{ .Values.postgresql.auth.password | quote }}
+  {{ include "landppt.postgresqlPasswordKey" . }}: {{ required "postgresql.auth.password is required when postgresql.enabled=true and postgresql.auth.existingSecret is empty" .Values.postgresql.auth.password | quote }}
+{{- end }}
 {{- end }}
