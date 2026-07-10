@@ -27,6 +27,7 @@ validate_access() {
     if ! /opt/venv/bin/python - "$TARGET_UID" "$TARGET_GID" "$target_path" "$target_kind" <<'PY'
 import os
 import sys
+import tempfile
 
 uid = int(sys.argv[1])
 gid = int(sys.argv[2])
@@ -41,8 +42,7 @@ if kind == "file":
     descriptor = os.open(path, os.O_WRONLY | os.O_APPEND)
     os.close(descriptor)
 else:
-    probe = os.path.join(path, f".landppt-write-test-{os.getpid()}")
-    descriptor = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    descriptor, probe = tempfile.mkstemp(prefix=".landppt-write-test-", dir=path)
     os.close(descriptor)
     os.unlink(probe)
 PY

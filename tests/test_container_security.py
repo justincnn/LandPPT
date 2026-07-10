@@ -1,6 +1,7 @@
 import builtins
 import contextlib
 import io
+import posixpath
 import stat
 from pathlib import Path
 from types import SimpleNamespace
@@ -104,6 +105,120 @@ def compose_dependency_anchor(compose_text: str) -> str:
 def embedded_python(script: str, function_name: str) -> str:
     function = script.split(f"{function_name}() {{", 1)[1].split("\n}", 1)[0]
     return function.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+
+
+class FakeAccessOS:
+    O_WRONLY = 1 << 0
+    O_APPEND = 1 << 1
+    O_CREAT = 1 << 2
+    O_EXCL = 1 << 3
+    path = posixpath
+
+    def __init__(self):
+        self.effective_uid = 0
+        self.effective_gid = 0
+        self.supplementary_groups = [0]
+        self.files = {}
+        self.descriptors = {}
+        self.created_paths = []
+        self.closed_descriptors = []
+        self.unlinked_paths = []
+        self.events = []
+        self.interrupt_next_close = False
+        self.next_descriptor = 10
+
+    def setgroups(self, groups):
+        self.supplementary_groups = list(groups)
+
+    def setgid(self, gid):
+        self.effective_gid = gid
+
+    def setuid(self, uid):
+        self.effective_uid = uid
+
+    def getpid(self):
+        return 4242
+
+    def open(self, path, flags, mode=None):
+        self.events.append(("open", path))
+        if flags & self.O_EXCL and path in self.files:
+            raise FileExistsError(path)
+
+        descriptor = self.next_descriptor
+        self.next_descriptor += 1
+        self.files[path] = (self.effective_uid, self.effective_gid, mode)
+        self.descriptors[descriptor] = path
+        self.created_paths.append(path)
+        return descriptor
+
+    def close(self, descriptor):
+        self.events.append(("close", descriptor))
+        if self.interrupt_next_close:
+            self.interrupt_next_close = False
+            raise KeyboardInterrupt("interrupted after probe creation")
+        self.closed_descriptors.append(descriptor)
+
+    def unlink(self, path):
+        self.events.append(("unlink", path))
+        del self.files[path]
+        self.unlinked_paths.append(path)
+
+    def restart_with_same_pid(self):
+        self.effective_uid = 0
+        self.effective_gid = 0
+        self.supplementary_groups = [0]
+        self.descriptors = {}
+        self.next_descriptor = 10
+
+
+class FakeTempfile:
+    def __init__(self, fake_os: FakeAccessOS, suffixes: list[str]):
+        self.fake_os = fake_os
+        self.suffixes = iter(suffixes)
+        self.attempted_paths = []
+
+    def mkstemp(self, *, prefix, dir):
+        for suffix in self.suffixes:
+            path = posixpath.join(dir, f"{prefix}{suffix}")
+            self.attempted_paths.append(path)
+            try:
+                descriptor = self.fake_os.open(
+                    path,
+                    self.fake_os.O_WRONLY
+                    | self.fake_os.O_CREAT
+                    | self.fake_os.O_EXCL,
+                    0o600,
+                )
+            except FileExistsError:
+                continue
+            return descriptor, path
+        raise FileExistsError("no unique temporary probe name")
+
+
+def run_embedded_access_python(
+    code: str, fake_os: FakeAccessOS, fake_tempfile: FakeTempfile
+):
+    fake_sys = SimpleNamespace(
+        argv=["access-test", "10001", "10001", "/volume", "directory"]
+    )
+    real_import = builtins.__import__
+
+    def import_for_access(name, *args, **kwargs):
+        if name == "os":
+            return fake_os
+        if name == "sys":
+            return fake_sys
+        if name == "tempfile":
+            return fake_tempfile
+        return real_import(name, *args, **kwargs)
+
+    namespace = {
+        "__builtins__": {
+            **vars(builtins),
+            "__import__": import_for_access,
+        }
+    }
+    exec(compile(code, "docker-permissions-init.sh", "exec"), namespace)
 
 
 class FakeMarkerOS:
@@ -272,6 +387,50 @@ def test_permission_migration_script_is_idempotent_and_validates_as_target_user(
     assert 'chown -R "${TARGET_UID}:${TARGET_GID}"' in script
     assert "chmod -R u+rwX" in script
     assert "docker-permissions-init.sh /usr/local/bin/" in dockerfile
+
+
+def test_directory_access_probe_survives_interruption_and_reused_pid():
+    script = read_repo_file("docker-permissions-init.sh")
+    validate_access = embedded_python(script, "validate_access")
+    fake_os = FakeAccessOS()
+
+    fake_os.interrupt_next_close = True
+    first_tempfile = FakeTempfile(fake_os, ["same"])
+    with pytest.raises(KeyboardInterrupt, match="interrupted after probe creation"):
+        run_embedded_access_python(validate_access, fake_os, first_tempfile)
+
+    assert len(fake_os.files) == 1
+    stale_probe = next(iter(fake_os.files))
+    assert fake_os.files[stale_probe][:2] == (10001, 10001)
+
+    fake_os.restart_with_same_pid()
+    restart_tempfile = FakeTempfile(fake_os, ["same", "next"])
+    run_embedded_access_python(validate_access, fake_os, restart_tempfile)
+
+    assert restart_tempfile.attempted_paths == [
+        stale_probe,
+        "/volume/.landppt-write-test-next",
+    ]
+    assert fake_os.created_paths == [
+        stale_probe,
+        "/volume/.landppt-write-test-next",
+    ]
+    assert fake_os.files == {stale_probe: (10001, 10001, 0o600)}
+    assert fake_os.closed_descriptors == [10]
+    assert fake_os.unlinked_paths == ["/volume/.landppt-write-test-next"]
+    assert fake_os.events[-2:] == [
+        ("close", 10),
+        ("unlink", "/volume/.landppt-write-test-next"),
+    ]
+
+    failing_os = FakeAccessOS()
+    with pytest.raises(FileExistsError, match="no unique temporary probe name"):
+        run_embedded_access_python(
+            validate_access,
+            failing_os,
+            FakeTempfile(failing_os, []),
+        )
+    assert failing_os.files == {}
 
 
 def test_permission_migration_marker_is_safe_and_keeps_fast_path():
