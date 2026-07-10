@@ -5,6 +5,7 @@ Configuration management service for LandPPT
 import os
 import json
 import logging
+import tempfile
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from dotenv import load_dotenv, set_key, unset_key
@@ -259,7 +260,24 @@ class ConfigService:
                 config[key] = value
         
         return config
-    
+
+    def _set_env_key_in_place(self, env_key: str, value: str) -> None:
+        """Apply python-dotenv key semantics without replacing the .env inode."""
+        with self.env_path.open("r+b") as env_file:
+            original_content = env_file.read()
+
+            with tempfile.TemporaryDirectory(prefix="landppt-dotenv-") as temp_dir:
+                staged_path = Path(temp_dir) / ".env"
+                staged_path.write_bytes(original_content)
+                set_key(str(staged_path), env_key, value, quote_mode="never")
+                updated_content = staged_path.read_bytes()
+
+            env_file.seek(0)
+            env_file.write(updated_content)
+            env_file.truncate()
+            env_file.flush()
+            os.fsync(env_file.fileno())
+
     def update_config(self, config: Dict[str, Any]) -> bool:
         """Update configuration values"""
         try:
@@ -273,8 +291,8 @@ class ConfigService:
                     else:
                         value = str(value)
 
-                    # Update .env file (without quotes)
-                    set_key(self.env_file, env_key, value, quote_mode="never")
+                    # Preserve the inode so updates work through a bind-mounted file.
+                    self._set_env_key_in_place(env_key, value)
 
                     # Update current environment
                     os.environ[env_key] = value
