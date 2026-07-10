@@ -109,14 +109,17 @@ gid = int(sys.argv[2])
 path = sys.argv[3]
 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
 
+os.setgroups([])
+os.setgid(gid)
+os.setuid(uid)
+os.umask(0o077)
+
 try:
     descriptor = os.open(path, flags, 0o600)
 except OSError as error:
     raise SystemExit(f"Could not create migration marker {path}: {error}")
 
 try:
-    os.fchown(descriptor, uid, gid)
-    os.fchmod(descriptor, 0o600)
     marker_stat = os.fstat(descriptor)
     if not stat.S_ISREG(marker_stat.st_mode):
         raise RuntimeError("created marker is not a regular file")

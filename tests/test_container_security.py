@@ -49,6 +49,25 @@ def test_entrypoint_checks_identity_and_never_repairs_permissions():
     assert 'cp "/app/.env"' not in entrypoint
 
 
+def test_entrypoint_preflights_runtime_roots_before_children():
+    entrypoint = read_repo_file("docker-entrypoint.sh")
+    create_directories = entrypoint.split("create_directories() {", 1)[1].split(
+        "\n}", 1
+    )[0]
+
+    for root, child in (
+        ("/app/temp", "/app/temp/ai_responses_cache"),
+        ("/app/lib", "/app/lib/Linux"),
+    ):
+        assert f'"{root}"' in create_directories
+        assert create_directories.index(f'"{root}"') < create_directories.index(
+            f'"{child}"'
+        )
+
+    assert 'error "Required path cannot be created: $dir"' in create_directories
+    assert 'error "Required path is not writable: $dir"' in create_directories
+
+
 def compose_init_service(compose_text: str) -> str:
     services = compose_text.split("\nservices:\n", 1)[1]
     return services.split("  permissions-init:\n", 1)[1].split(
@@ -95,33 +114,76 @@ class FakeMarkerOS:
     O_CREAT = 1 << 4
     O_EXCL = 1 << 5
 
-    def __init__(self, marker_stat=None, open_error=None):
+    def __init__(self, marker_stat=None, open_error=None, fstat_error=None):
         self.marker_stat = marker_stat
         self.open_error = open_error
+        self.fstat_error = fstat_error
         self.open_flags = None
         self.closed = False
-        self.chown = None
-        self.mode = None
+        self.effective_uid = 0
+        self.effective_gid = 0
+        self.supplementary_groups = [0]
+        self.current_umask = 0o022
+        self.events = []
 
-    def open(self, _path, flags, _mode=None):
+    def open(self, path, flags, mode=None):
         self.open_flags = flags
+        self.events.append(
+            (
+                "open",
+                path,
+                flags,
+                mode,
+                self.effective_uid,
+                self.effective_gid,
+                self.current_umask,
+            )
+        )
         if self.open_error is not None:
             raise self.open_error
+        if flags & self.O_CREAT:
+            self.marker_stat = SimpleNamespace(
+                st_mode=stat.S_IFREG | (mode & ~self.current_umask),
+                st_uid=self.effective_uid,
+                st_gid=self.effective_gid,
+            )
         return 7
 
     def fstat(self, _descriptor):
+        if self.fstat_error is not None:
+            error = self.fstat_error
+            self.fstat_error = None
+            raise error
         return self.marker_stat
 
     def close(self, _descriptor):
         self.closed = True
 
+    def setgroups(self, groups):
+        self.events.append(("setgroups", tuple(groups)))
+        self.supplementary_groups = list(groups)
+
+    def setgid(self, gid):
+        self.events.append(("setgid", gid))
+        self.effective_gid = gid
+
+    def setuid(self, uid):
+        self.events.append(("setuid", uid))
+        self.effective_uid = uid
+
+    def umask(self, mode):
+        self.events.append(("umask", mode))
+        previous = self.current_umask
+        self.current_umask = mode
+        return previous
+
     def fchown(self, _descriptor, uid, gid):
-        self.chown = (uid, gid)
+        self.events.append(("fchown", uid, gid))
         self.marker_stat.st_uid = uid
         self.marker_stat.st_gid = gid
 
     def fchmod(self, _descriptor, mode):
-        self.mode = mode
+        self.events.append(("fchmod", mode))
         file_type = stat.S_IFMT(self.marker_stat.st_mode)
         self.marker_stat.st_mode = file_type | mode
 
@@ -248,18 +310,31 @@ def test_permission_migration_marker_is_safe_and_keeps_fast_path():
     _output, exit_code = run_embedded_marker_python(create_marker, existing_os)
     assert "Could not create migration marker" in str(exit_code)
 
-    created_stat = SimpleNamespace(
-        st_mode=stat.S_IFREG | 0o666,
-        st_uid=0,
-        st_gid=0,
-    )
-    created_os = FakeMarkerOS(created_stat)
+    created_os = FakeMarkerOS()
     assert run_embedded_marker_python(create_marker, created_os) == ("", None)
     assert created_os.open_flags & created_os.O_EXCL
     assert created_os.open_flags & created_os.O_NOFOLLOW
-    assert created_os.chown == (10001, 10001)
-    assert created_os.mode == 0o600
+    assert [event[0] for event in created_os.events[:5]] == [
+        "setgroups",
+        "setgid",
+        "setuid",
+        "umask",
+        "open",
+    ]
+    assert created_os.events[0] == ("setgroups", ())
+    assert created_os.events[4][3:] == (0o600, 10001, 10001, 0o077)
+    assert created_os.marker_stat.st_uid == 10001
+    assert created_os.marker_stat.st_gid == 10001
+    assert stat.S_IMODE(created_os.marker_stat.st_mode) == 0o600
     assert created_os.closed is True
+
+    interrupted_os = FakeMarkerOS(
+        fstat_error=KeyboardInterrupt("interrupted after marker creation")
+    )
+    with pytest.raises(KeyboardInterrupt, match="interrupted after marker creation"):
+        run_embedded_marker_python(create_marker, interrupted_os)
+    assert interrupted_os.closed is True
+    assert run_embedded_marker_python(marker_state, interrupted_os) == ("valid", None)
 
     assert "marker_state()" in script
     assert "create_marker()" in script
@@ -272,8 +347,8 @@ def test_permission_migration_marker_is_safe_and_keeps_fast_path():
     assert ".st_gid != gid" in script
     assert "stat.S_IMODE(" in script
     assert "!= 0o600" in script
-    assert "os.fchown(" in script
-    assert "os.fchmod(" in script
+    assert "os.fchown(" not in script
+    assert "os.fchmod(" not in script
     assert '[ -f "$marker_path" ]' not in script
     assert ': > "$marker_path"' not in script
     assert script.count('chown -R "${TARGET_UID}:${TARGET_GID}"') == 1

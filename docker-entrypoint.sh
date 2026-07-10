@@ -98,11 +98,13 @@ create_directories() {
     local dirs=(
         "/app/data"
         "/app/uploads"
+        "/app/temp"
         "/app/temp/ai_responses_cache"
         "/app/temp/style_genes_cache"
         "/app/temp/summeryanyfile_cache"
         "/app/temp/templates_cache"
         "/app/research_reports"
+        "/app/lib"
         "/app/lib/Linux"
         "/app/lib/MacOS"
         "/app/lib/Windows"
