@@ -153,3 +153,47 @@ def test_permission_migration_marker_is_safe_and_keeps_fast_path():
     assert ': > "$marker_path"' not in script
     assert script.count('chown -R "${TARGET_UID}:${TARGET_GID}"') == 1
     assert "Migration marker found for ${volume_path}; validating" in script
+
+
+def test_helm_defaults_enforce_non_root_identity_and_volume_group():
+    values = read_repo_file("helm/landppt/values.yaml")
+    pod_context = values.split("podSecurityContext:", 1)[1].split(
+        "\nsecurityContext:", 1
+    )[0]
+    container_context = values.split("\nsecurityContext:", 1)[1].split(
+        "\nlivenessProbe:", 1
+    )[0]
+
+    for expected in (
+        "fsGroup: 10001",
+        "fsGroupChangePolicy: OnRootMismatch",
+        "type: RuntimeDefault",
+    ):
+        assert expected in pod_context
+    assert "runAsUser" not in pod_context
+
+    for expected in (
+        "runAsNonRoot: true",
+        "runAsUser: 10001",
+        "runAsGroup: 10001",
+        "allowPrivilegeEscalation: false",
+        "- ALL",
+    ):
+        assert expected in container_context
+
+
+@pytest.mark.parametrize(
+    "template_path",
+    [
+        "helm/landppt/templates/deployment.yaml",
+        "helm/landppt/templates/worker-deployment.yaml",
+        "helm/landppt/templates/migration-job.yaml",
+    ],
+)
+def test_helm_workloads_render_pod_and_container_security_contexts(
+    template_path: str,
+):
+    template = read_repo_file(template_path)
+
+    assert "{{- with .Values.podSecurityContext }}" in template
+    assert "{{- with .Values.securityContext }}" in template
