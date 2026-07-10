@@ -78,7 +78,7 @@ The service will:
 - Mount only `.env` and the five LandPPT named volumes at dedicated paths below `/mnt/landppt`; it will not mount `/app` or the development source tree.
 - Disable networking and container restart.
 - Use a read-only root filesystem.
-- Drop all Linux capabilities, then add only the file capabilities required for ownership and mode changes: `CHOWN`, `FOWNER`, and `DAC_OVERRIDE`.
+- Drop all Linux capabilities, then add only those required for ownership repair and target-identity verification: `CHOWN`, `FOWNER`, `DAC_OVERRIDE`, `SETUID`, and `SETGID`. The script uses the last two only to drop a validation child process to UID/GID `10001`; the long-lived containers receive none of these capabilities.
 
 For each named volume, the script will look for a `.landppt-permissions-v1` marker. If absent, it will recursively set ownership to `10001:10001`, create the marker only after successful migration, and validate that UID/GID `10001` can write the volume. A present marker makes subsequent starts a fast validation path.
 
