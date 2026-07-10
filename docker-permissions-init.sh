@@ -51,24 +51,114 @@ PY
     fi
 }
 
+marker_state() {
+    marker_path="$1"
+
+    /opt/venv/bin/python - "$TARGET_UID" "$TARGET_GID" "$marker_path" <<'PY'
+import os
+import stat
+import sys
+
+uid = int(sys.argv[1])
+gid = int(sys.argv[2])
+path = sys.argv[3]
+
+try:
+    descriptor = os.open(
+        path,
+        os.O_PATH | os.O_CLOEXEC | os.O_NOFOLLOW,
+    )
+except FileNotFoundError:
+    print("missing")
+    raise SystemExit(0)
+except OSError as error:
+    raise SystemExit(f"Could not inspect migration marker {path}: {error}")
+
+try:
+    marker_stat = os.fstat(descriptor)
+finally:
+    os.close(descriptor)
+
+if not stat.S_ISREG(marker_stat.st_mode):
+    raise SystemExit(f"Migration marker is not a regular file: {path}")
+if marker_stat.st_uid != uid or marker_stat.st_gid != gid:
+    raise SystemExit(
+        f"Migration marker has unexpected owner: {path} "
+        f"({marker_stat.st_uid}:{marker_stat.st_gid})"
+    )
+if stat.S_IMODE(marker_stat.st_mode) != 0o600:
+    raise SystemExit(
+        f"Migration marker has unexpected mode: {path} "
+        f"({stat.S_IMODE(marker_stat.st_mode):#o})"
+    )
+
+print("valid")
+PY
+}
+
+create_marker() {
+    marker_path="$1"
+
+    /opt/venv/bin/python - "$TARGET_UID" "$TARGET_GID" "$marker_path" <<'PY'
+import os
+import stat
+import sys
+
+uid = int(sys.argv[1])
+gid = int(sys.argv[2])
+path = sys.argv[3]
+flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW
+
+try:
+    descriptor = os.open(path, flags, 0o600)
+except OSError as error:
+    raise SystemExit(f"Could not create migration marker {path}: {error}")
+
+try:
+    os.fchown(descriptor, uid, gid)
+    os.fchmod(descriptor, 0o600)
+    marker_stat = os.fstat(descriptor)
+    if not stat.S_ISREG(marker_stat.st_mode):
+        raise RuntimeError("created marker is not a regular file")
+    if marker_stat.st_uid != uid or marker_stat.st_gid != gid:
+        raise RuntimeError("created marker has unexpected owner")
+    if stat.S_IMODE(marker_stat.st_mode) != 0o600:
+        raise RuntimeError("created marker has unexpected mode")
+except Exception as error:
+    raise SystemExit(f"Could not secure migration marker {path}: {error}")
+finally:
+    os.close(descriptor)
+PY
+}
+
 migrate_volume() {
     volume_path="$1"
     marker_path="${volume_path}/${MARKER_NAME}"
 
     [ -d "$volume_path" ] || fail "Volume path is missing: ${volume_path}"
 
-    if [ ! -f "$marker_path" ]; then
-        log "Migrating ${volume_path} to ${TARGET_UID}:${TARGET_GID}"
-        chown -R "${TARGET_UID}:${TARGET_GID}" "$volume_path"
-        chmod -R u+rwX "$volume_path"
-        validate_access "$volume_path" directory
-        : > "$marker_path"
-        chown "${TARGET_UID}:${TARGET_GID}" "$marker_path"
-        chmod 600 "$marker_path"
-    else
-        log "Migration marker found for ${volume_path}; validating"
-        validate_access "$volume_path" directory
+    if ! state=$(marker_state "$marker_path"); then
+        fail "Migration marker validation failed: ${marker_path}"
     fi
+
+    case "$state" in
+        missing)
+            log "Migrating ${volume_path} to ${TARGET_UID}:${TARGET_GID}"
+            chown -R "${TARGET_UID}:${TARGET_GID}" "$volume_path"
+            chmod -R u+rwX "$volume_path"
+            validate_access "$volume_path" directory
+            if ! create_marker "$marker_path"; then
+                fail "Migration marker creation failed: ${marker_path}"
+            fi
+            ;;
+        valid)
+            log "Migration marker found for ${volume_path}; validating"
+            validate_access "$volume_path" directory
+            ;;
+        *)
+            fail "Unexpected migration marker state for ${marker_path}: ${state}"
+            ;;
+    esac
 }
 
 configure_env_file() {

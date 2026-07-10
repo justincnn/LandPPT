@@ -45,9 +45,30 @@ def test_entrypoint_checks_identity_and_never_repairs_permissions():
 
 
 def compose_init_service(compose_text: str) -> str:
-    return compose_text.split("\n  permissions-init:\n", 1)[1].split(
+    services = compose_text.split("\nservices:\n", 1)[1]
+    return services.split("  permissions-init:\n", 1)[1].split(
         "\n  landppt:\n", 1
     )[0]
+
+
+def compose_service(
+    compose_text: str, service_name: str, next_service_name: str
+) -> str:
+    services = compose_text.split("\nservices:\n", 1)[1]
+    return services.split(f"  {service_name}:\n", 1)[1].split(
+        f"\n  {next_service_name}:\n", 1
+    )[0]
+
+
+def compose_sequence(service_text: str, key: str, next_key: str) -> list[str]:
+    sequence = service_text.split(f"\n    {key}:\n", 1)[1].split(
+        f"\n    {next_key}:", 1
+    )[0]
+    return [
+        line.removeprefix("      - ")
+        for line in sequence.splitlines()
+        if line.startswith("      - ")
+    ]
 
 
 def compose_dependency_anchor(compose_text: str) -> str:
@@ -61,31 +82,41 @@ def test_compose_migrates_permissions_before_app_start(compose_path: str):
     compose_text = read_repo_file(compose_path)
     init_service = compose_init_service(compose_text)
     dependencies = compose_dependency_anchor(compose_text)
+    landppt_service = compose_service(compose_text, "landppt", "worker")
+    worker_service = compose_service(compose_text, "worker", "postgres")
 
     assert 'user: "0:0"' in init_service
     assert 'entrypoint: ["/usr/local/bin/docker-permissions-init.sh"]' in init_service
     assert 'network_mode: "none"' in init_service
     assert "read_only: true" in init_service
     assert 'restart: "no"' in init_service
-    assert "- ALL" in init_service
-    for capability in ("CHOWN", "FOWNER", "DAC_OVERRIDE", "SETUID", "SETGID"):
-        assert f"- {capability}" in init_service
+    assert compose_sequence(init_service, "cap_drop", "cap_add") == ["ALL"]
+    assert compose_sequence(init_service, "cap_add", "security_opt") == [
+        "CHOWN",
+        "FOWNER",
+        "DAC_OVERRIDE",
+        "SETUID",
+        "SETGID",
+    ]
     assert "no-new-privileges:true" in init_service
 
-    for mount in (
+    assert compose_sequence(init_service, "volumes", "network_mode") == [
         "${LANDPPT_ENV_FILE:-./.env}:/mnt/landppt/env/.env",
         "landppt_data:/mnt/landppt/data",
         "landppt_uploads:/mnt/landppt/uploads",
         "landppt_reports:/mnt/landppt/reports",
         "landppt_cache:/mnt/landppt/cache",
         "landppt_lib:/mnt/landppt/lib",
-    ):
-        assert mount in init_service
+    ]
 
     assert "/app" not in init_service
+    assert "docker.sock" not in init_service
+    assert "/var/run/docker.sock" not in init_service
     assert "${LANDPPT_ENV_FILE:-./.env}:/app/.env" in compose_text
     assert "permissions-init:" in dependencies
     assert "condition: service_completed_successfully" in dependencies
+    assert "depends_on: *landppt-depends-on" in landppt_service
+    assert "depends_on: *landppt-depends-on" in worker_service
 
 
 def test_permission_migration_script_is_idempotent_and_validates_as_target_user():
@@ -100,3 +131,25 @@ def test_permission_migration_script_is_idempotent_and_validates_as_target_user(
     assert 'chown -R "${TARGET_UID}:${TARGET_GID}"' in script
     assert "chmod -R u+rwX" in script
     assert "docker-permissions-init.sh /usr/local/bin/" in dockerfile
+
+
+def test_permission_migration_marker_is_safe_and_keeps_fast_path():
+    script = read_repo_file("docker-permissions-init.sh")
+
+    assert "marker_state()" in script
+    assert "create_marker()" in script
+    assert "os.O_PATH" in script
+    assert "os.O_NOFOLLOW" in script
+    assert "os.O_EXCL" in script
+    assert "os.fstat(" in script
+    assert "stat.S_ISREG(" in script
+    assert ".st_uid != uid" in script
+    assert ".st_gid != gid" in script
+    assert "stat.S_IMODE(" in script
+    assert "!= 0o600" in script
+    assert "os.fchown(" in script
+    assert "os.fchmod(" in script
+    assert '[ -f "$marker_path" ]' not in script
+    assert ': > "$marker_path"' not in script
+    assert script.count('chown -R "${TARGET_UID}:${TARGET_GID}"') == 1
+    assert "Migration marker found for ${volume_path}; validating" in script
