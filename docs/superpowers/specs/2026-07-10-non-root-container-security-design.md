@@ -23,7 +23,7 @@ Changing only the final Docker user would close the static alert, but it could b
 - `/app/lib`
 - `/app/.env`
 
-The Helm chart exposes `podSecurityContext` and `securityContext` values, but both default to empty objects. The web deployment and migration job consume these values; the worker deployment does not currently consume the container security context.
+The Helm chart exposes `podSecurityContext` and `securityContext` values, but both default to empty objects. The web deployment and migration job consume these values; the worker deployment does not currently consume either security context.
 
 ## Requirements
 
@@ -88,19 +88,16 @@ The web and worker services will depend on `permissions-init` with `condition: s
 
 ## Kubernetes Security and PVC Migration
 
-The Helm chart defaults will set the pod security context to:
+The Helm chart defaults will set the pod security context used for PVC ownership to:
 
 ```yaml
-runAsNonRoot: true
-runAsUser: 10001
-runAsGroup: 10001
 fsGroup: 10001
 fsGroupChangePolicy: OnRootMismatch
 seccompProfile:
   type: RuntimeDefault
 ```
 
-The container security context will disallow privilege escalation and drop all capabilities. The web deployment and migration job already render the configurable context; the worker deployment will be updated to render it as well.
+The LandPPT container security context will enforce `runAsNonRoot: true`, `runAsUser: 10001`, and `runAsGroup: 10001`, disallow privilege escalation, and drop all capabilities. Keeping the numeric identity at container level avoids changing the runtime identity of the chart's third-party BusyBox and MinIO initialization containers. The web deployment and migration job already render the configurable context; the worker deployment will be updated to render it as well.
 
 For supported POSIX PVC implementations, `fsGroup` makes existing volume contents group-writable by the LandPPT process. `OnRootMismatch` performs the recursive adjustment when the volume root does not match and avoids repeating it after the first successful mount. This is the automatic migration path for the repository's current Helm deployment.
 
