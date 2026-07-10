@@ -1,5 +1,5 @@
 x-landppt-volumes: &landppt-volumes
-  - ./.env:/app/.env
+  - ${LANDPPT_ENV_FILE:-./.env}:/app/.env
   - landppt_data:/app/data
   - landppt_uploads:/app/uploads
   - landppt_reports:/app/research_reports
@@ -44,6 +44,8 @@ x-landppt-env: &landppt-env
   S3_PRESIGNED_URL_EXPIRES_SECONDS: ${S3_PRESIGNED_URL_EXPIRES_SECONDS:-3600}
 
 x-landppt-depends-on: &landppt-depends-on
+  permissions-init:
+    condition: service_completed_successfully
   postgres:
     condition: service_healthy
   valkey:
@@ -54,6 +56,36 @@ x-landppt-depends-on: &landppt-depends-on
     condition: service_completed_successfully
 
 services:
+  permissions-init:
+    image: ${LANDPPT_IMAGE:-bradleylzh/landppt:latest}
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/docker-permissions-init.sh"]
+    environment:
+      LANDPPT_UID: "10001"
+      LANDPPT_GID: "10001"
+    volumes:
+      - ${LANDPPT_ENV_FILE:-./.env}:/mnt/landppt/env/.env
+      - landppt_data:/mnt/landppt/data
+      - landppt_uploads:/mnt/landppt/uploads
+      - landppt_reports:/mnt/landppt/reports
+      - landppt_cache:/mnt/landppt/cache
+      - landppt_lib:/mnt/landppt/lib
+    network_mode: "none"
+    read_only: true
+    restart: "no"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      disable: true
+
   landppt:
     image: ${LANDPPT_IMAGE:-bradleylzh/landppt:latest}
     shm_size: ${LANDPPT_SHM_SIZE:-4gb}

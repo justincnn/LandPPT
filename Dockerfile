@@ -169,12 +169,14 @@ WORKDIR /app
 COPY run.py ./
 COPY src/ ./src/
 COPY template_examples/ ./template_examples/
-COPY docker-healthcheck.sh docker-entrypoint.sh /usr/local/bin/
+COPY docker-healthcheck.sh docker-entrypoint.sh docker-permissions-init.sh /usr/local/bin/
 COPY .env.example ./.env
 
 # Create directories and set permissions in one layer
-RUN sed -i 's/\r$//' /usr/local/bin/docker-healthcheck.sh /usr/local/bin/docker-entrypoint.sh && \
-    chmod +x /usr/local/bin/docker-healthcheck.sh /usr/local/bin/docker-entrypoint.sh && \
+RUN sed -i 's/\r$//' /usr/local/bin/docker-healthcheck.sh /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-permissions-init.sh && \
+    chmod +x /usr/local/bin/docker-healthcheck.sh \
+             /usr/local/bin/docker-entrypoint.sh \
+             /usr/local/bin/docker-permissions-init.sh && \
     mkdir -p temp/ai_responses_cache temp/style_genes_cache temp/summeryanyfile_cache temp/templates_cache \
              research_reports lib/Linux lib/MacOS lib/Windows uploads data && \
     chown -R landppt:landppt /app /home/landppt && \
