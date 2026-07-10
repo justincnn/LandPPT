@@ -2,6 +2,7 @@
 __pycache__/
 *.py[oc]
 build/
+.agents/
 dist/
 lib/
 artifacts/
@@ -11,6 +12,7 @@ research_reports/
 wheels/
 .claude/
 docs/
+data/
 *.egg-info
 requires.md
 prompts.md
@@ -24,7 +26,6 @@ CLAUDE.md
 # Virtual environments
 .venv
 .claude
-
 # Local git worktrees
 .worktrees/
 
