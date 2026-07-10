@@ -14,7 +14,8 @@ def test_update_config_preserves_env_inode_ownership_and_mode(tmp_path, monkeypa
         encoding="utf-8",
     )
     env_path.chmod(0o640)
-    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.setenv("OPENAI_MODEL", "process-old-model")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://process-old.test/v1")
 
     service = ConfigService(env_file=str(env_path))
     monkeypatch.setattr(service, "_reload_ai_config", lambda: None)

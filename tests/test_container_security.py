@@ -1,4 +1,9 @@
+import builtins
+import contextlib
+import io
+import stat
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -77,6 +82,77 @@ def compose_dependency_anchor(compose_text: str) -> str:
     )[1].split("\n\nservices:", 1)[0]
 
 
+def embedded_python(script: str, function_name: str) -> str:
+    function = script.split(f"{function_name}() {{", 1)[1].split("\n}", 1)[0]
+    return function.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+
+
+class FakeMarkerOS:
+    O_PATH = 1 << 0
+    O_CLOEXEC = 1 << 1
+    O_NOFOLLOW = 1 << 2
+    O_WRONLY = 1 << 3
+    O_CREAT = 1 << 4
+    O_EXCL = 1 << 5
+
+    def __init__(self, marker_stat=None, open_error=None):
+        self.marker_stat = marker_stat
+        self.open_error = open_error
+        self.open_flags = None
+        self.closed = False
+        self.chown = None
+        self.mode = None
+
+    def open(self, _path, flags, _mode=None):
+        self.open_flags = flags
+        if self.open_error is not None:
+            raise self.open_error
+        return 7
+
+    def fstat(self, _descriptor):
+        return self.marker_stat
+
+    def close(self, _descriptor):
+        self.closed = True
+
+    def fchown(self, _descriptor, uid, gid):
+        self.chown = (uid, gid)
+        self.marker_stat.st_uid = uid
+        self.marker_stat.st_gid = gid
+
+    def fchmod(self, _descriptor, mode):
+        self.mode = mode
+        file_type = stat.S_IFMT(self.marker_stat.st_mode)
+        self.marker_stat.st_mode = file_type | mode
+
+
+def run_embedded_marker_python(code: str, fake_os: FakeMarkerOS):
+    fake_sys = SimpleNamespace(argv=["marker-test", "10001", "10001", "/marker"])
+    real_import = builtins.__import__
+
+    def import_for_marker(name, *args, **kwargs):
+        if name == "os":
+            return fake_os
+        if name == "sys":
+            return fake_sys
+        return real_import(name, *args, **kwargs)
+
+    namespace = {
+        "__builtins__": {
+            **vars(builtins),
+            "__import__": import_for_marker,
+        }
+    }
+    output = io.StringIO()
+    exit_code = None
+    with contextlib.redirect_stdout(output):
+        try:
+            exec(compile(code, "docker-permissions-init.sh", "exec"), namespace)
+        except SystemExit as error:
+            exit_code = error.code
+    return output.getvalue().strip(), exit_code
+
+
 @pytest.mark.parametrize("compose_path", ["docker-compose.yml", "docker-compose-dev.yaml"])
 def test_compose_migrates_permissions_before_app_start(compose_path: str):
     compose_text = read_repo_file(compose_path)
@@ -114,7 +190,10 @@ def test_compose_migrates_permissions_before_app_start(compose_path: str):
     assert "/var/run/docker.sock" not in init_service
     assert "${LANDPPT_ENV_FILE:-./.env}:/app/.env" in compose_text
     assert "permissions-init:" in dependencies
-    assert "condition: service_completed_successfully" in dependencies
+    permissions_dependency = dependencies.split("  permissions-init:\n", 1)[1].split(
+        "\n  postgres:", 1
+    )[0]
+    assert "condition: service_completed_successfully" in permissions_dependency
     assert "depends_on: *landppt-depends-on" in landppt_service
     assert "depends_on: *landppt-depends-on" in worker_service
 
@@ -135,6 +214,52 @@ def test_permission_migration_script_is_idempotent_and_validates_as_target_user(
 
 def test_permission_migration_marker_is_safe_and_keeps_fast_path():
     script = read_repo_file("docker-permissions-init.sh")
+
+    marker_state = embedded_python(script, "marker_state")
+    create_marker = embedded_python(script, "create_marker")
+
+    missing_os = FakeMarkerOS(open_error=FileNotFoundError("missing"))
+    assert run_embedded_marker_python(marker_state, missing_os) == ("missing", 0)
+
+    valid_os = FakeMarkerOS(
+        SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_uid=10001, st_gid=10001)
+    )
+    assert run_embedded_marker_python(marker_state, valid_os) == ("valid", None)
+    assert valid_os.closed is True
+
+    invalid_markers = [
+        (stat.S_IFLNK | 0o777, 10001, 10001, "not a regular file"),
+        (stat.S_IFIFO | 0o600, 10001, 10001, "not a regular file"),
+        (stat.S_IFREG | 0o600, 0, 0, "unexpected owner"),
+        (stat.S_IFREG | 0o644, 10001, 10001, "unexpected mode"),
+    ]
+    for marker_mode, marker_uid, marker_gid, expected_error in invalid_markers:
+        fake_os = FakeMarkerOS(
+            SimpleNamespace(
+                st_mode=marker_mode,
+                st_uid=marker_uid,
+                st_gid=marker_gid,
+            )
+        )
+        _output, exit_code = run_embedded_marker_python(marker_state, fake_os)
+        assert expected_error in str(exit_code)
+
+    existing_os = FakeMarkerOS(open_error=FileExistsError("already exists"))
+    _output, exit_code = run_embedded_marker_python(create_marker, existing_os)
+    assert "Could not create migration marker" in str(exit_code)
+
+    created_stat = SimpleNamespace(
+        st_mode=stat.S_IFREG | 0o666,
+        st_uid=0,
+        st_gid=0,
+    )
+    created_os = FakeMarkerOS(created_stat)
+    assert run_embedded_marker_python(create_marker, created_os) == ("", None)
+    assert created_os.open_flags & created_os.O_EXCL
+    assert created_os.open_flags & created_os.O_NOFOLLOW
+    assert created_os.chown == (10001, 10001)
+    assert created_os.mode == 0o600
+    assert created_os.closed is True
 
     assert "marker_state()" in script
     assert "create_marker()" in script
