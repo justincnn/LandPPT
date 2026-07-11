@@ -29,6 +29,9 @@ CLAUDE.md
 # Local git worktrees
 .worktrees/
 
+# Helm chart documentation is maintained locally only
+helm/landppt/README.md
+
 # Temporary files and cache
 temp/
 tmp/
