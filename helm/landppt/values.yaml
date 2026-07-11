@@ -153,6 +153,22 @@ persistence:
   lib:
     size: 1Gi
 
+# Ensure provisioned application volumes are writable by the non-root process.
+# This is needed for local/hostPath provisioners that do not honor fsGroup.
+volumePermissions:
+  enabled: true
+  image: busybox:1.36
+  imagePullPolicy: IfNotPresent
+  uid: 10001
+  gid: 10001
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 resources:
   requests:
     cpu: 1000m

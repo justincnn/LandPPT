@@ -531,6 +531,16 @@ def test_helm_defaults_enforce_non_root_identity_and_volume_group():
         assert expected in pod_context
     assert "runAsUser" not in pod_context
 
+    volume_permissions = values.split("volumePermissions:", 1)[1].split(
+        "\nresources:", 1
+    )[0]
+    for expected in (
+        "enabled: true",
+        "uid: 10001",
+        "gid: 10001",
+    ):
+        assert expected in volume_permissions
+
     for expected in (
         "runAsNonRoot: true",
         "runAsUser: 10001",
@@ -556,3 +566,27 @@ def test_helm_workloads_render_pod_and_container_security_contexts(
 
     assert "{{- with .Values.podSecurityContext }}" in template
     assert "{{- with .Values.securityContext }}" in template
+
+
+def test_helm_web_repairs_persistent_volume_permissions_before_startup():
+    template = read_repo_file("helm/landppt/templates/deployment.yaml")
+    init_container = template.split("- name: volume-permissions", 1)[1].split(
+        "{{- if .Values.minio.enabled }}", 1
+    )[0]
+
+    assert ".Values.persistence.enabled .Values.volumePermissions.enabled" in template
+    assert "runAsUser: 0" in init_container
+    assert "allowPrivilegeEscalation: false" in init_container
+    assert "readOnlyRootFilesystem: true" in init_container
+    for capability in ("CHOWN", "DAC_OVERRIDE", "FOWNER"):
+        assert f"- {capability}" in init_container
+    for path in (
+        "/app/data",
+        "/app/uploads",
+        "/app/research_reports",
+        "/app/temp",
+        "/app/lib",
+    ):
+        assert path in init_container
+    assert "chown -R {{ .Values.volumePermissions.uid }}:" in init_container
+    assert 'chmod -R u+rwX "$path"' in init_container

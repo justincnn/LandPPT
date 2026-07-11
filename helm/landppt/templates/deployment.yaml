@@ -35,8 +35,49 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.postgresql.enabled .Values.minio.enabled }}
+      {{- if or (and .Values.persistence.enabled .Values.volumePermissions.enabled) .Values.postgresql.enabled .Values.minio.enabled }}
       initContainers:
+        {{- if and .Values.persistence.enabled .Values.volumePermissions.enabled }}
+        # Some local/hostPath provisioners do not apply fsGroup to newly-created
+        # volumes. Repair ownership before the non-root application starts.
+        - name: volume-permissions
+          image: {{ .Values.volumePermissions.image | quote }}
+          imagePullPolicy: {{ .Values.volumePermissions.imagePullPolicy }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              for path in /app/data /app/uploads /app/research_reports /app/temp /app/lib; do
+                chown -R {{ .Values.volumePermissions.uid }}:{{ .Values.volumePermissions.gid }} "$path"
+                chmod -R u+rwX "$path"
+              done
+          resources:
+            {{- toYaml .Values.volumePermissions.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: uploads
+              mountPath: /app/uploads
+            - name: reports
+              mountPath: /app/research_reports
+            - name: cache
+              mountPath: /app/temp
+            - name: lib
+              mountPath: /app/lib
+        {{- end }}
         {{- if .Values.minio.enabled }}
         - name: wait-for-minio
           image: busybox:1.36
