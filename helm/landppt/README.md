@@ -72,6 +72,7 @@ helm upgrade --install landppt ./helm/landppt \
 | `persistence.enabled` | 应用数据持久化（5 个 PVC） | `true` |
 | `persistence.storageClass` | 存储类 | 集群默认 |
 | `volumePermissions.enabled` | 启动前修复 PVC 权限，兼容不支持 `fsGroup` 的 local/hostPath 存储 | `true` |
+| `service.type` / `service.nodePort` | Service 类型及可选固定 NodePort；生产反向代理可直接连接 NodePort | `ClusterIP` / `null` |
 | `ingress.enabled` | 启用 Ingress | `false` |
 | `shmSize` | /dev/shm 大小（Chromium 渲染需要） | `4Gi` |
 

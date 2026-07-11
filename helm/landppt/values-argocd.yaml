@@ -20,6 +20,14 @@ image:
 # imagePullSecrets:
 #   - name: ghcr-pull-secret
 
+# OpenResty on the Kubernetes node proxies to this stable Service entry point.
+# Do not use kubectl port-forward for production traffic: it binds to one Pod
+# and exits when that Pod is replaced during a rolling update.
+service:
+  type: NodePort
+  port: 8000
+  nodePort: 30601
+
 app:
   workers: 2
   existingSecret: landppt-app-secrets
