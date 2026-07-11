@@ -4,6 +4,13 @@ replicaCount: 1
 
 web:
   replicaCount: 1
+  # Empty type selects Recreate with persistence and RollingUpdate otherwise.
+  # Set type to RollingUpdate only when the mounted storage supports concurrent Pods.
+  updateStrategy:
+    type: ""
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   autoscaling:
     enabled: false
     minReplicas: 2

@@ -8,9 +8,14 @@ spec:
   {{- if not .Values.web.autoscaling.enabled }}
   replicas: {{ default .Values.replicaCount .Values.web.replicaCount }}
   {{- end }}
+  {{- $strategyType := .Values.web.updateStrategy.type | default (ternary "Recreate" "RollingUpdate" .Values.persistence.enabled) }}
   strategy:
-    # PVC 为 RWO，滚动更新会因卷占用卡住，故用 Recreate
-    type: {{ ternary "Recreate" "RollingUpdate" .Values.persistence.enabled }}
+    type: {{ $strategyType }}
+    {{- if eq $strategyType "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.web.updateStrategy.rollingUpdate.maxUnavailable }}
+      maxSurge: {{ .Values.web.updateStrategy.rollingUpdate.maxSurge }}
+    {{- end }}
   selector:
     matchLabels:
       {{- include "landppt.selectorLabels" . | nindent 6 }}

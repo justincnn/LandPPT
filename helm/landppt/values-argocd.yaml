@@ -44,17 +44,26 @@ app:
     DB_POOL_RECYCLE: "1800"
 
 web:
-  # Current cluster uses RWO local-path PVCs, so keep Web at one replica.
-  replicaCount: 1
+  # The current single-node local-path volumes can be mounted by multiple Pods
+  # on that same node. Keep the legacy PVCs until their data is migrated to S3,
+  # while allowing a second Web Pod to become ready before an old Pod is removed.
+  replicaCount: 2
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   autoscaling:
     enabled: false
   pdb:
-    enabled: false
+    enabled: true
+    minAvailable: 1
 
+# Leave enough allocatable capacity for the extra Pod created during a rollout.
 resources:
   requests:
-    cpu: 1000m
-    memory: 1500Mi
+    cpu: 400m
+    memory: 900Mi
   limits:
     cpu: "2"
     memory: 4Gi

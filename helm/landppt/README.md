@@ -57,6 +57,8 @@ helm upgrade --install landppt ./helm/landppt \
 | `LANDPPT_EXPOSE_TEMP_STATIC_FILES` | Helm 默认关闭 `/temp` 本地临时目录暴露 | `false` |
 | `ENABLE_CREDITS_SYSTEM` | 启用积分系统 | `true` |
 | `web.autoscaling.enabled` / `worker.autoscaling.enabled` | Web / Worker HPA，支持 CPU 与 Memory 双指标 | `false` / `false` |
+| `web.updateStrategy.type` | Web 更新策略；留空时挂载 PVC 使用 `Recreate`，无 PVC 使用 `RollingUpdate` | `""` |
+| `web.updateStrategy.rollingUpdate` | 滚动更新可用性参数 | `maxUnavailable: 0` / `maxSurge: 1` |
 | `web.pdb.enabled` / `worker.pdb.enabled` | Web / Worker PodDisruptionBudget | `false` / `false` |
 | `networkPolicy.enabled` | 生成基础 NetworkPolicy | `false` |
 | `observability.serviceMonitor.enabled` | 生成 Prometheus Operator ServiceMonitor | `false` |
@@ -146,6 +148,6 @@ ingress:
 
 ## 说明
 
-- 应用 PVC 均为 `ReadWriteOnce`，Deployment 使用 `Recreate` 策略，`replicaCount` 建议保持 1。多副本需要 RWX 存储并自行调整。
+- 应用 PVC 均为 `ReadWriteOnce`，默认使用 `Recreate` 策略并建议保持单副本。仅当存储允许多个 Pod 并发挂载时才应显式启用 `RollingUpdate`；多节点生产环境优先使用 RWX 或彻底迁移至对象存储。
 - Chromium 导出 PPT 需要较大共享内存，chart 通过内存 `emptyDir` 挂载 `/dev/shm`（对应 docker-compose 的 `shm_size: 4gb`），该内存计入容器 memory limit。
 - 健康检查使用应用的 `/health` 端点。

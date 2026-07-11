@@ -568,6 +568,19 @@ def test_helm_workloads_render_pod_and_container_security_contexts(
     assert "{{- with .Values.securityContext }}" in template
 
 
+def test_helm_web_update_strategy_supports_zero_unavailable_rollouts():
+    values = read_repo_file("helm/landppt/values.yaml")
+    template = read_repo_file("helm/landppt/templates/deployment.yaml")
+
+    assert 'type: ""' in values
+    assert "maxUnavailable: 0" in values
+    assert "maxSurge: 1" in values
+    assert '$strategyType := .Values.web.updateStrategy.type | default' in template
+    assert 'eq $strategyType "RollingUpdate"' in template
+    assert ".Values.web.updateStrategy.rollingUpdate.maxUnavailable" in template
+    assert ".Values.web.updateStrategy.rollingUpdate.maxSurge" in template
+
+
 def test_helm_web_repairs_persistent_volume_permissions_before_startup():
     template = read_repo_file("helm/landppt/templates/deployment.yaml")
     init_container = template.split("- name: volume-permissions", 1)[1].split(
