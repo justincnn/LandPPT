@@ -204,7 +204,7 @@
 
 .project-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     gap: 12px;
     margin-bottom: 4px;
@@ -271,18 +271,21 @@
 
 .project-actions {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     margin-top: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .project-action-btn {
     position: relative;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     padding: 0;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     font-weight: 600;
     text-decoration: none;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -569,7 +572,7 @@
 
 .project-list-item {
     display: grid;
-    grid-template-columns: 4px minmax(260px, 1fr) 160px 230px;
+    grid-template-columns: 4px minmax(240px, 1fr) 150px 240px;
     gap: 16px;
     min-height: 76px;
     cursor: pointer;
@@ -615,8 +618,11 @@
 .project-progress-cell {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     min-width: 0;
+    text-align: center;
 }
 
 .project-progress-track {
@@ -820,19 +826,6 @@
                         <span class="project-title-icon"><i class="fas fa-file-powerpoint" aria-hidden="true"></i></span>
                         <h4 class="project-title">{{ project.title }}</h4>
                     </div>
-                    <span class="project-status-badge" data-status="{{ project.status }}">
-                        {% if project.status == 'completed' %}
-                            已完成
-                        {% elif project.status == 'in_progress' %}
-                            进行中
-                        {% elif project.status == 'draft' %}
-                            草稿
-                        {% elif project.status == 'archived' %}
-                            已归档
-                        {% else %}
-                            异常状态
-                        {% endif %}
-                    </span>
                 </div>
 
                 <div class="project-meta">
@@ -848,19 +841,24 @@
             </div>
 
             <div class="project-progress-cell">
+                <span class="project-status-badge" data-status="{{ project.status }}">
+                    {% if project.status == 'completed' %}
+                        已完成
+                    {% elif project.status == 'in_progress' %}
+                        进行中
+                    {% elif project.status == 'draft' %}
+                        草稿
+                    {% elif project.status == 'archived' %}
+                        已归档
+                    {% else %}
+                        异常状态
+                    {% endif %}
+                </span>
                 {% if project.status == 'in_progress' and project.todo_board %}
                     <div class="project-progress-track">
                         <div class="project-progress-fill" style="width: {{ project.todo_board.overall_progress }}%;"></div>
                     </div>
                     <span class="project-progress-label">{{ "%.0f" | format(project.todo_board.overall_progress) }}%</span>
-                {% elif project.status == 'completed' %}
-                    <span class="project-progress-label">已完成</span>
-                {% elif project.status == 'draft' %}
-                    <span class="project-progress-label">草稿</span>
-                {% elif project.status == 'archived' %}
-                    <span class="project-progress-label">已归档</span>
-                {% else %}
-                    <span class="project-progress-label">待处理</span>
                 {% endif %}
             </div>
 
@@ -882,13 +880,19 @@
                 {% endif %}
                 <button onclick='openRenameModal("{{ project.project_id }}", {{ project.title | tojson | safe }})'
                         class="project-action-btn secondary"
-                        aria-label="重命名项目"
+                        aria-label="重命名"
                         data-tooltip="重命名">
                     <i class="fas fa-i-cursor"></i>
                 </button>
+                <button onclick="duplicateProject('{{ project.project_id }}')"
+                        class="project-action-btn secondary"
+                        aria-label="复制"
+                        data-tooltip="复制">
+                    <i class="fas fa-copy"></i>
+                </button>
                 <button onclick='confirmDeleteProject("{{ project.project_id }}", {{ project.title | tojson | safe }})'
                         class="project-action-btn destructive"
-                        aria-label="删除项目"
+                        aria-label="删除"
                         data-tooltip="删除">
                     <i class="fas fa-trash-alt"></i>
                 </button>
@@ -1061,6 +1065,24 @@ async function executeRenameProject() {
         setLoadingOverlay(false);
     }
     currentRenameProjectId = null;
+}
+
+async function duplicateProject(projectId) {
+    try {
+        showNotification('正在复制项目...', 'info');
+        const response = await fetch(`/api/projects/${projectId}/duplicate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            throw new Error(result.detail || result.message || '复制失败');
+        }
+        showNotification('项目复制成功', 'success');
+        setTimeout(() => { window.location.href = `/projects/${result.project_id}`; }, 600);
+    } catch (error) {
+        showNotification('复制失败：' + error.message, 'error');
+    }
 }
 
 async function executeDeleteProject() {

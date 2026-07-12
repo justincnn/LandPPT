@@ -143,14 +143,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     padding: 0;
     border-radius: 8px;
     border: 1px solid transparent;
     background: transparent;
     color: #475569;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     font-weight: 600;
     text-decoration: none;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -243,7 +244,7 @@
 
 .projects-table-header {
     display: grid;
-    grid-template-columns: 120px 1fr 140px 170px 130px 130px;
+    grid-template-columns: 110px minmax(200px, 1fr) 110px 150px 120px 228px;
     gap: 12px;
     padding: 10px 20px;
     background: #f8fafc;
@@ -265,7 +266,7 @@
 
 .project-list-item {
     display: grid;
-    grid-template-columns: 120px 1fr 140px 170px 130px 130px;
+    grid-template-columns: 110px minmax(200px, 1fr) 110px 150px 120px 228px;
     gap: 12px;
     padding: 14px 20px;
     border-bottom: 1px solid #f1f5f9;
@@ -283,6 +284,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    text-align: center;
+}
+
+.project-meta,
+.project-updated,
+.project-progress-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+}
+
+.project-progress {
+    width: 100%;
 }
 
 .status-badge {
@@ -392,9 +409,10 @@
 .table-action-group {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 2px;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
 /* 空状态 */
@@ -532,11 +550,12 @@
 
 .projects-table-header,
 .project-list-item {
-    grid-template-columns: 116px minmax(240px, 1fr) 120px 170px 130px 198px;
+    grid-template-columns: 110px minmax(200px, 1fr) 110px 150px 120px 228px;
 }
 
 .project-list-item {
     min-height: 72px;
+    align-items: center;
 }
 
 .project-title-cell {
@@ -574,10 +593,10 @@
 }
 
 /* 响应式 */
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
     .projects-table-header,
     .project-list-item {
-        grid-template-columns: 100px minmax(220px, 1fr) 130px 180px;
+        grid-template-columns: 100px minmax(180px, 1fr) 130px 220px;
     }
 
     .projects-table-header > div:nth-child(3),
@@ -698,11 +717,11 @@
                     </div>
                 </div>
 
-                <div class="project-meta" style="display: flex; align-items: center;">
+                <div class="project-meta">
                     {{ project.scenario }}
                 </div>
 
-                <div style="display: flex; align-items: center;">
+                <div class="project-progress-cell">
                     {% if project.status == 'in_progress' and project.todo_board %}
                         <div class="project-progress">
                             <div class="project-progress-track">
@@ -721,11 +740,12 @@
                     {% endif %}
                 </div>
 
-                <div class="project-updated" style="display: flex; align-items: center;">
+                <div class="project-updated">
                     {{ project.updated_at | strftime('%m-%d %H:%M') }}
                 </div>
 
                 <div class="table-action-group" onclick="event.stopPropagation();">
+                    <a href="/projects/{{ project.project_id }}" class="action-btn" aria-label="详情" data-tooltip="详情"><i class="fas fa-eye"></i></a>
                     {% if project.status == 'completed' %}
                         <a href="/projects/{{ project.project_id }}/edit" class="action-btn" aria-label="编辑" data-tooltip="编辑"><i class="fas fa-pen"></i></a>
                         <a href="/projects/{{ project.project_id }}/fullscreen" class="action-btn" aria-label="预览" data-tooltip="预览" target="_blank"><i class="fas fa-expand"></i></a>
