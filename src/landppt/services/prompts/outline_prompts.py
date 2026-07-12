@@ -113,9 +113,15 @@ class OutlinePrompts:
    - 结论/感谢页 content_points 提炼核心结论，保持简洁有力。
    - 普通内容页可适当展开，每个要点不超过50字符，避免信息堆积。
 
-4. **图表建议**：对适合可视化的信息，在 chart_config 字段中给出图表类型（bar/pie/line/scatter/radar 等）和简要说明。
+4. **单页信息架构**：
+   - 每页只承担 1 个核心任务（解释/上手/对比/架构/总结等）；标题用顿号或「与/及」串联 2 个以上独立主题时，优先拆成多页。
+   - 普通内容页建议 1 个主模块 + 至多 1 个辅助模块；禁止同页并列两套完整流程且共用同一编号体系。
+   - content_points 应能映射为单一版式（流程/卡片/指标/对比/层级），不要把多类完全不同的信息塞进同一页。
+   - 页数紧张时宁可一页一任务、减少装饰性要点，也不要一页多主题。
 
-5. **语言一致性**：统一使用 {language}。若需提及时间语义，以上述当前时间为准；若需求已给出明确时间，以原始时间为准。
+5. **图表建议**：对适合可视化的信息，在 chart_config 字段中给出图表类型（bar/pie/line/scatter/radar 等）和简要说明。
+
+6. **语言一致性**：统一使用 {language}。若需提及时间语义，以上述当前时间为准；若需求已给出明确时间，以原始时间为准。
 
 ---
 
@@ -205,9 +211,15 @@ chart_config 仅在需要图表时填写，含 type、data、options；不需要
    - Conclusion: concise summary or thanks.
    - Content pages: each point under 50 characters; avoid overload.
 
-4. **Chart Suggestions**: For data-rich content, include a chart_config with type (bar/pie/line/scatter/radar etc.) and brief description.
+4. **Per-Slide Information Architecture**:
+   - Each slide carries ONE core task (explain / get-started / compare / architecture / summary). If a title chains 2+ independent topics, split into multiple slides.
+   - Content pages: 1 primary module + at most 1 auxiliary module; never place two complete numbered flows sharing the same numbering scheme on one slide.
+   - content_points should map to a single layout family (process / cards / metrics / compare / stack); do not mix unrelated information types on one slide.
+   - When page count is tight, prefer one-task-per-slide with fewer decorative points over multi-topic slides.
 
-5. **Language**: Entire outline in **{language}**. Use current time reference where applicable; prefer source values when given.
+5. **Chart Suggestions**: For data-rich content, include a chart_config with type (bar/pie/line/scatter/radar etc.) and brief description.
+
+6. **Language**: Entire outline in **{language}**. Use current time reference where applicable; prefer source values when given.
 
 ---
 
@@ -297,7 +309,8 @@ slide_type 可选值：title / content / agenda / transition / conclusion / than
 4. 首尾页保持克制与聚焦，不要像普通内容页一样堆满要点
 5. {transition_inst}
 6. 页面标题简洁明确，内容要点具体实用
-7. 时间语义以上述当前时间为准；若输入信息已给出明确时间，以输入信息为准"""
+7. 每页只承担一个核心任务；标题串联多个独立主题时优先拆页，不要一页多主题
+8. 时间语义以上述当前时间为准；若输入信息已给出明确时间，以输入信息为准"""
 
     # ----------------------------------------------------------------
     # 大纲生成上下文（供其他模块使用）

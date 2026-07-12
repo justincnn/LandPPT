@@ -237,7 +237,8 @@ class TemplatePrompts:
 - 如果使用纵向 `flex` 骨架，标题锚点和编号锚点 `flex:none`，主舞台 `flex:1; min-height:0; min-width:0; overflow:hidden`。
 - 如果使用 `grid` 骨架，主舞台轨道写成 `minmax(0,1fr)`。
 - 所有承载正文的 flex/grid item 显式写 `min-height:0; min-width:0`。
-- 内容较少时要有气场，内容较多时不能崩坏。
+- 主舞台可占满剩余高度，但舞台内的内容模块按内容定高，不被 stretch 成等高空壳。
+- 内容较少时的气场靠放大焦点字号、加强主视觉、加大模块间距，而非纵向拉满；内容较多时不能崩坏。
 - 类名仅用于说明结构关系，使用 inline style 做等价实现同样有效。
 """.strip()
 
@@ -298,7 +299,7 @@ class TemplatePrompts:
 - 如果使用纵向 `flex` 骨架，标题锚点和编号锚点 `flex:none`，主舞台 `flex:1; min-height:0; min-width:0; overflow:hidden`。
 - 如果使用 `grid` 骨架，主舞台轨道写成 `minmax(0,1fr)`。
 - 所有承载正文的 flex/grid item 显式写 `min-height:0; min-width:0`。
-- 内容页兼容"内容较少时有气场"和"内容较多时不崩坏"。
+- 内容页兼容"内容较少时有气场"和"内容较多时不崩坏"；气场靠放大焦点与间距实现，舞台内模块按内容定高，不做纵向 stretch 撑空。
 """.strip()
         return apply_page_number_prompt_filter(
             prompt,
